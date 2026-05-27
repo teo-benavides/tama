@@ -80,6 +80,7 @@ fire_block = INDENT
                  bullet_call NEWLINE
                  { fire_prop NEWLINE }
              DEDENT ;
+            # bullet_call is mandatory, the other 3 statements are optional. there can only be one of each.
 action_block = INDENT { action_stmt NEWLINE } DEDENT ;
 bullet_block = INDENT { bullet_stmt NEWLINE } DEDENT ;
 chdir_block  = INDENT { chdir_stmt  NEWLINE } DEDENT ;

@@ -181,13 +181,15 @@ func _collect_to_rparen(open_tok: TamaToken) -> String:
 			if depth == 0:
 				break
 			depth -= 1
+		elif t.type == TamaToken.COMMA and depth == 0:
+			break
 		parts.append(t.value)
 		_pos += 1
 	return " ".join(parts)
 
 # Parses (expr, expr, ...) — returns Array[String] of raw expression strings.
-func _parse_call_args(caller_tok: TamaToken) -> Array:
-	var args := []
+func _parse_call_args(caller_tok: TamaToken) -> Array[String]:
+	var args: Array[String] = []
 	if _peek_type() != TamaToken.LPAREN:
 		return args
 	var lp := _consume(TamaToken.LPAREN)
@@ -213,8 +215,8 @@ func _parse_identifier() -> String:
 	return ""
 
 # ([name, name, ...]) — returns Array[String]
-func _parse_param_list() -> Array:
-	var params := []
+func _parse_param_list() -> Array[String]:
+	var params: Array[String] = []
 	if _peek_type() != TamaToken.LPAREN:
 		return params
 	var lp := _consume(TamaToken.LPAREN)
@@ -233,8 +235,8 @@ func _parse_param_list() -> Array:
 		_consume(TamaToken.RPAREN)
 	return params
 
-func _parse_block(parse_statement: Callable) -> Array:
-	var nodes := []
+func _parse_block(parse_statement: Callable) -> Array[TamaAst.ASTNode]:
+	var nodes: Array[TamaAst.ASTNode] = []
 	if _peek_type() != TamaToken.INDENT:
 		_error_at(_peek(), "Expected indented block")
 		return nodes
@@ -413,7 +415,7 @@ func _parse_inline_fire() -> TamaAst.InlineFireNode:
 	var tok := _consume(TamaToken.KW_FIRE)
 	var node := TamaAst.InlineFireNode.new(tok.line, tok.col)
 	_consume(TamaToken.NEWLINE)
-	node.body = _parse_block(_parse_fire_body_statement)
+	_parse_fire_block(node, tok)
 	return node
 
 func _parse_fire_call() -> TamaAst.FireCallNode:
@@ -483,20 +485,32 @@ func _parse_action_statement():   # -> TamaAst.ASTNode
 			return null
 
 # ---------------------------------------------------------------------------
-# Fire block statement dispatcher
+# Fire block parser — fills dir/speed/offset/bullet directly onto node
 # ---------------------------------------------------------------------------
-func _parse_fire_body_statement():   # -> TamaAst.ASTNode
-	var tok := _peek()
-	match tok.type:
-		TamaToken.KW_DIR:    return _parse_dir()
-		TamaToken.KW_SPEED:  return _parse_speed()
-		TamaToken.KW_OFFSET: return _parse_offset()
-		TamaToken.KW_BULLET: return _parse_bullet_call()
-		_:
-			_error_at(tok, "Unexpected token in fire block: \"%s\"" % _tok_display(tok))
-			_pos += 1
-			_try_consume(TamaToken.NEWLINE)
-			return null
+func _parse_fire_block(node, open_tok: TamaToken) -> void:
+	if _peek_type() != TamaToken.INDENT:
+		_error_at(_peek(), "Expected indented block")
+		return
+	_consume(TamaToken.INDENT)
+	_skip_newlines()
+	while _peek_type() != TamaToken.DEDENT and _peek_type() != TamaToken.EOF:
+		var tok := _peek()
+		match tok.type:
+			TamaToken.KW_DIR:    node.dir    = _parse_dir()
+			TamaToken.KW_SPEED:  node.speed  = _parse_speed()
+			TamaToken.KW_OFFSET: node.offset = _parse_offset()
+			TamaToken.KW_BULLET: node.bullet = _parse_bullet_call()
+			_:
+				_error_at(tok, "Unexpected token in fire block: \"%s\"" % _tok_display(tok))
+				_pos += 1
+				_try_consume(TamaToken.NEWLINE)
+		_skip_newlines()
+	if _peek_type() == TamaToken.DEDENT:
+		_consume(TamaToken.DEDENT)
+	else:
+		_error_at(_peek(), "Unclosed block (missing dedent)")
+	if not node.bullet:
+		_error_at(open_tok, "Fire block is missing a bullet call")
 
 # ---------------------------------------------------------------------------
 # Top-level definition parsers
@@ -519,7 +533,7 @@ func _parse_fire_def() -> TamaAst.FireDefNode:
 	var params := _parse_param_list()
 	_consume(TamaToken.NEWLINE)
 	var node := TamaAst.FireDefNode.new(name, params, name_tok.line, name_tok.col)
-	node.body = _parse_block(_parse_fire_body_statement)
+	_parse_fire_block(node, name_tok)
 	return node
 
 func _parse_act_def() -> TamaAst.ActDefNode:
@@ -550,7 +564,7 @@ func _parse_bullet_def() -> TamaAst.BulletDefNode:
 		match tok.type:
 			TamaToken.KW_TYPE:
 				_consume(TamaToken.KW_TYPE)
-				if _peek_type() == TamaToken.WORD or _peek_type() == TamaToken.KW_SPAWNER:
+				if _peek_type() == TamaToken.WORD:
 					node.bullet_type = _peek().value
 					_pos += 1
 				else:
@@ -560,7 +574,6 @@ func _parse_bullet_def() -> TamaAst.BulletDefNode:
 				_consume(TamaToken.KW_SPAWNER)
 				if _peek_type() == TamaToken.WORD:
 					node.spawner_name = _peek().value
-					_bullet_refs.append({ "name": node.spawner_name, "line": _peek().line, "col": _peek().col })
 					_pos += 1
 				else:
 					_error_at(_peek(), "Expected spawner name after 'spawner'")

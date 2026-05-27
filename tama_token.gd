@@ -1,10 +1,9 @@
 class_name TamaToken
 
 # --- Token type constants ---
-const NUMBER     = "NUMBER"
-const WORD       = "WORD"
-const DOLLAR_VAR = "DOLLAR_VAR"   # $rand, $rank, $1, $2 ...
-const LPAREN     = "LPAREN"
+const NUMBER  = "NUMBER"
+const WORD    = "WORD"
+const LPAREN  = "LPAREN"
 const RPAREN     = "RPAREN"
 const OP         = "OP"
 const COMMA      = "COMMA"

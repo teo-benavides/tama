@@ -9,9 +9,7 @@ func _init() -> void:
 
 func _compile_rules() -> void:
 	var patterns := [
-		["^\\$[a-zA-Z_][a-zA-Z0-9_]*", TamaToken.DOLLAR_VAR],  # $rand, $rank, $param
-		["^\\$\\d+",                    TamaToken.DOLLAR_VAR],  # $1, $2, ...
-		["^\\d+\\.\\d+",               TamaToken.NUMBER],       # float before int
+		["^\\d+\\.\\d+",            TamaToken.NUMBER],  # float before int
 		["^\\d+",                       TamaToken.NUMBER],
 		["^[a-zA-Z_][a-zA-Z0-9_]*",    TamaToken.WORD],
 		["^\\(",                        TamaToken.LPAREN],

@@ -43,13 +43,15 @@ class MainNode extends ASTNode:
 class FireDefNode extends ASTNode:
 	var name:   String
 	var params: Array[String]
-	var body:   Array[ASTNode]
+	var dir:    DirNode       # optional
+	var speed:  SpeedNode     # optional
+	var offset: ASTNode       # optional — OffsetNode or OffsetInlineNode
+	var bullet: BulletCallNode  # mandatory
 
-	func _init(p_name: String, p_params: Array, p_line: int, p_col: int) -> void:
+	func _init(p_name: String, p_params: Array[String], p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		name   = p_name
 		params = p_params
-		body   = []
 
 # act <name>([params...])
 class ActDefNode extends ASTNode:
@@ -225,18 +227,20 @@ class InlineActNode extends ASTNode:
 
 # fire (anonymous inline block inside an action block)
 class InlineFireNode extends ASTNode:
-	var body: Array
+	var dir:    DirNode       # optional
+	var speed:  SpeedNode     # optional
+	var offset: ASTNode       # optional — OffsetNode or OffsetInlineNode
+	var bullet: BulletCallNode  # mandatory
 
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
-		body = []
 
 # fire <name>([args...])  — named fire call inside an action block
 class FireCallNode extends ASTNode:
 	var name: String
 	var args: Array[String]
 
-	func _init(p_name: String, p_args: Array, p_line: int, p_col: int) -> void:
+	func _init(p_name: String, p_args: Array[String], p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		name = p_name
 		args = p_args
@@ -246,7 +250,7 @@ class ActCallNode extends ASTNode:
 	var name: String
 	var args: Array[String]
 
-	func _init(p_name: String, p_args: Array, p_line: int, p_col: int) -> void:
+	func _init(p_name: String, p_args: Array[String], p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		name = p_name
 		args = p_args
