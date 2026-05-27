@@ -1,5 +1,9 @@
 class_name TamaAst
 
+enum DirType   { AIM, ABS, REL, SEQ }
+enum ValueType { ABS, REL, SEQ }
+enum OffsetMode { NONE, INLINE, BLOCK }
+
 # ---------------------------------------------------------------------------
 # Base node — all AST nodes extend this
 # ---------------------------------------------------------------------------
@@ -43,10 +47,10 @@ class MainNode extends ASTNode:
 class FireDefNode extends ASTNode:
 	var name:   String
 	var params: Array[String]
-	var dir:    DirNode       # optional
-	var speed:  SpeedNode     # optional
-	var offset: ASTNode       # optional — OffsetNode or OffsetInlineNode
-	var bullet: BulletCallNode  # mandatory
+	var dir:    DirNode  # optional
+	var speed:  SpeedNode  # optional
+	var offset: ASTNode  # optional — OffsetNode or OffsetInlineNode
+	var bullet: ASTNode  # mandatory — BulletCallNode or InlineBulletNode
 
 	func _init(p_name: String, p_params: Array[String], p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
@@ -71,7 +75,7 @@ class BulletDefNode extends ASTNode:
 	var params:       Array[String]
 	var bullet_type:  String
 	var spawner_name: String
-	var act:          InlineActNode
+	var act:          ASTNode   # InlineActNode or ActCallNode
 
 	func _init(p_name: String, p_params: Array, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
@@ -86,20 +90,20 @@ class BulletDefNode extends ASTNode:
 
 # dir [aim|abs|rel|seq] <expr>   — default qualifier: aim
 class DirNode extends ASTNode:
-	var dir_type: String
+	var dir_type: DirType
 	var expr:     String
 
-	func _init(p_type: String, p_expr: String, p_line: int, p_col: int) -> void:
+	func _init(p_type: DirType, p_expr: String, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		dir_type = p_type
 		expr     = p_expr
 
 # speed [abs|rel|seq] <expr>   — default qualifier: abs
 class SpeedNode extends ASTNode:
-	var speed_type: String
+	var speed_type: ValueType
 	var expr:       String
 
-	func _init(p_type: String, p_expr: String, p_line: int, p_col: int) -> void:
+	func _init(p_type: ValueType, p_expr: String, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		speed_type = p_type
 		expr       = p_expr
@@ -123,16 +127,16 @@ class OffsetInlineNode extends ASTNode:
 # x|y [abs|rel|seq] <expr>  — axis sub-node used by offset block and accel
 class OffsetAxisNode extends ASTNode:
 	var axis:      String
-	var axis_type: String
+	var axis_type: ValueType
 	var expr:      String
 
-	func _init(p_axis: String, p_type: String, p_expr: String, p_line: int, p_col: int) -> void:
+	func _init(p_axis: String, p_type: ValueType, p_expr: String, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		axis      = p_axis
 		axis_type = p_type
 		expr      = p_expr
 
-# bullet <name>([args...])  — bullet reference inside a fire block
+# bullet <name>([args...])  — named bullet reference inside a fire block
 class BulletCallNode extends ASTNode:
 	var name: String
 	var args: Array[String]
@@ -141,6 +145,15 @@ class BulletCallNode extends ASTNode:
 		super(p_line, p_col)
 		name = p_name
 		args = p_args
+
+# bullet NEWLINE <block>  — anonymous inline bullet definition inside a fire block
+class InlineBulletNode extends ASTNode:
+	var bullet_type:  String = ""
+	var spawner_name: String = ""
+	var act:          ASTNode  # InlineActNode or ActCallNode, may be null
+
+	func _init(p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
 
 # spawner <name>  — inside a bullet def, names the spawner bullet
 class FireSpawnerNode extends ASTNode:
@@ -230,7 +243,7 @@ class InlineFireNode extends ASTNode:
 	var dir:    DirNode       # optional
 	var speed:  SpeedNode     # optional
 	var offset: ASTNode       # optional — OffsetNode or OffsetInlineNode
-	var bullet: BulletCallNode  # mandatory
+	var bullet: ASTNode  # mandatory — BulletCallNode or InlineBulletNode
 
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)

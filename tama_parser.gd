@@ -136,22 +136,23 @@ func _error_at(tok: TamaToken, message: String) -> void:
 # Qualifier helpers
 # ---------------------------------------------------------------------------
 
-# Optional dir qualifier: aim | abs | rel | seq — default "aim"
-func _peek_dir_qualifier() -> String:
+# Optional dir qualifier: aim | abs | rel | seq — default AIM
+func _peek_dir_qualifier() -> TamaAst.DirType:
 	var t := _peek()
 	match t.type:
-		TamaToken.KW_AIM, TamaToken.KW_ABS, TamaToken.KW_REL, TamaToken.KW_SEQ:
-			_pos += 1
-			return t.value
-	return "aim"
+		TamaToken.KW_AIM: _pos += 1; return TamaAst.DirType.AIM
+		TamaToken.KW_ABS: _pos += 1; return TamaAst.DirType.ABS
+		TamaToken.KW_REL: _pos += 1; return TamaAst.DirType.REL
+		TamaToken.KW_SEQ: _pos += 1; return TamaAst.DirType.SEQ
+	return TamaAst.DirType.AIM
 
 # Optional value qualifier: abs | rel | seq — caller supplies default
-func _peek_value_qualifier(default_val: String) -> String:
+func _peek_value_qualifier(default_val: TamaAst.ValueType) -> TamaAst.ValueType:
 	var t := _peek()
 	match t.type:
-		TamaToken.KW_ABS, TamaToken.KW_REL, TamaToken.KW_SEQ:
-			_pos += 1
-			return t.value
+		TamaToken.KW_ABS: _pos += 1; return TamaAst.ValueType.ABS
+		TamaToken.KW_REL: _pos += 1; return TamaAst.ValueType.REL
+		TamaToken.KW_SEQ: _pos += 1; return TamaAst.ValueType.SEQ
 	return default_val
 
 # ---------------------------------------------------------------------------
@@ -268,7 +269,7 @@ func _parse_dir() -> TamaAst.DirNode:
 
 func _parse_speed() -> TamaAst.SpeedNode:
 	var tok := _consume(TamaToken.KW_SPEED)
-	var qualifier := _peek_value_qualifier("abs")
+	var qualifier := _peek_value_qualifier(TamaAst.ValueType.ABS)
 	var expr := _collect_to_eol()
 	if expr.strip_edges().is_empty():
 		_error_at(_peek(), "Expected expression after speed")
@@ -307,7 +308,7 @@ func _parse_offset() -> TamaAst.ASTNode:
 			if t.type == TamaToken.KW_X or t.type == TamaToken.KW_Y:
 				var axis := t.value
 				_pos += 1
-				var qualifier := _peek_value_qualifier("rel")
+				var qualifier := _peek_value_qualifier(TamaAst.ValueType.REL)
 				var expr := _collect_to_eol()
 				_consume(TamaToken.NEWLINE)
 				var axis_node := TamaAst.OffsetAxisNode.new(axis, qualifier, expr, t.line, t.col)
@@ -346,6 +347,10 @@ func _parse_chdir() -> TamaAst.ChdirNode:
 				_try_consume(TamaToken.NEWLINE)
 				return null
 	)
+	if not node.dir:
+		_error_at(tok, "chdir requires a dir statement")
+	if not node.over:
+		_error_at(tok, "chdir requires an over statement")
 	return node
 
 func _parse_chspd() -> TamaAst.ChspdNode:
@@ -364,6 +369,10 @@ func _parse_chspd() -> TamaAst.ChspdNode:
 				_try_consume(TamaToken.NEWLINE)
 				return null
 	)
+	if not node.speed:
+		_error_at(tok, "chspd requires a speed statement")
+	if not node.over:
+		_error_at(tok, "chspd requires an over statement")
 	return node
 
 func _parse_accel() -> TamaAst.AccelNode:
@@ -376,7 +385,7 @@ func _parse_accel() -> TamaAst.AccelNode:
 			TamaToken.KW_X, TamaToken.KW_Y:
 				var axis := t.value
 				_pos += 1
-				var qualifier := _peek_value_qualifier("abs")
+				var qualifier := _peek_value_qualifier(TamaAst.ValueType.ABS)
 				var expr := _collect_to_eol()
 				_consume(TamaToken.NEWLINE)
 				var axis_node := TamaAst.OffsetAxisNode.new(axis, qualifier, expr, t.line, t.col)
@@ -392,6 +401,10 @@ func _parse_accel() -> TamaAst.AccelNode:
 				_try_consume(TamaToken.NEWLINE)
 				return null
 	)
+	if not node.over:
+		_error_at(tok, "accel requires an over statement")
+	if not node.x and not node.y:
+		_error_at(tok, "accel requires at least one of x or y")
 	return node
 
 func _parse_repeat() -> TamaAst.RepeatNode:
@@ -451,6 +464,42 @@ func _parse_bullet_call() -> TamaAst.BulletCallNode:
 	_consume(TamaToken.NEWLINE)
 	return TamaAst.BulletCallNode.new(name, args, name_tok.line, name_tok.col)
 
+func _parse_inline_bullet() -> TamaAst.InlineBulletNode:
+	var tok := _consume(TamaToken.KW_BULLET)
+	var node := TamaAst.InlineBulletNode.new(tok.line, tok.col)
+	_consume(TamaToken.NEWLINE)
+	_parse_block(func():
+		var t := _peek()
+		match t.type:
+			TamaToken.KW_TYPE:
+				_consume(TamaToken.KW_TYPE)
+				if _peek_type() == TamaToken.WORD:
+					node.bullet_type = _peek().value
+					_pos += 1
+				else:
+					_error_at(_peek(), "Expected bullet type name after 'type'")
+				_consume(TamaToken.NEWLINE)
+			TamaToken.KW_SPAWNER:
+				_consume(TamaToken.KW_SPAWNER)
+				var spawner_val := _collect_to_eol().replace(" ", "")
+				if spawner_val.is_empty():
+					_error_at(_peek(), "Expected spawner filename after 'spawner'")
+				else:
+					node.spawner_name = spawner_val
+				_consume(TamaToken.NEWLINE)
+			TamaToken.KW_ACT:
+				if _peek_type_at(1) == TamaToken.NEWLINE:
+					node.act = _parse_inline_act()
+				else:
+					node.act = _parse_act_call()
+			_:
+				_error_at(t, "Unexpected token in bullet block: '%s'" % _tok_display(t))
+				_pos += 1
+				_try_consume(TamaToken.NEWLINE)
+		return null
+	)
+	return node
+
 # ---------------------------------------------------------------------------
 # Action block statement dispatcher
 # ---------------------------------------------------------------------------
@@ -499,7 +548,11 @@ func _parse_fire_block(node, open_tok: TamaToken) -> void:
 			TamaToken.KW_DIR:    node.dir    = _parse_dir()
 			TamaToken.KW_SPEED:  node.speed  = _parse_speed()
 			TamaToken.KW_OFFSET: node.offset = _parse_offset()
-			TamaToken.KW_BULLET: node.bullet = _parse_bullet_call()
+			TamaToken.KW_BULLET:
+				if _peek_type_at(1) == TamaToken.NEWLINE:
+					node.bullet = _parse_inline_bullet()
+				else:
+					node.bullet = _parse_bullet_call()
 			_:
 				_error_at(tok, "Unexpected token in fire block: \"%s\"" % _tok_display(tok))
 				_pos += 1
@@ -572,14 +625,17 @@ func _parse_bullet_def() -> TamaAst.BulletDefNode:
 				_consume(TamaToken.NEWLINE)
 			TamaToken.KW_SPAWNER:
 				_consume(TamaToken.KW_SPAWNER)
-				if _peek_type() == TamaToken.WORD:
-					node.spawner_name = _peek().value
-					_pos += 1
+				var spawner_val := _collect_to_eol().replace(" ", "")
+				if spawner_val.is_empty():
+					_error_at(_peek(), "Expected spawner filename after 'spawner'")
 				else:
-					_error_at(_peek(), "Expected spawner name after 'spawner'")
+					node.spawner_name = spawner_val
 				_consume(TamaToken.NEWLINE)
 			TamaToken.KW_ACT:
-				node.act = _parse_inline_act()
+				if _peek_type_at(1) == TamaToken.NEWLINE:
+					node.act = _parse_inline_act()
+				else:
+					node.act = _parse_act_call()
 			_:
 				_error_at(tok, "Unexpected token in bullet block: '%s'" % _tok_display(tok))
 				_pos += 1

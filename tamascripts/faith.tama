@@ -1,0 +1,40 @@
+main
+    repeat
+        fire
+            dir abs lerp(0, 6, randf())
+            speed abs 100
+            bullet faith
+        fire
+            dir seq 360/60
+            speed abs 100
+            bullet faith2
+        repeat 59
+            fire faith
+            fire faith2
+        wait lerp(1.0, 1.2, randf())
+
+fire faith
+    dir seq 360/60
+    speed abs 100
+    bullet faith
+
+fire faith2
+    dir seq 360/60
+    speed abs 100
+    bullet faith2
+
+bullet faith
+    type example
+    act
+        wait 0.5
+        chdir
+            dir rel 90
+            over 3.0
+
+bullet faith2
+    type example
+    act
+        wait 0.5
+        chdir
+            dir rel -90
+            over 3.0

@@ -7,9 +7,8 @@ main
 fire bwp(direction)
     dir rel direction
     speed abs 250
-    offset
-        x abs 0
-        y abs 0
+    bullet
+        type example
 
 act shoot
     fire bwp((360/8) * 1)
@@ -22,7 +21,7 @@ act shoot
     fire bwp((360/8) * 8)
 
 bullet shooter
-    type shooter
+    type example
     act
         repeat
             act shoot

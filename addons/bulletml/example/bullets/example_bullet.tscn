@@ -1,0 +1,53 @@
+[gd_scene format=3 uid="uid://byifemnnn7hte"]
+
+[ext_resource type="Texture2D" uid="uid://v6dtfgr4lubj" path="res://addons/bulletml/example/bullets/bullet.png" id="1"]
+[ext_resource type="Script" uid="uid://cnnaqucbd3810" path="res://addons/bulletml/example/bullets/example_bullet.gd" id="2"]
+
+[sub_resource type="AtlasTexture" id="1"]
+atlas = ExtResource("1")
+region = Rect2(0, 0, 14, 14)
+
+[sub_resource type="AtlasTexture" id="2"]
+atlas = ExtResource("1")
+region = Rect2(14, 0, 14, 14)
+
+[sub_resource type="AtlasTexture" id="3"]
+atlas = ExtResource("1")
+region = Rect2(28, 0, 14, 14)
+
+[sub_resource type="AtlasTexture" id="4"]
+atlas = ExtResource("1")
+region = Rect2(42, 0, 14, 14)
+
+[sub_resource type="SpriteFrames" id="5"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("1")
+}, {
+"duration": 1.0,
+"texture": SubResource("2")
+}, {
+"duration": 1.0,
+"texture": SubResource("3")
+}, {
+"duration": 1.0,
+"texture": SubResource("4")
+}],
+"loop": true,
+"name": &"default",
+"speed": 20.0
+}]
+
+[node name="BulletMLBulletInstance" type="CharacterBody2D" unique_id=1467376744]
+script = ExtResource("2")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=609138133]
+sprite_frames = SubResource("5")
+autoplay = "default"
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=258935594]
+position = Vector2(-5.96046e-08, 4.76837e-07)
+scale = Vector2(0.2, 0.2)
+
+[connection signal="screen_exited" from="VisibleOnScreenNotifier2D" to="." method="_on_VisibilityNotifier2D_screen_exited"]

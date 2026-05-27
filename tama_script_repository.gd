@@ -1,0 +1,52 @@
+extends Node
+
+var _scripts: Dictionary[String, TamaAst.ProgramNode] = {}
+
+## Parse every .tam file in path and cache the resulting ASTs.
+## Call this once at startup before running any TamaEmitters.
+func load_scripts(path: String) -> void:
+	var dir := DirAccess.open(path)
+	if not dir:
+		push_error("TamaScriptRepository: cannot open directory '%s'" % path)
+		return
+	dir.list_dir_begin()
+	var file := dir.get_next()
+	while not file.is_empty():
+		if file.ends_with(".tam"):
+			_parse_and_store(file, path.path_join(file))
+		file = dir.get_next()
+	dir.list_dir_end()
+
+## Parse a single .tam file and cache it under its filename.
+func load_script(filename: String, full_path: String) -> void:
+	_parse_and_store(filename, full_path)
+
+## Parse raw TamaScript source and cache it under the given name.
+func load_script_from_source(name: String, source: String) -> void:
+	var program := _parse_source(source, name)
+	if program:
+		_scripts[name] = program
+
+## Retrieve a previously loaded program by filename.
+func get_tama_script(filename: String) -> TamaAst.ProgramNode:
+	return _scripts.get(filename)
+
+## True if a script with this filename has been loaded.
+func has_tama_script(filename: String) -> bool:
+	return _scripts.has(filename)
+
+func _parse_and_store(filename: String, full_path: String) -> void:
+	var source := FileAccess.get_file_as_string(full_path)
+	if source.is_empty():
+		push_error("TamaScriptRepository: could not read '%s'" % full_path)
+		return
+	var program := _parse_source(source, full_path)
+	if program:
+		_scripts[filename] = program
+
+func _parse_source(source: String, label: String) -> TamaAst.ProgramNode:
+	var tokens := TamaLexer.new().tokenize(source)
+	var result := TamaParser.new().parse(tokens)
+	if not result:
+		push_error("TamaScriptRepository: parse failed for '%s'" % label)
+	return result.program

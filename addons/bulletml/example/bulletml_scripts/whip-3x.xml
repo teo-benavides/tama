@@ -1,0 +1,33 @@
+<action label="top">
+	<repeat>
+		<action>
+			<fire>
+				<direction type="aim">0</direction>
+				<speed type="absolute">100</speed>
+				<bullet type="example"/>
+			</fire>
+			<wait>0.4/10.0</wait>
+			<repeat><times>9</times>
+				<action>
+					<fire>
+						<direction type="sequence">20</direction>
+						<speed type="sequence">15</speed>
+						<bullet type="example"/>
+					</fire>
+					<fire>
+						<direction type="sequence">-40</direction>
+						<speed type="sequence">0</speed>
+						<bullet type="example"/>
+					</fire>
+					<fire>
+						<direction type="sequence">20</direction>
+						<speed type="sequence">0</speed>
+						<bullet type="example"/>
+					</fire>
+					<wait>0.4/10.0</wait>
+				</action>	
+			</repeat>
+			<wait>2.0</wait>
+		</action>
+	</repeat>
+</action>

@@ -1,0 +1,8 @@
+main
+    repeat
+        fire
+            dir abs 135
+            speed 300
+            bullet
+                type example
+        wait 0.1

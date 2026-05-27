@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="BulletMLBulletRegistry" format=3 uid="uid://2dyypirluvs5"]
+
+[ext_resource type="Script" uid="uid://j1ri786dxgg8" path="res://addons/bulletml/bulletml_bullet_registry.gd" id="1"]
+[ext_resource type="PackedScene" path="res://addons/bulletml/example/bullets/example_bullet.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://addons/bulletml/example/bullets/spawner_bullet.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://addons/bulletml/example/enemies/example_enemy.tscn" id="4"]
+
+[resource]
+script = ExtResource("1")
+entries = {
+"example": ExtResource("2"),
+"spawner": ExtResource("3"),
+"zako": ExtResource("4")
+}

@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://addons/bulletml/example/enemies/boss_enemy.gd" type="Script" id=1]
+[ext_resource path="res://addons/bulletml/example/other/icon.png" type="Texture2D" id=2]
+
+[node name="BossEnemy" type="CharacterBody2D"]
+script = ExtResource( 1 )
+initialize_position = false
+exempt_from_group = true
+script_filename = "boss.xml"
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color( 1, 0, 0, 1 )
+texture = ExtResource( 2 )

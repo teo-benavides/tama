@@ -15,6 +15,11 @@ run/main_scene="uid://ddi7qj5x80hqh"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[autoload]
+
+TamaScriptRepository="*uid://cm8v6n37nsiq"
+TamaSpawnManager="*uid://tkvso0en214a"
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

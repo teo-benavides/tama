@@ -1,0 +1,7 @@
+main
+    wait 0.5 + randf() * 1.8
+    fire
+        dir aim 0
+        speed 130
+        bullet
+            type example

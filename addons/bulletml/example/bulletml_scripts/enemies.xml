@@ -1,0 +1,55 @@
+<action label="top">
+	<fireRef label="spawn-zakos-wiggle-left">
+		<param>30</param>
+		<param>50</param>
+	</fireRef>
+</action>
+
+<!--$1 = amount of enemies-->
+<!--$2 = height-->
+<fire label="spawn-zakos-wiggle-left">
+	<direction type="absolute">0</direction>
+	<speed type="absolute">0</speed>
+	<bullet type="spawner">
+		<action>
+			<repeat><times>$1</times>
+				<action>
+					<fire>
+						<direction type="absolute">90</direction>
+						<speed type="absolute">130</speed>
+						<offset>
+							<horizontal type="absolute">-20</horizontal>
+							<vertical type="absolute">$2</vertical>
+						</offset>
+						<bulletRef label="wiggle-zako">
+							<param>100</param>
+							<param>0.4</param>
+						</bulletRef>
+					</fire>
+					<wait>0.25</wait>
+				</action>
+			</repeat>
+		</action>
+	</bullet>
+</fire>
+
+<!--$1 = distance wiggled-->
+<!--$2 = wiggle frequency-->
+<bullet shooter="aim-random-x1.xml" type="zako" label="wiggle-zako">
+	<action>
+		<repeat><times>-1</times>
+			<action>
+				<accel>
+					<vertical type="absolute">$1</vertical>
+					<term>$2</term>
+				</accel>
+				<wait>$2</wait>
+				<accel>
+					<vertical type="absolute">-$1</vertical>
+					<term>$2</term>
+				</accel>
+				<wait>$2</wait>
+			</action>
+		</repeat>
+	</action>
+</bullet>

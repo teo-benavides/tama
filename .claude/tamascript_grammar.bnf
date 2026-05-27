@@ -134,6 +134,7 @@ repeat_stmt = "repeat" [ EXPR ] NEWLINE action_block ;
 
 bullet_stmt = bullet_type_stmt
              | bullet_spawner_stmt
+             | act_call
              | inline_act ;
 
 bullet_type_stmt           = "type" IDENT ;
