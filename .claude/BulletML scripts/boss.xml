@@ -1,0 +1,41 @@
+<action label="top">
+    <repeat><times>-1</times>
+        <action>
+            <fire>
+                <direction type="absolute">360/8</direction>
+                <speed type="absolute">100</speed>
+                <bullet type="example"/>
+            </fire>
+            <repeat><times>7</times>
+                <action>
+                    <fire>
+                        <direction type="sequence">360/8</direction>
+                        <speed type="absolute">100</speed>
+                        <bullet type="example"/>
+                    </fire>
+                </action>
+            </repeat>
+            <wait>0.7/15.0</wait>
+            <repeat><times>14</times>
+                <action>
+                    <fire>
+                        <direction type="absolute">360/8</direction>
+                        <speed type="sequence">5</speed>
+                        <bullet type="example"/>
+                    </fire>
+                    <repeat><times>7</times>
+                        <action>
+                            <fire>
+                                <direction type="sequence">360/8</direction>
+                                <speed type="sequence">0</speed>
+                                <bullet type="example"/>
+                            </fire>
+                        </action>
+                    </repeat>
+                    <wait>1.5/15.0</wait>
+                </action>
+            </repeat>
+            <wait>0.5</wait>
+        </action>
+    </repeat>
+</action>

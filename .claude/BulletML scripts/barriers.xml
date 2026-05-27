@@ -1,0 +1,55 @@
+<action label="top">
+	<repeat><times>-1</times>
+		<action>
+            <fire>
+                <direction type="absolute">lerp(0, 6, randf())</direction>
+                <speed type="absolute">100</speed>
+                <bulletRef label="faith" />
+            </fire>
+            <fire>
+                <direction type="sequence">360/60</direction>
+                <speed type="absolute">100</speed>
+                <bulletRef label="faith2" />
+            </fire>
+			<repeat><times>59</times>
+				<action>
+					<fireRef label="faith" />
+					<fireRef label="faith2" />
+				</action>
+			</repeat>
+			<wait>lerp(1.0, 1.2, randf())</wait>
+		</action>
+	</repeat>
+</action>
+
+<fire label="faith">
+	<direction type="sequence">360/60</direction>
+	<speed type="absolute">100</speed>
+	<bulletRef label="faith" />
+</fire>
+
+<fire label="faith2">
+	<direction type="sequence">360/60</direction>
+	<speed type="absolute">100</speed>
+	<bulletRef label="faith2" />
+</fire>
+
+<bullet type="example" label="faith">
+	<action>
+		<wait>0.5</wait>
+		<changeDirection>
+			<direction type="relative">90</direction>
+			<term>3</term>
+		</changeDirection>
+	</action>
+</bullet>
+
+<bullet type="example" label="faith2">
+	<action>
+		<wait>0.5</wait>
+		<changeDirection>
+			<direction type="relative">-90</direction>
+			<term>3</term>
+		</changeDirection>
+	</action>
+</bullet>

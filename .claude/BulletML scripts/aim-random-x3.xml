@@ -1,0 +1,14 @@
+<action label="top">
+	<wait>0.2 + randf() * 1.8</wait>
+	<repeat><times>3</times>
+		<action>
+			<fire>
+				<direction type="aim">0</direction>
+				<speed type="absolute">200</speed>
+				<bullet type="example"/>
+			</fire>
+			<wait>0.3</wait>
+		</action>
+	</repeat>
+	<vanish />
+</action>

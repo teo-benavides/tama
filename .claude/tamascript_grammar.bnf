@@ -1,0 +1,190 @@
+(* ============================================================
+   TAMA GRAMMAR  —  Extended Backus-Naur Form
+   
+   Notation:
+     rule = ...        definition
+     A B               sequence
+     A | B             alternation
+     [ A ]             optional  (0 or 1)
+     { A }             repetition (0 or more)
+     ( A )             grouping
+     "x"               literal terminal
+     UPPER             lexer token
+     (* ... *)         comment
+   ============================================================ *)
+
+
+(* ------------------------------------------------------------
+   LEXER TOKENS
+   ------------------------------------------------------------ *)
+
+IDENT   = LETTER { LETTER | DIGIT | "_" } ;
+            (* any name that is NOT a keyword *)
+
+NUMBER  = DIGIT { DIGIT } [ "." { DIGIT } ] ;
+
+EXPR    = #(* raw token sequence to end-of-line or matching ")"  *)
+            (* evaluated at runtime by Godot's Expression class  *)
+            (* may reference IDENT (params), NUMBER, operators,  *)
+            (* and built-in calls like time()                    *)
+
+NEWLINE = "\n" ;
+INDENT  = #(* increase in leading whitespace vs. previous line   *)
+DEDENT  = #(* decrease in leading whitespace vs. previous line   *)
+
+(* reserved keywords — cannot be used as IDENT *)
+KW = "main" | "fire" | "act" | "bullet"
+   | "repeat" | "wait" | "chdir" | "chspd" | "accel"
+   | "wait" | "vanish"
+   | "dir" | "speed" | "offset" | "spawner"
+   | "abs" | "rel" | "seq"
+   | "over" | "x" | "y" | "type" ;
+
+DIR_TYPE = "aim" | "abs" | "rel" | "seq" ;
+VALUE_TYPE = "abs" | "rel" | "seq" ;
+
+
+(* ------------------------------------------------------------
+   PROGRAM
+   ------------------------------------------------------------ *)
+
+program = main_def { top_level_def } EOF ;
+
+top_level_def = fire_def
+              | act_def
+              | bullet_def ;
+
+
+(* ------------------------------------------------------------
+   TOP-LEVEL DEFINITIONS
+   ------------------------------------------------------------ *)
+
+main_def   = "main" NEWLINE action_block ;
+
+fire_def   = "fire" IDENT [ param_list ] NEWLINE fire_block ;
+
+act_def    = "act"  IDENT [ param_list ] NEWLINE action_block ;
+
+bullet_def = "bullet" IDENT [ param_list ] NEWLINE bullet_block ;
+
+param_list = "(" IDENT { "," IDENT } ")" ;
+
+
+(* ------------------------------------------------------------
+   BLOCKS
+   Each block is a non-empty indented region of statements.
+   ------------------------------------------------------------ *)
+
+fire_block = INDENT
+                 { fire_prop NEWLINE }
+                 bullet_call NEWLINE
+                 { fire_prop NEWLINE }
+             DEDENT ;
+action_block = INDENT { action_stmt NEWLINE } DEDENT ;
+bullet_block = INDENT { bullet_stmt NEWLINE } DEDENT ;
+chdir_block  = INDENT { chdir_stmt  NEWLINE } DEDENT ;
+chspd_block  = INDENT { chspd_stmt  NEWLINE } DEDENT ;
+accel_block  = INDENT { accel_stmt  NEWLINE } DEDENT ;
+offset_block = INDENT { offset_stmt NEWLINE } DEDENT ;
+
+
+(* ------------------------------------------------------------
+   FIRE BLOCK STATEMENTS
+   ------------------------------------------------------------ *)
+
+fire_stmt = dir_stmt
+           | speed_stmt
+           | offset_stmt
+           | bullet_call ;
+
+bullet_call = "bullet" IDENT [ arg_list ] ;
+              (* reference to a named bullet definition, with optional args *)
+
+
+(* ------------------------------------------------------------
+   ACTION BLOCK STATEMENTS
+   ------------------------------------------------------------ *)
+
+action_stmt = dir_stmt
+             | speed_stmt
+             | wait_stmt
+             | offset_stmt
+             | chdir_stmt
+             | accel_stmt
+             | repeat_stmt
+             | inline_act
+             | inline_fire
+             | fire_call
+             | act_call ;
+
+fire_call = "fire" IDENT [ arg_list ] ;
+act_call = "act" IDENT [ arg_list ] ;
+
+arg_list = "(" EXPR { "," EXPR } ")" ;
+
+wait_stmt  = "wait"  EXPR ;
+repeat_stmt = "repeat" [ EXPR ] NEWLINE action_block ;
+              (* omitting EXPR means infinite repeat *)
+
+
+(* ------------------------------------------------------------
+   BULLET BLOCK STATEMENTS
+   ------------------------------------------------------------ *)
+
+bullet_stmt = bullet_type_stmt
+             | bullet_spawner_stmt
+             | inline_act ;
+
+bullet_type_stmt           = "type" IDENT ;
+                      (* declares the bullet's gameplay type, e.g. "zako", "spawner" *)
+bullet_spawner_stmt = "spawner" IDENT ;
+                      (* names the file used to spawn sub-bullets *)
+
+
+(* ------------------------------------------------------------
+   INLINE BLOCKS
+   (anonymous, appear inside other blocks rather than at top level)
+   ------------------------------------------------------------ *)
+
+inline_act  = "act"  NEWLINE action_block ;
+              (* anonymous act — valid inside an action_block or bullet_block *)
+
+inline_fire = "fire" NEWLINE fire_block ;
+              (* anonymous fire — only valid inside an action_block *)
+
+
+(* ------------------------------------------------------------
+   SHARED PROPERTY STATEMENTS
+   (valid in fire, action, chdir, and accel blocks as appropriate)
+   ------------------------------------------------------------ *)
+
+dir_stmt   = "dir"  [ DIR_TYPE ] EXPR ;
+            # default DIR_TYPE = aim
+speed_stmt = "speed" [ VALUE_TYPE ] EXPR ;
+            # default VALUE_TYPE = abs
+
+axis = "x" | "y" ;
+
+offset_stmt      = offset_block_form | offset_inline_form ;
+offset_block_form  = "offset" NEWLINE offset_block ;
+offset_inline_form = "offset" EXPR ;
+offset_block = INDENT { offset_axis_stmt NEWLINE } DEDENT ;
+offset_axis_stmt = axis [ VALUE_TYPE ] EXPR ;
+                    # default VALUE_TYPE = rel
+                    # inline form offsets relative to the spawner's local (accounts for rotation/angle) up direction
+
+chdir_stmt = "chdir" NEWLINE chdir_block ;
+chdir_block = INDENT { chdir_inner NEWLINE } DEDENT ;
+chdir_inner = dir_stmt | over_stmt ;
+
+chspd_stmt = "chspd" NEWLINE chspd_block ;
+chspd_block = INDENT { chspd_inner NEWLINE } DEDENT ;
+chspd_inner = speed_stmt | over_stmt ;
+
+accel_stmt = "accel" NEWLINE accel_block ;
+accel_block = INDENT { accel_inner NEWLINE } DEDENT ;
+accel_inner = axis [ VALUE_TYPE ] EXPR
+            | over_stmt ;
+
+over_stmt  = "over" EXPR ;
+             (* duration in seconds for chdir/chspd/accel transitions *)

@@ -1,0 +1,34 @@
+main
+    fire spawn_zakos_wiggle_left(30, 50)
+
+fire spawn_zakos_wiggle_left(enemies, spawn_y)
+    dir abs 0
+    speed 0
+    bullet shooter(spawn_y)
+
+bullet shooter(spawn_y)
+    type shooter
+    act
+        repeat enemies
+            fire
+                dir abs 90
+                speed abs 130
+                offset
+                    x abs -20
+                    y abs spawn_y
+                bullet wiggle_zako(100, 0.4)
+            wait 0.25
+
+bullet wiggle_zako(wiggle_distance, wiggle_frequency)
+    type zako
+    spawner aim_random_x1
+    act
+        repeat
+            accel
+                y abs wiggle_distance
+                over wiggle_frequency
+            wait wiggle_frequency
+            accel
+                y abs -wiggle_distance
+                over wiggle_frequency
+            wait wiggle_frequency

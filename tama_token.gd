@@ -1,0 +1,79 @@
+class_name TamaToken
+
+# --- Token type constants ---
+const NUMBER     = "NUMBER"
+const WORD       = "WORD"
+const DOLLAR_VAR = "DOLLAR_VAR"   # $rand, $rank, $1, $2 ...
+const LPAREN     = "LPAREN"
+const RPAREN     = "RPAREN"
+const OP         = "OP"
+const COMMA      = "COMMA"
+const NEWLINE    = "NEWLINE"
+const INDENT     = "INDENT"
+const DEDENT     = "DEDENT"
+const EOF        = "EOF"
+const ERROR      = "ERROR"
+
+# Keywords
+const KW_MAIN    = "KW_MAIN"
+const KW_FIRE    = "KW_FIRE"
+const KW_ACT     = "KW_ACT"
+const KW_BULLET  = "KW_BULLET"
+const KW_REPEAT  = "KW_REPEAT"
+const KW_WAIT    = "KW_WAIT"
+const KW_VANISH  = "KW_VANISH"
+const KW_CHDIR   = "KW_CHDIR"
+const KW_CHSPD   = "KW_CHSPD"
+const KW_DIR     = "KW_DIR"
+const KW_SPEED   = "KW_SPEED"
+const KW_OFFSET  = "KW_OFFSET"
+const KW_ACCEL   = "KW_ACCEL"
+const KW_AIM     = "KW_AIM"
+const KW_ABS     = "KW_ABS"
+const KW_REL     = "KW_REL"
+const KW_SEQ     = "KW_SEQ"
+const KW_OVER    = "KW_OVER"
+const KW_X       = "KW_X"
+const KW_Y       = "KW_Y"
+const KW_TYPE    = "KW_TYPE"
+const KW_SPAWNER = "KW_SPAWNER"
+
+const KEYWORDS: Dictionary = {
+	"main":    KW_MAIN,
+	"fire":    KW_FIRE,
+	"act":     KW_ACT,
+	"bullet":  KW_BULLET,
+	"repeat":  KW_REPEAT,
+	"wait":    KW_WAIT,
+	"vanish":  KW_VANISH,
+	"chdir":   KW_CHDIR,
+	"chspd":   KW_CHSPD,
+	"dir":     KW_DIR,
+	"speed":   KW_SPEED,
+	"offset":  KW_OFFSET,
+	"accel":   KW_ACCEL,
+	"aim":     KW_AIM,
+	"abs":     KW_ABS,
+	"rel":     KW_REL,
+	"seq":     KW_SEQ,
+	"over":    KW_OVER,
+	"x":       KW_X,
+	"y":       KW_Y,
+	"type":    KW_TYPE,
+	"spawner": KW_SPAWNER,
+}
+
+# --- Instance fields ---
+var type:  String
+var value: String
+var line:  int
+var col:   int
+
+func _init(p_type: String, p_value: String, p_line: int, p_col: int) -> void:
+	type  = p_type
+	value = p_value
+	line  = p_line
+	col   = p_col
+
+func _to_string() -> String:
+	return "[%s:'%s' L%d C%d]" % [type, value, line, col]

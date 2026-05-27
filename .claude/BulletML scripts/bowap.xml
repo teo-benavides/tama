@@ -1,0 +1,40 @@
+<action label="top">
+	<fire>
+		<direction type="absolute">0</direction>
+		<speed type="absolute">0</speed>
+		<bulletRef label="shooter_bullet" />
+	</fire>
+</action>
+
+<fire label="bwp">
+	<direction type="relative">$1</direction>
+	<speed type="absolute">250</speed>
+	<offset>0</offset>
+	<bullet type="example"/>
+</fire>
+
+<bullet type="spawner" label="shooter_bullet">
+	<action>
+        <repeat>
+            <action>
+                <actionRef label="shoot" />
+                <changeDirection>
+                    <direction type="relative">time()*4</direction>
+                    <term>0</term>
+                </changeDirection>
+                <wait>0.07</wait>
+            </action>
+        </repeat>
+	</action>
+</bullet>
+
+<action label="shoot">
+	<fireRef label="bwp"><param>(360/8) * 1</param></fireRef>
+	<fireRef label="bwp"><param>(360/8) * 2</param></fireRef>
+	<fireRef label="bwp"><param>(360/8) * 3</param></fireRef>
+	<fireRef label="bwp"><param>(360/8) * 4</param></fireRef>
+	<fireRef label="bwp"><param>(360/8) * 5</param></fireRef>
+	<fireRef label="bwp"><param>(360/8) * 6</param></fireRef>
+	<fireRef label="bwp"><param>(360/8) * 7</param></fireRef>
+	<fireRef label="bwp"><param>(360/8) * 8</param></fireRef>
+</action>

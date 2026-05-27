@@ -1,0 +1,43 @@
+<action label="top">
+    <wait>lerp(0.5, 1, randf())</wait>
+    <actionRef label="fire_arrow">
+        <param>10</param>
+    </actionRef>
+    <actionRef label="fire_arrow">
+        <param>12</param>
+    </actionRef>
+    <actionRef label="fire_arrow">
+        <param>14</param>
+    </actionRef>
+	<vanish />
+</action>
+
+<action label="fire_arrow">
+    <fire>
+        <direction type="aim">0</direction>
+        <speed type="absolute">100</speed>
+        <bullet type="example"/>
+	</fire>
+    <wait>0.1</wait>
+    <fire>
+        <direction type="sequence">$1</direction>
+        <speed type="absolute">100</speed>
+        <bullet type="example"/>
+	</fire>
+    <fire>
+        <direction type="sequence">-$1*2</direction>
+        <speed type="absolute">100</speed>
+        <bullet type="example"/>
+	</fire>
+    <wait>0.1</wait>
+    <fire>
+        <direction type="sequence">$1*3</direction>
+        <speed type="absolute">100</speed>
+        <bullet type="example"/>
+	</fire>
+    <fire>
+        <direction type="sequence">-$1*4</direction>
+        <speed type="absolute">100</speed>
+        <bullet type="example"/>
+	</fire>
+</action>
