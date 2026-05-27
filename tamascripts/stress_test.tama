@@ -1,0 +1,10 @@
+main
+    repeat
+        repeat 1000 i
+            fire
+                dir abs (360.0/1000.0) * i
+                spd 400
+                bullet
+                    type example
+        wait 0.5
+

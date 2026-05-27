@@ -131,7 +131,8 @@ async_act  = "async" ( inline_act | act_call ) ;
 arg_list = "(" EXPR { "," EXPR } ")" ;
 
 wait_stmt  = "wait"  EXPR ;
-repeat_stmt = "repeat" [ EXPR ] NEWLINE action_block ;
+repeat_stmt = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block ;
+              (* IDENT names the loop index, 1-based; may be nested arbitrarily *)
               (* omitting EXPR means infinite repeat *)
 
 

@@ -1,4 +1,5 @@
 main
+    # we fire a separate bullet because we need it to chdir
     fire
         dir abs 0
         speed abs 0
@@ -10,21 +11,12 @@ fire bwp(direction)
     bullet
         type example
 
-act shoot
-    fire bwp((360/8) * 1)
-    fire bwp((360/8) * 2)
-    fire bwp((360/8) * 3)
-    fire bwp((360/8) * 4)
-    fire bwp((360/8) * 5)
-    fire bwp((360/8) * 6)
-    fire bwp((360/8) * 7)
-    fire bwp((360/8) * 8)
-
 bullet shooter
     type example
     act
         repeat
-            act shoot
+            repeat 8 i
+                fire bwp((360/8) * i)
             chdir
                 dir rel time()*4
                 over 0

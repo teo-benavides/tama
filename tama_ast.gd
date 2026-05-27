@@ -180,15 +180,17 @@ class VanishNode extends ASTNode:
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 
-# repeat [count_expr]  — omitting count means infinite
+# repeat [count_expr] [index_var]  — omitting count means infinite; index_var is 1-based
 class RepeatNode extends ASTNode:
-	var count: String
-	var body:  Array
+	var count:     String
+	var index_var: String
+	var body:      Array
 
 	func _init(p_count: String, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
-		count = p_count
-		body  = []
+		count     = p_count
+		index_var = ""
+		body      = []
 
 # chdir
 #   dir:  DirNode | null

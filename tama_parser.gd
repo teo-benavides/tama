@@ -410,10 +410,29 @@ func _parse_accel() -> TamaAst.AccelNode:
 func _parse_repeat() -> TamaAst.RepeatNode:
 	var tok := _consume(TamaToken.KW_REPEAT)
 	var count := ""
+	var index_var := ""
 	if _peek_type() != TamaToken.NEWLINE:
-		count = _collect_to_eol()
+		# Find where this line ends
+		var end := _pos
+		while end < _tokens.size() \
+		  and _tokens[end].type != TamaToken.NEWLINE \
+		  and _tokens[end].type != TamaToken.EOF:
+			end += 1
+		# If the last token is a plain WORD and there are tokens before it,
+		# treat it as the index variable; otherwise collect everything as count.
+		if end - 1 > _pos and _tokens[end - 1].type == TamaToken.WORD:
+			index_var = _tokens[end - 1].value
+			var parts: Array[String] = []
+			while _pos < end - 1:
+				parts.append(_tokens[_pos].value)
+				_pos += 1
+			count = " ".join(parts)
+			_pos += 1  # consume the index WORD
+		else:
+			count = _collect_to_eol()
 	_consume(TamaToken.NEWLINE)
 	var node := TamaAst.RepeatNode.new(count, tok.line, tok.col)
+	node.index_var = index_var
 	node.body = _parse_block(_parse_action_statement)
 	return node
 

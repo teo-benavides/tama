@@ -193,7 +193,11 @@ func _exec_repeat(node: TamaAst.RepeatNode, scope: Dictionary) -> void:
 		count = roundi(_eval(node.count, scope))
 	var i := 0
 	while _running and (count < 0 or i < count):
-		await _exec_action_body(node.body, scope)
+		var iter_scope := scope
+		if not node.index_var.is_empty():
+			iter_scope = scope.duplicate()
+			iter_scope[node.index_var] = float(i + 1)
+		await _exec_action_body(node.body, iter_scope)
 		i += 1
 
 func _exec_fire_call(node: TamaAst.FireCallNode, scope: Dictionary) -> void:
