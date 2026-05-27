@@ -35,7 +35,8 @@ const KW_OVER    = "KW_OVER"
 const KW_X       = "KW_X"
 const KW_Y       = "KW_Y"
 const KW_TYPE    = "KW_TYPE"
-const KW_SPAWNER = "KW_SPAWNER"
+const KW_EMITTER = "KW_EMITTER"
+const KW_ASYNC   = "KW_ASYNC"
 
 const KEYWORDS: Dictionary = {
 	"main":    KW_MAIN,
@@ -61,7 +62,9 @@ const KEYWORDS: Dictionary = {
 	"x":       KW_X,
 	"y":       KW_Y,
 	"type":    KW_TYPE,
-	"spawner": KW_SPAWNER,
+	"emitter": KW_EMITTER,
+	"emt":     KW_EMITTER,
+	"async":   KW_ASYNC,
 }
 
 # --- Instance fields ---

@@ -1,0 +1,34 @@
+main
+    # these come from the left
+    async act spawn_zakos_wiggle(30, 0, 50, 0)
+    # these come from the right
+    async act spawn_zakos_wiggle(30, 1000, 100, 180)
+    # these come from the left
+    async act spawn_zakos_wiggle(30, 0, 150, 0)
+    # these come from the right
+    async act spawn_zakos_wiggle(30, 1000, 200, 180)
+    
+act spawn_zakos_wiggle(enemies, spawn_x, spawn_y, direction)
+    repeat enemies
+        fire
+            dir abs direction
+            speed abs 130
+            offset
+                x abs spawn_x
+                y abs spawn_y
+            bullet wiggle_zako(100, 0.4)
+        wait 0.25
+
+bullet wiggle_zako(wiggle_distance, wiggle_frequency)
+    type example
+    emt aim_random_x1
+    act
+        repeat
+            accel
+                y abs wiggle_distance
+                over wiggle_frequency
+            wait wiggle_frequency
+            accel
+                y abs -wiggle_distance
+                over wiggle_frequency
+            wait wiggle_frequency

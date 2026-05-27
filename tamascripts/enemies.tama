@@ -1,27 +1,30 @@
 main
-    fire spawn_zakos_wiggle_left(30, 50)
+    # these come from the left
+    fire spawn_zakos_wiggle(30, 0, 50, 0)
+    # these come from the right
+    fire spawn_zakos_wiggle(30, 1000, 100, 180)
 
-fire spawn_zakos_wiggle_left(enemies, spawn_y)
+fire spawn_zakos_wiggle(enemies, spawn_x, spawn_y, direction)
     dir abs 0
     speed 0
-    bullet shooter(enemies, spawn_y)
+    bullet shooter(enemies, spawn_x, spawn_y, direction)
 
-bullet shooter(enemies, spawn_y)
+bullet shooter(enemies, spawn_x, spawn_y, direction)
     type example
     act
         repeat enemies
             fire
-                dir abs 90
+                dir abs direction
                 speed abs 130
                 offset
-                    x abs 0
+                    x abs spawn_x
                     y abs spawn_y
                 bullet wiggle_zako(100, 0.4)
             wait 0.25
 
 bullet wiggle_zako(wiggle_distance, wiggle_frequency)
     type example
-    spawner aim_random_x1.tam
+    emt aim_random_x1
     act
         repeat
             accel

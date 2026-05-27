@@ -155,7 +155,7 @@ class InlineBulletNode extends ASTNode:
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 
-# spawner <name>  — inside a bullet def, names the spawner bullet
+# emitter <name>  — inside a bullet def, names the emitter script
 class FireSpawnerNode extends ASTNode:
 	var bullet_name: String
 
@@ -232,7 +232,8 @@ class OverNode extends ASTNode:
 
 # act (anonymous inline block)
 class InlineActNode extends ASTNode:
-	var body: Array
+	var body:     Array
+	var is_async: bool = false
 
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
@@ -260,8 +261,9 @@ class FireCallNode extends ASTNode:
 
 # act <name>([args...])  — named act call inside an action block
 class ActCallNode extends ASTNode:
-	var name: String
-	var args: Array[String]
+	var name:     String
+	var args:     Array[String]
+	var is_async: bool = false
 
 	func _init(p_name: String, p_args: Array[String], p_line: int, p_col: int) -> void:
 		super(p_line, p_col)

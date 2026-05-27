@@ -453,6 +453,23 @@ func _parse_act_call() -> TamaAst.ActCallNode:
 	_consume(TamaToken.NEWLINE)
 	return TamaAst.ActCallNode.new(name, args, name_tok.line, name_tok.col)
 
+func _parse_async_act():  # -> TamaAst.ActCallNode | TamaAst.InlineActNode
+	_consume(TamaToken.KW_ASYNC)
+	var tok := _peek()
+	if tok.type != TamaToken.KW_ACT:
+		_error_at(tok, "Expected 'act' after 'async'")
+		return null
+	var node: TamaAst.ASTNode
+	if _peek_type_at(1) == TamaToken.NEWLINE:
+		node = _parse_inline_act()
+	else:
+		node = _parse_act_call()
+	if node is TamaAst.InlineActNode:
+		(node as TamaAst.InlineActNode).is_async = true
+	elif node is TamaAst.ActCallNode:
+		(node as TamaAst.ActCallNode).is_async = true
+	return node
+
 func _parse_bullet_call() -> TamaAst.BulletCallNode:
 	_consume(TamaToken.KW_BULLET)
 	var name_tok := _peek()
@@ -479,11 +496,11 @@ func _parse_inline_bullet() -> TamaAst.InlineBulletNode:
 				else:
 					_error_at(_peek(), "Expected bullet type name after 'type'")
 				_consume(TamaToken.NEWLINE)
-			TamaToken.KW_SPAWNER:
-				_consume(TamaToken.KW_SPAWNER)
+			TamaToken.KW_EMITTER:
+				_consume(TamaToken.KW_EMITTER)
 				var spawner_val := _collect_to_eol().replace(" ", "")
 				if spawner_val.is_empty():
-					_error_at(_peek(), "Expected spawner filename after 'spawner'")
+					_error_at(_peek(), "Expected emitter filename after 'emitter'")
 				else:
 					node.spawner_name = spawner_val
 				_consume(TamaToken.NEWLINE)
@@ -521,6 +538,8 @@ func _parse_action_statement():   # -> TamaAst.ASTNode
 				return _parse_inline_act()
 			else:
 				return _parse_act_call()
+		TamaToken.KW_ASYNC:
+			return _parse_async_act()
 		TamaToken.KW_FIRE:
 			# fire NEWLINE ... = inline fire;  fire IDENT ... = fire call
 			if _peek_type_at(1) == TamaToken.NEWLINE:
@@ -623,11 +642,11 @@ func _parse_bullet_def() -> TamaAst.BulletDefNode:
 				else:
 					_error_at(_peek(), "Expected bullet type name after 'type'")
 				_consume(TamaToken.NEWLINE)
-			TamaToken.KW_SPAWNER:
-				_consume(TamaToken.KW_SPAWNER)
+			TamaToken.KW_EMITTER:
+				_consume(TamaToken.KW_EMITTER)
 				var spawner_val := _collect_to_eol().replace(" ", "")
 				if spawner_val.is_empty():
-					_error_at(_peek(), "Expected spawner filename after 'spawner'")
+					_error_at(_peek(), "Expected emitter filename after 'emitter'")
 				else:
 					node.spawner_name = spawner_val
 				_consume(TamaToken.NEWLINE)

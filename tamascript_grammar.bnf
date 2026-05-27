@@ -40,9 +40,9 @@ COMMENT = "#" { any character except newline } ;
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "wait" | "chdir" | "chspd" | "accel"
    | "wait" | "vanish"
-   | "dir" | "speed" | "spd" | "offset" | "spawner"
+   | "dir" | "speed" | "spd" | "offset" | "emitter" | "emt"
    | "abs" | "rel" | "seq"
-   | "over" | "x" | "y" | "type" ;
+   | "over" | "x" | "y" | "type" | "async" ;
 
 DIR_TYPE = "aim" | "abs" | "rel" | "seq" ;
 VALUE_TYPE = "abs" | "rel" | "seq" ;
@@ -120,10 +120,13 @@ action_stmt = dir_stmt
              | inline_act
              | inline_fire
              | fire_call
-             | act_call ;
+             | act_call
+             | async_act ;
 
-fire_call = "fire" IDENT [ arg_list ] ;
-act_call = "act" IDENT [ arg_list ] ;
+fire_call  = "fire" IDENT [ arg_list ] ;
+act_call   = "act" IDENT [ arg_list ] ;
+async_act  = "async" ( inline_act | act_call ) ;
+             (* fires the act without blocking; execution continues immediately *)
 
 arg_list = "(" EXPR { "," EXPR } ")" ;
 
@@ -143,7 +146,7 @@ bullet_stmt = bullet_type_stmt
 
 bullet_type_stmt           = "type" IDENT ;
                       (* declares the bullet's gameplay type, e.g. "zako", "spawner" *)
-bullet_spawner_stmt = "spawner" IDENT ;
+bullet_spawner_stmt = ( "emitter" | "emt" ) IDENT ;
                       (* names the file used to spawn sub-bullets *)
 
 

@@ -58,6 +58,7 @@ signal vanished
 signal changed_direction(data: ChdirData)
 signal changed_speed(data: ChspdData)
 signal accelerated(data: AccelData)
+signal _all_async_done
 
 # ---------------------------------------------------------------------------
 # State
@@ -65,6 +66,7 @@ signal accelerated(data: AccelData)
 
 var _program: TamaAst.ProgramNode
 var _running: bool = false
+var _async_count: int = 0
 var context: TamaContext = TamaContext.new()
 
 # ---------------------------------------------------------------------------
@@ -80,6 +82,8 @@ func start(program: TamaAst.ProgramNode) -> void:
 		return
 	_running = true
 	await _exec_action_body(_program.main.body, {})
+	if _async_count > 0:
+		await _all_async_done
 	_running = false
 
 # Run a bullet's act, called by the spawning system after bullet_fired.
@@ -131,10 +135,18 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 		_exec_fire_node(node, scope)
 
 	elif node is TamaAst.ActCallNode:
-		await _exec_act_call(node as TamaAst.ActCallNode, scope)
+		var acn := node as TamaAst.ActCallNode
+		if acn.is_async:
+			_run_async(func(): await _exec_act_call(acn, scope))
+		else:
+			await _exec_act_call(acn, scope)
 
 	elif node is TamaAst.InlineActNode:
-		await _exec_action_body((node as TamaAst.InlineActNode).body, scope)
+		var ian := node as TamaAst.InlineActNode
+		if ian.is_async:
+			_run_async(func(): await _exec_action_body(ian.body, scope))
+		else:
+			await _exec_action_body(ian.body, scope)
 
 	elif node is TamaAst.ChdirNode:
 		var cn := node as TamaAst.ChdirNode
@@ -197,6 +209,13 @@ func _exec_act_call(node: TamaAst.ActCallNode, scope: Dictionary) -> void:
 		push_error("TamaInterpreter: unknown act '%s'" % node.name)
 		return
 	await _exec_action_body(act_def.body, _bind_args(act_def.params, node.args, scope))
+
+func _run_async(fn: Callable) -> void:
+	_async_count += 1
+	await fn.call()
+	_async_count -= 1
+	if _async_count == 0:
+		_all_async_done.emit()
 
 # Duck-typed: accepts FireDefNode or InlineFireNode — both share dir/speed/offset/bullet.
 func _exec_fire_node(node, scope: Dictionary) -> void:
