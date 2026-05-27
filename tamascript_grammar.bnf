@@ -32,11 +32,15 @@ NEWLINE = "\n" ;
 INDENT  = #(* increase in leading whitespace vs. previous line   *)
 DEDENT  = #(* decrease in leading whitespace vs. previous line   *)
 
+COMMENT = "#" { any character except newline } ;
+          (* from "#" to end of line; valid anywhere whitespace is allowed,
+             both as a full line and trailing after a statement            *)
+
 (* reserved keywords — cannot be used as IDENT *)
-KW = "main" | "fire" | "act" | "bullet"
+KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "wait" | "chdir" | "chspd" | "accel"
    | "wait" | "vanish"
-   | "dir" | "speed" | "offset" | "spawner"
+   | "dir" | "speed" | "spd" | "offset" | "spawner"
    | "abs" | "rel" | "seq"
    | "over" | "x" | "y" | "type" ;
 
@@ -65,7 +69,7 @@ fire_def   = "fire" IDENT [ param_list ] NEWLINE fire_block ;
 
 act_def    = "act"  IDENT [ param_list ] NEWLINE action_block ;
 
-bullet_def = "bullet" IDENT [ param_list ] NEWLINE bullet_block ;
+bullet_def = ( "bullet" | "bul" ) IDENT [ param_list ] NEWLINE bullet_block ;
 
 param_list = "(" IDENT { "," IDENT } ")" ;
 
@@ -98,7 +102,7 @@ fire_stmt = dir_stmt
            | offset_stmt
            | bullet_call ;
 
-bullet_call = "bullet" IDENT [ arg_list ] ;
+bullet_call = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
               (* reference to a named bullet definition, with optional args *)
 
 
@@ -162,7 +166,7 @@ inline_fire = "fire" NEWLINE fire_block ;
 
 dir_stmt   = "dir"  [ DIR_TYPE ] EXPR ;
             # default DIR_TYPE = aim
-speed_stmt = "speed" [ VALUE_TYPE ] EXPR ;
+speed_stmt = ( "speed" | "spd" ) [ VALUE_TYPE ] EXPR ;
             # default VALUE_TYPE = abs
 
 axis = "x" | "y" ;

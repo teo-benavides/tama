@@ -10,7 +10,7 @@ script = ExtResource("1_ig7tw")
 [node name="TamaEmitter" type="Node2D" parent="." unique_id=707930907]
 position = Vector2(565, 308)
 script = ExtResource("2_0xm2m")
-script_filename = "enemies.tam"
+script_filename = "faith.tama"
 metadata/_custom_type_script = "uid://cgn6yxjungdbv"
 
 [node name="ExamplePlayer" parent="." unique_id=985488048 instance=ExtResource("3_h2yge")]
