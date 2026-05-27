@@ -24,6 +24,7 @@ var _initial_position := Vector2.ZERO
 var player_position := Vector2.ZERO
 
 func _ready() -> void:
+	add_to_group(&"tama_bullets")
 	global_position = _initial_position
 	var screen := Vector2(
 		ProjectSettings.get_setting("display/window/size/viewport_width"),

@@ -3,6 +3,7 @@ class_name TamaEmitter
 
 ## Filename of the .tam script to run (must be loaded in spawn_manager.repository first).
 @export var script_filename: String
+@export var excluded_from_group: bool = false
 
 var _interpreter: TamaInterpreter
 var _running: bool = false
@@ -11,6 +12,10 @@ var _running: bool = false
 var _last_angle: float = 0.0
 @warning_ignore("unused_private_class_variable")
 var _last_speed: float = 0.0
+
+func _ready() -> void:
+	if not excluded_from_group:
+		add_to_group(&"tama_emitters")
 
 # ---------------------------------------------------------------------------
 # Public API
