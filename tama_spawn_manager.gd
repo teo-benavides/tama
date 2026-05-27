@@ -89,7 +89,10 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 # ---------------------------------------------------------------------------
 
 func _start_spawner(interpreter: TamaInterpreter, spawner_filename: String) -> void:
-	var filename := spawner_filename if spawner_filename.get_extension() != "" else spawner_filename + ".tam"
+	var ext := spawner_filename.get_extension()
+	var filename := spawner_filename if ext != "" else spawner_filename + ".tama"
+	if ext.is_empty() and not TamaScriptRepository.has_tama_script(filename):
+		filename = spawner_filename + ".tam"
 	var prog := get_tama_script(filename)
 	if prog:
 		interpreter.start(prog)
