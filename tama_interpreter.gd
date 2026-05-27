@@ -20,11 +20,12 @@ class BulletFireData:
 	var offset_y:      float
 
 	# Bullet properties
-	var bullet_type:    String
-	var bullet_spawner: String
-	var bullet_act:     TamaAst.ASTNode    # InlineActNode or ActCallNode, null if none
-	var bullet_params:  Array[String] = [] # param names from the bullet def
-	var bullet_args:    Array[float]  = [] # evaluated args matching bullet_params
+	var bullet_type:           String
+	var bullet_spawner:        String
+	var bullet_inline_emitter: TamaAst.InlineActNode  # null if named/absent
+	var bullet_act:            TamaAst.ASTNode    # InlineActNode or ActCallNode, null if none
+	var bullet_params:         Array[String] = [] # param names from the bullet def
+	var bullet_args:           Array[float]  = [] # evaluated args matching bullet_params
 
 	# The program that fired this bullet — needed so the bullet's act can resolve
 	# named fires/acts/bullets from the same script even without a spawner file.
@@ -100,6 +101,14 @@ func start_act(
 		await _exec_action_body((act as TamaAst.InlineActNode).body, scope)
 	elif act is TamaAst.ActCallNode:
 		await _exec_act_call(act as TamaAst.ActCallNode, scope)
+	_running = false
+
+func start_emitter(program: TamaAst.ProgramNode, emitter_def: TamaAst.EmitterDefNode) -> void:
+	_program = program
+	_running = true
+	await _exec_action_body(emitter_def.body, {})
+	if _async_count > 0:
+		await _all_async_done
 	_running = false
 
 func stop() -> void:
@@ -256,18 +265,20 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 	# Bullet
 	if node.bullet is TamaAst.InlineBulletNode:
 		var ib := node.bullet as TamaAst.InlineBulletNode
-		data.bullet_type    = ib.bullet_type
-		data.bullet_spawner = ib.spawner_name
-		data.bullet_act     = ib.act
+		data.bullet_type           = ib.bullet_type
+		data.bullet_spawner        = ib.spawner_name
+		data.bullet_inline_emitter = ib.inline_emitter
+		data.bullet_act            = ib.act
 	else:
 		var bullet_def := _find_bullet((node.bullet as TamaAst.BulletCallNode).name)
 		if not bullet_def:
 			push_error("TamaInterpreter: unknown bullet '%s'" % (node.bullet as TamaAst.BulletCallNode).name)
 			return
-		data.bullet_type    = bullet_def.bullet_type
-		data.bullet_spawner = bullet_def.spawner_name
-		data.bullet_act     = bullet_def.act
-		data.bullet_params  = bullet_def.params.duplicate()
+		data.bullet_type           = bullet_def.bullet_type
+		data.bullet_spawner        = bullet_def.spawner_name
+		data.bullet_inline_emitter = bullet_def.inline_emitter
+		data.bullet_act            = bullet_def.act
+		data.bullet_params         = bullet_def.params.duplicate()
 		for arg_expr: String in (node.bullet as TamaAst.BulletCallNode).args:
 			data.bullet_args.append(_eval(arg_expr, scope))
 

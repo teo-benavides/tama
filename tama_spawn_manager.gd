@@ -68,7 +68,7 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 			CONNECT_ONE_SHOT
 		)
 
-	if not data.bullet_spawner.is_empty():
+	if not data.bullet_spawner.is_empty() or data.bullet_inline_emitter != null:
 		# When the bullet also has an act, the act already owns bullet_runner.
 		# Create a separate interpreter so both run in parallel.
 		var spawner_runner: TamaInterpreter
@@ -79,23 +79,27 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 		else:
 			spawner_runner = bullet_runner
 		connect_interpreter(spawner_runner, bullet)
-		bullet.ready.connect(
-			func(): _start_spawner(spawner_runner, data.bullet_spawner),
-			CONNECT_ONE_SHOT
-		)
+		if not data.bullet_spawner.is_empty():
+			bullet.ready.connect(
+				func(): _start_spawner(spawner_runner, data.bullet_spawner, data.source_program),
+				CONNECT_ONE_SHOT
+			)
+		else:
+			bullet.ready.connect(
+				func(): spawner_runner.start_act(data.source_program, data.bullet_inline_emitter, {}),
+				CONNECT_ONE_SHOT
+			)
 
 # ---------------------------------------------------------------------------
 # Spawner support
 # ---------------------------------------------------------------------------
 
-func _start_spawner(interpreter: TamaInterpreter, spawner_filename: String) -> void:
-	var ext := spawner_filename.get_extension()
-	var filename := spawner_filename if ext != "" else spawner_filename + ".tama"
-	if ext.is_empty() and not TamaScriptRepository.has_tama_script(filename):
-		filename = spawner_filename + ".tam"
-	var prog := get_tama_script(filename)
-	if prog:
-		interpreter.start(prog)
+func _start_spawner(interpreter: TamaInterpreter, emitter_name: String, source_program: TamaAst.ProgramNode) -> void:
+	for emitter_def: TamaAst.EmitterDefNode in source_program.emitters:
+		if emitter_def.name == emitter_name:
+			interpreter.start_emitter(source_program, emitter_def)
+			return
+	push_error("TamaSpawnManager: unknown emitter '%s'" % emitter_name)
 
 
 # ---------------------------------------------------------------------------

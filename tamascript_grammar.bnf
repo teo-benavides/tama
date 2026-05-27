@@ -56,20 +56,24 @@ program = main_def { top_level_def } EOF ;
 
 top_level_def = fire_def
               | act_def
-              | bullet_def ;
+              | bullet_def
+              | emitter_def ;
 
 
 (* ------------------------------------------------------------
    TOP-LEVEL DEFINITIONS
    ------------------------------------------------------------ *)
 
-main_def   = "main" NEWLINE action_block ;
+main_def     = "main" NEWLINE action_block ;
 
-fire_def   = "fire" IDENT [ param_list ] NEWLINE fire_block ;
+fire_def     = "fire" IDENT [ param_list ] NEWLINE fire_block ;
 
-act_def    = "act"  IDENT [ param_list ] NEWLINE action_block ;
+act_def      = "act"  IDENT [ param_list ] NEWLINE action_block ;
 
-bullet_def = ( "bullet" | "bul" ) IDENT [ param_list ] NEWLINE bullet_block ;
+bullet_def   = ( "bullet" | "bul" ) IDENT [ param_list ] NEWLINE bullet_block ;
+
+emitter_def  = ( "emitter" | "emt" ) IDENT NEWLINE action_block ;
+               (* defines a named emitter; referenced by IDENT in bullet blocks *)
 
 param_list = "(" IDENT { "," IDENT } ")" ;
 
@@ -147,8 +151,9 @@ bullet_stmt = bullet_type_stmt
 
 bullet_type_stmt           = "type" IDENT ;
                       (* declares the bullet's gameplay type, e.g. "zako", "spawner" *)
-bullet_spawner_stmt = ( "emitter" | "emt" ) IDENT ;
-                      (* names the file used to spawn sub-bullets *)
+bullet_spawner_stmt = ( "emitter" | "emt" ) ( IDENT | NEWLINE action_block ) ;
+                      (* IDENT references a top-level emitter_def by name;
+                         NEWLINE starts an anonymous inline emitter block    *)
 
 
 (* ------------------------------------------------------------

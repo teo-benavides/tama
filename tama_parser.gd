@@ -39,13 +39,15 @@ var _tokens: Array[TamaToken]
 var _pos:    int
 var _errors: Array[Diagnostic]
 
-var _defined_fires:   Dictionary
-var _defined_acts:    Dictionary
-var _defined_bullets: Dictionary
+var _defined_fires:    Dictionary
+var _defined_acts:     Dictionary
+var _defined_bullets:  Dictionary
+var _defined_emitters: Dictionary
 
-var _fire_refs:   Array   # {name, line, col}
-var _act_refs:    Array   # {name, line, col}
-var _bullet_refs: Array   # {name, line, col}
+var _fire_refs:    Array   # {name, line, col}
+var _act_refs:     Array   # {name, line, col}
+var _bullet_refs:  Array   # {name, line, col}
+var _emitter_refs: Array   # {name, line, col}
 
 # ---------------------------------------------------------------------------
 # Public entry point
@@ -54,12 +56,14 @@ func parse(tokens: Array) -> ParseResult:
 	_tokens          = tokens
 	_pos             = 0
 	_errors          = []
-	_defined_fires   = {}
-	_defined_acts    = {}
-	_defined_bullets = {}
-	_fire_refs       = []
-	_act_refs        = []
-	_bullet_refs     = []
+	_defined_fires    = {}
+	_defined_acts     = {}
+	_defined_bullets  = {}
+	_defined_emitters = {}
+	_fire_refs        = []
+	_act_refs         = []
+	_bullet_refs      = []
+	_emitter_refs     = []
 
 	var program := TamaAst.ProgramNode.new()
 
@@ -81,6 +85,10 @@ func parse(tokens: Array) -> ParseResult:
 				var node := _parse_bullet_def()
 				if node:
 					program.bullets.append(node)
+			TamaToken.KW_EMITTER:
+				var node := _parse_emitter_def()
+				if node:
+					program.emitters.append(node)
 			TamaToken.ERROR:
 				_error_at(tok, "Unexpected character: '%s'" % tok.value)
 				_pos += 1
@@ -443,6 +451,13 @@ func _parse_inline_act() -> TamaAst.InlineActNode:
 	node.body = _parse_block(_parse_action_statement)
 	return node
 
+func _parse_inline_emitter() -> TamaAst.InlineActNode:
+	var tok := _consume(TamaToken.KW_EMITTER)
+	var node := TamaAst.InlineActNode.new(tok.line, tok.col)
+	_consume(TamaToken.NEWLINE)
+	node.body = _parse_block(_parse_action_statement)
+	return node
+
 func _parse_inline_fire() -> TamaAst.InlineFireNode:
 	var tok := _consume(TamaToken.KW_FIRE)
 	var node := TamaAst.InlineFireNode.new(tok.line, tok.col)
@@ -516,13 +531,18 @@ func _parse_inline_bullet() -> TamaAst.InlineBulletNode:
 					_error_at(_peek(), "Expected bullet type name after 'type'")
 				_consume(TamaToken.NEWLINE)
 			TamaToken.KW_EMITTER:
-				_consume(TamaToken.KW_EMITTER)
-				var spawner_val := _collect_to_eol().replace(" ", "")
-				if spawner_val.is_empty():
-					_error_at(_peek(), "Expected emitter filename after 'emitter'")
+				if _peek_type_at(1) == TamaToken.NEWLINE:
+					node.inline_emitter = _parse_inline_emitter()
 				else:
-					node.spawner_name = spawner_val
-				_consume(TamaToken.NEWLINE)
+					_consume(TamaToken.KW_EMITTER)
+					var emt_tok := _peek()
+					var emt_name := _parse_identifier()
+					if emt_name.is_empty():
+						_error_at(emt_tok, "Expected emitter name after 'emitter'")
+					else:
+						node.spawner_name = emt_name
+						_emitter_refs.append({ "name": emt_name, "line": emt_tok.line, "col": emt_tok.col })
+					_consume(TamaToken.NEWLINE)
 			TamaToken.KW_ACT:
 				if _peek_type_at(1) == TamaToken.NEWLINE:
 					node.act = _parse_inline_act()
@@ -662,13 +682,18 @@ func _parse_bullet_def() -> TamaAst.BulletDefNode:
 					_error_at(_peek(), "Expected bullet type name after 'type'")
 				_consume(TamaToken.NEWLINE)
 			TamaToken.KW_EMITTER:
-				_consume(TamaToken.KW_EMITTER)
-				var spawner_val := _collect_to_eol().replace(" ", "")
-				if spawner_val.is_empty():
-					_error_at(_peek(), "Expected emitter filename after 'emitter'")
+				if _peek_type_at(1) == TamaToken.NEWLINE:
+					node.inline_emitter = _parse_inline_emitter()
 				else:
-					node.spawner_name = spawner_val
-				_consume(TamaToken.NEWLINE)
+					_consume(TamaToken.KW_EMITTER)
+					var emt_tok := _peek()
+					var emt_name := _parse_identifier()
+					if emt_name.is_empty():
+						_error_at(emt_tok, "Expected emitter name after 'emitter'")
+					else:
+						node.spawner_name = emt_name
+						_emitter_refs.append({ "name": emt_name, "line": emt_tok.line, "col": emt_tok.col })
+					_consume(TamaToken.NEWLINE)
 			TamaToken.KW_ACT:
 				if _peek_type_at(1) == TamaToken.NEWLINE:
 					node.act = _parse_inline_act()
@@ -680,6 +705,18 @@ func _parse_bullet_def() -> TamaAst.BulletDefNode:
 				_try_consume(TamaToken.NEWLINE)
 		return null   # items written directly into node, not collected
 	)
+	return node
+
+func _parse_emitter_def() -> TamaAst.EmitterDefNode:
+	_consume(TamaToken.KW_EMITTER)
+	var name_tok := _peek()
+	var name := _parse_identifier()
+	if name.is_empty():
+		return null
+	_defined_emitters[name] = true
+	_consume(TamaToken.NEWLINE)
+	var node := TamaAst.EmitterDefNode.new(name, name_tok.line, name_tok.col)
+	node.body = _parse_block(_parse_action_statement)
 	return node
 
 # ---------------------------------------------------------------------------
@@ -708,4 +745,12 @@ func _resolve_references() -> void:
 			_errors.append(Diagnostic.new(
 				ref["line"], ref["col"], name.length(),
 				"Unknown bullet reference '%s'" % name
+			))
+
+	for ref in _emitter_refs:
+		var name: String = ref["name"]
+		if not _defined_emitters.has(name):
+			_errors.append(Diagnostic.new(
+				ref["line"], ref["col"], name.length(),
+				"Unknown emitter reference '%s'" % name
 			))
