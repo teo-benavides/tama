@@ -67,6 +67,7 @@ func parse(tokens: Array) -> ParseResult:
 
 	var program := TamaAst.ProgramNode.new()
 
+	_pre_scan_definitions()
 	_skip_newlines()
 	while _peek_type() != TamaToken.EOF:
 		var tok := _peek()
@@ -164,6 +165,29 @@ func _peek_value_qualifier(default_val: TamaAst.ValueType) -> TamaAst.ValueType:
 	return default_val
 
 # ---------------------------------------------------------------------------
+# Pre-scan: collect all top-level definition names before parsing bodies.
+# This lets arg parsing distinguish first-class refs from float expressions.
+# ---------------------------------------------------------------------------
+func _pre_scan_definitions() -> void:
+	var depth := 0
+	for i in _tokens.size():
+		match _tokens[i].type:
+			TamaToken.INDENT:  depth += 1
+			TamaToken.DEDENT:  depth -= 1
+			TamaToken.KW_FIRE:
+				if depth == 0 and i + 1 < _tokens.size() and _tokens[i + 1].type == TamaToken.WORD:
+					_defined_fires[_tokens[i + 1].value] = true
+			TamaToken.KW_ACT:
+				if depth == 0 and i + 1 < _tokens.size() and _tokens[i + 1].type == TamaToken.WORD:
+					_defined_acts[_tokens[i + 1].value] = true
+			TamaToken.KW_BULLET:
+				if depth == 0 and i + 1 < _tokens.size() and _tokens[i + 1].type == TamaToken.WORD:
+					_defined_bullets[_tokens[i + 1].value] = true
+			TamaToken.KW_EMITTER:
+				if depth == 0 and i + 1 < _tokens.size() and _tokens[i + 1].type == TamaToken.WORD:
+					_defined_emitters[_tokens[i + 1].value] = true
+
+# ---------------------------------------------------------------------------
 # Expression collecting
 # ---------------------------------------------------------------------------
 
@@ -196,20 +220,38 @@ func _collect_to_rparen(open_tok: TamaToken) -> String:
 		_pos += 1
 	return " ".join(parts)
 
-# Parses (expr, expr, ...) — returns Array[String] of raw expression strings.
-func _parse_call_args(caller_tok: TamaToken) -> Array[String]:
-	var args: Array[String] = []
+# Parses (arg, arg, ...) — each arg is a String expr or RefCallArg.
+func _parse_call_args(caller_tok: TamaToken) -> Array:
+	var args: Array = []
 	if _peek_type() != TamaToken.LPAREN:
 		return args
 	var lp := _consume(TamaToken.LPAREN)
 	while _peek_type() != TamaToken.RPAREN and _peek_type() != TamaToken.EOF:
-		args.append(_collect_to_rparen(lp))
+		args.append(_parse_single_arg(lp))
 		_try_consume(TamaToken.COMMA)
 	if _peek_type() != TamaToken.RPAREN:
 		_error_at(caller_tok, "Unclosed argument list")
 	else:
 		_consume(TamaToken.RPAREN)
 	return args
+
+# Parses one argument: a first-class ref if the token is a known definition name
+# (optionally followed by '(args)'), otherwise a raw expression string.
+func _parse_single_arg(open_tok: TamaToken):  # -> String | TamaAst.RefCallArg
+	var tok := _peek()
+	if tok.type == TamaToken.WORD:
+		var is_def := _defined_fires.has(tok.value) or _defined_acts.has(tok.value) \
+		           or _defined_bullets.has(tok.value) or _defined_emitters.has(tok.value)
+		var next := _peek_type_at(1)
+		var at_terminator := next == TamaToken.COMMA or next == TamaToken.RPAREN
+		var at_call       := next == TamaToken.LPAREN
+		if is_def and (at_terminator or at_call):
+			var ref_tok := _consume(TamaToken.WORD)
+			var ref := TamaAst.RefCallArg.new(ref_tok.value, ref_tok.line, ref_tok.col)
+			if at_call:
+				ref.args = _parse_call_args(ref_tok)
+			return ref
+	return _collect_to_rparen(open_tok)
 
 # ---------------------------------------------------------------------------
 # Shared sub-parsers

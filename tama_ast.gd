@@ -152,12 +152,23 @@ class OffsetAxisNode extends ASTNode:
 # bullet <name>([args...])  — named bullet reference inside a fire block
 class BulletCallNode extends ASTNode:
 	var name: String
-	var args: Array[String]
+	var args: Array  # Array[String | RefCallArg]
 
 	func _init(p_name: String, p_args: Array, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		name = p_name
 		args = p_args
+
+# A first-class definition reference used as an argument value.
+# name is the definition identifier; args are the pre-bound sub-args (String | RefCallArg).
+class RefCallArg extends ASTNode:
+	var name: String
+	var args: Array
+
+	func _init(p_name: String, p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+		name = p_name
+		args = []
 
 # bullet NEWLINE <block>  — anonymous inline bullet definition inside a fire block
 class InlineBulletNode extends ASTNode:
@@ -268,9 +279,9 @@ class InlineFireNode extends ASTNode:
 # fire <name>([args...])  — named fire call inside an action block
 class FireCallNode extends ASTNode:
 	var name: String
-	var args: Array[String]
+	var args: Array  # Array[String | RefCallArg]
 
-	func _init(p_name: String, p_args: Array[String], p_line: int, p_col: int) -> void:
+	func _init(p_name: String, p_args: Array, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		name = p_name
 		args = p_args
@@ -278,10 +289,10 @@ class FireCallNode extends ASTNode:
 # act <name>([args...])  — named act call inside an action block
 class ActCallNode extends ASTNode:
 	var name:     String
-	var args:     Array[String]
+	var args:     Array  # Array[String | RefCallArg]
 	var is_async: bool = false
 
-	func _init(p_name: String, p_args: Array[String], p_line: int, p_col: int) -> void:
+	func _init(p_name: String, p_args: Array, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 		name = p_name
 		args = p_args

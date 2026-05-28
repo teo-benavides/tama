@@ -1,0 +1,26 @@
+act simpleAct(f)
+    fire f
+
+fire simpleFire(proj)
+    dir 0
+    spd 200
+    bullet proj
+    
+bullet myBullet(chspd_val)
+   type example
+   act
+       wait 1.0
+       chspd
+           spd chspd_val
+           over 1.0
+   
+bullet simpleBullet
+    type example
+            
+main
+    repeat
+        fire simpleFire(simpleBullet)
+        fire simpleFire(myBullet(500))
+        fire simpleFire(myBullet(1000))
+        act simpleAct(simpleFire(simpleBullet))
+        wait 0.5

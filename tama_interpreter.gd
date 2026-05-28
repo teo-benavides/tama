@@ -4,6 +4,16 @@ extends Node
 # ---------------------------------------------------------------------------
 # Signal payload — carries everything the spawning system needs
 # ---------------------------------------------------------------------------
+# Represents a first-class act/fire/bullet/emitter value held in a scope variable.
+# name is the definition identifier; bound_args are pre-applied (float or TamaRef).
+class TamaRef:
+	var name:       String
+	var bound_args: Array
+
+	func _init(p_name: String = "", p_args: Array = []) -> void:
+		name       = p_name
+		bound_args = p_args
+
 class BulletFireData:
 	# Fire statement properties
 	var dir_type:      TamaAst.DirType    = TamaAst.DirType.AIM
@@ -210,18 +220,32 @@ func _exec_repeat(node: TamaAst.RepeatNode, scope: Dictionary) -> void:
 		i += 1
 
 func _exec_fire_call(node: TamaAst.FireCallNode, scope: Dictionary) -> void:
-	var fire_def := _find_fire(node.name)
+	var ref_name := node.name
+	var pre_bound: Array = []
+	if scope.has(node.name) and scope[node.name] is TamaRef:
+		var r: TamaRef = scope[node.name]
+		ref_name  = r.name
+		pre_bound = r.bound_args
+	var fire_def := _find_fire(ref_name)
 	if not fire_def:
-		push_error("TamaInterpreter: unknown fire '%s'" % node.name)
+		push_error("TamaInterpreter: unknown fire '%s'" % ref_name)
 		return
-	_exec_fire_node(fire_def, _bind_args(fire_def.params, node.args, scope))
+	var extra := node.args.map(func(a): return _eval_arg(a, scope))
+	_exec_fire_node(fire_def, _bind_args_from_values(fire_def.params, pre_bound + extra, scope))
 
 func _exec_act_call(node: TamaAst.ActCallNode, scope: Dictionary) -> void:
-	var act_def := _find_act(node.name)
+	var ref_name := node.name
+	var pre_bound: Array = []
+	if scope.has(node.name) and scope[node.name] is TamaRef:
+		var r: TamaRef = scope[node.name]
+		ref_name  = r.name
+		pre_bound = r.bound_args
+	var act_def := _find_act(ref_name)
 	if not act_def:
-		push_error("TamaInterpreter: unknown act '%s'" % node.name)
+		push_error("TamaInterpreter: unknown act '%s'" % ref_name)
 		return
-	await _exec_action_body(act_def.body, _bind_args(act_def.params, node.args, scope))
+	var extra := node.args.map(func(a): return _eval_arg(a, scope))
+	await _exec_action_body(act_def.body, _bind_args_from_values(act_def.params, pre_bound + extra, scope))
 
 func _run_async(fn: Callable) -> void:
 	_async_count += 1
@@ -266,21 +290,30 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 	if node.bullet is TamaAst.InlineBulletNode:
 		var ib := node.bullet as TamaAst.InlineBulletNode
 		data.bullet_type           = ib.bullet_type
-		data.bullet_spawner        = ib.spawner_name
+		data.bullet_spawner        = _resolve_ref_name(ib.spawner_name, scope)
 		data.bullet_inline_emitter = ib.inline_emitter
 		data.bullet_act            = ib.act
 	else:
-		var bullet_def := _find_bullet((node.bullet as TamaAst.BulletCallNode).name)
+		var bcn      := node.bullet as TamaAst.BulletCallNode
+		var bul_name := bcn.name
+		var pre_bound: Array = []
+		if scope.has(bul_name) and scope[bul_name] is TamaRef:
+			var r: TamaRef = scope[bul_name]
+			pre_bound = r.bound_args
+			bul_name  = r.name
+		var bullet_def := _find_bullet(bul_name)
 		if not bullet_def:
-			push_error("TamaInterpreter: unknown bullet '%s'" % (node.bullet as TamaAst.BulletCallNode).name)
+			push_error("TamaInterpreter: unknown bullet '%s'" % bul_name)
 			return
 		data.bullet_type           = bullet_def.bullet_type
-		data.bullet_spawner        = bullet_def.spawner_name
+		data.bullet_spawner        = _resolve_ref_name(bullet_def.spawner_name, scope)
 		data.bullet_inline_emitter = bullet_def.inline_emitter
 		data.bullet_act            = bullet_def.act
 		data.bullet_params         = bullet_def.params.duplicate()
-		for arg_expr: String in (node.bullet as TamaAst.BulletCallNode).args:
-			data.bullet_args.append(_eval(arg_expr, scope))
+		for val in pre_bound:
+			data.bullet_args.append(float(val) if val is float or val is int else 0.0)
+		for arg in bcn.args:
+			data.bullet_args.append(_eval_arg_as_float(arg, scope))
 
 	data.source_program = _program
 	bullet_fired.emit(data)
@@ -311,11 +344,56 @@ func _find_bullet(name: String) -> TamaAst.BulletDefNode:
 # Scope helpers
 # ---------------------------------------------------------------------------
 
-# Evaluates each arg expression in the caller's scope and binds to param names.
-func _bind_args(params: Array[String], arg_exprs: Array[String], scope: Dictionary) -> Dictionary:
-	var new_scope := scope.duplicate()
-	for i in mini(params.size(), arg_exprs.size()):
-		new_scope[params[i]] = _eval(arg_exprs[i], scope)
+func _find_emitter(name: String) -> TamaAst.EmitterDefNode:
+	for e: TamaAst.EmitterDefNode in _program.emitters:
+		if e.name == name:
+			return e
+	return null
+
+# Returns the canonical definition name, resolving through a TamaRef in scope if present.
+func _resolve_ref_name(name: String, scope: Dictionary) -> String:
+	if scope.has(name) and scope[name] is TamaRef:
+		return (scope[name] as TamaRef).name
+	return name
+
+# Resolves a RefCallArg at runtime: evaluates its sub-args and builds a TamaRef.
+func _resolve_ref_arg(ref_arg: TamaAst.RefCallArg, scope: Dictionary):
+	var bound: Array = []
+	for sub_arg in ref_arg.args:
+		bound.append(_eval_arg(sub_arg, scope))
+	if scope.has(ref_arg.name) and scope[ref_arg.name] is TamaRef:
+		var v: TamaRef = scope[ref_arg.name]
+		var merged := TamaRef.new()
+		merged.name       = v.name
+		merged.bound_args = v.bound_args + bound
+		return merged
+	var ref := TamaRef.new()
+	ref.name       = ref_arg.name
+	ref.bound_args = bound
+	return ref
+
+# Evaluates a single argument: a RefCallArg becomes a TamaRef; a plain String identifier that
+# holds a non-numeric scope value is passed through; everything else is evaluated as a float.
+func _eval_arg(arg, scope: Dictionary):
+	if arg is TamaAst.RefCallArg:
+		return _resolve_ref_arg(arg as TamaAst.RefCallArg, scope)
+	var expr: String = arg as String
+	var stripped := expr.strip_edges()
+	if stripped.is_valid_identifier() and scope.has(stripped):
+		var val = scope[stripped]
+		if not (val is float or val is int):
+			return val
+	return _eval(expr, scope)
+
+func _eval_arg_as_float(arg, scope: Dictionary) -> float:
+	var val = _eval_arg(arg, scope)
+	return float(val) if (val is float or val is int) else 0.0
+
+# Binds already-evaluated values to param names, merging into a copy of outer_scope.
+func _bind_args_from_values(params: Array[String], values: Array, outer_scope: Dictionary) -> Dictionary:
+	var new_scope := outer_scope.duplicate()
+	for i in mini(params.size(), values.size()):
+		new_scope[params[i]] = values[i]
 	return new_scope
 
 # ---------------------------------------------------------------------------
@@ -327,11 +405,19 @@ func _eval(expr: String, scope: Dictionary) -> float:
 	if expr.is_empty():
 		return 0.0
 	var expression := Expression.new()
-	var names := PackedStringArray(scope.keys())
+	# Filter scope to only float-compatible values so Expression doesn't choke on TamaRefs.
+	var float_keys:   Array[String] = []
+	var float_values: Array         = []
+	for key in scope.keys():
+		var val = scope[key]
+		if val is float or val is int:
+			float_keys.append(key)
+			float_values.append(val)
+	var names := PackedStringArray(float_keys)
 	if expression.parse(expr, names) != OK:
 		push_error("TamaScript expression parse error '%s': %s" % [expr, expression.get_error_text()])
 		return 0.0
-	var result = expression.execute(Array(scope.values()), context)
+	var result = expression.execute(float_values, context)
 	if expression.has_execute_failed():
 		push_error("TamaScript expression execute error '%s': %s" % [expr, expression.get_error_text()])
 		return 0.0
