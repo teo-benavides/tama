@@ -38,6 +38,7 @@ const KW_Y       = "KW_Y"
 const KW_TYPE    = "KW_TYPE"
 const KW_EMITTER = "KW_EMITTER"
 const KW_ASYNC   = "KW_ASYNC"
+const KW_EXPORT  = "KW_EXPORT"
 
 const KEYWORDS: Dictionary = {
 	"main":    KW_MAIN,
@@ -67,6 +68,7 @@ const KEYWORDS: Dictionary = {
 	"emitter": KW_EMITTER,
 	"emt":     KW_EMITTER,
 	"async":   KW_ASYNC,
+	"export":  KW_EXPORT,
 }
 
 # --- Instance fields ---

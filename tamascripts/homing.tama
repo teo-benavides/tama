@@ -1,6 +1,6 @@
 bullet homing
     act
-        repeat
+        repeat 60
             chdir
                 dir aim 0
                 over 0
@@ -10,6 +10,6 @@ main
     repeat
         fire
             dir aim 0
-            spd 200
+            spd 100
             bul homing
         wait 0.5

@@ -20,6 +20,7 @@ class ASTNode:
 # ---------------------------------------------------------------------------
 
 class ProgramNode extends ASTNode:
+	var exports: Array  # Array[ExportVarNode]
 	var main:    MainNode
 	var fires:   Array[FireDefNode]
 	var acts:    Array[ActDefNode]
@@ -27,9 +28,22 @@ class ProgramNode extends ASTNode:
 
 	func _init() -> void:
 		super(0, 0)
+		exports = []
 		fires   = []
 		acts    = []
 		bullets = []
+
+# export (num|str) <name> [default_value]
+class ExportVarNode extends ASTNode:
+	var name:          String
+	var export_type:   String   # "num" or "str"
+	var default_value: Variant  # null if not specified
+
+	func _init(p_name: String, p_type: String, p_default: Variant, p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+		name          = p_name
+		export_type   = p_type
+		default_value = p_default
 
 # ---------------------------------------------------------------------------
 # Top-level definitions

@@ -13,7 +13,7 @@ func load_scripts(path: String) -> void:
 	var file := dir.get_next()
 	while not file.is_empty():
 		if file.ends_with(".tam") or file.ends_with(".tama"):
-			_parse_and_store(file, path.path_join(file))
+			_parse_and_store(file.get_basename(), path.path_join(file))
 		file = dir.get_next()
 	dir.list_dir_end()
 

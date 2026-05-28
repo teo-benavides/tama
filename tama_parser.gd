@@ -68,6 +68,10 @@ func parse(tokens: Array) -> ParseResult:
 	while _peek_type() != TamaToken.EOF:
 		var tok := _peek()
 		match tok.type:
+			TamaToken.KW_EXPORT:
+				var node := _parse_export()
+				if node:
+					program.exports.append(node)
 			TamaToken.KW_MAIN:
 				program.main = _parse_main()
 			TamaToken.KW_FIRE:
@@ -719,6 +723,28 @@ func _parse_fire_block(node, open_tok: TamaToken) -> void:
 # ---------------------------------------------------------------------------
 # Top-level definition parsers
 # ---------------------------------------------------------------------------
+
+func _parse_export() -> TamaAst.ExportVarNode:
+	var tok := _consume(TamaToken.KW_EXPORT)
+	var type_tok := _peek()
+	if type_tok.type != TamaToken.WORD or (type_tok.value != "num" and type_tok.value != "str"):
+		_error_at(type_tok, "Expected 'num' or 'str' after 'export'")
+		_try_consume(TamaToken.NEWLINE)
+		return null
+	var export_type := type_tok.value
+	_pos += 1
+	var name_tok := _peek()
+	var name := _parse_identifier()
+	if name.is_empty():
+		_error_at(name_tok, "Expected identifier after export type")
+		return null
+	var default_value: Variant = null
+	if _peek_type() != TamaToken.NEWLINE and _peek_type() != TamaToken.EOF:
+		var raw := _collect_to_eol().strip_edges()
+		if not raw.is_empty():
+			default_value = float(raw) if export_type == "num" else raw
+	_consume(TamaToken.NEWLINE)
+	return TamaAst.ExportVarNode.new(name, export_type, default_value, tok.line, tok.col)
 
 func _parse_main() -> TamaAst.MainNode:
 	var tok := _consume(TamaToken.KW_MAIN)

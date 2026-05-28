@@ -85,13 +85,13 @@ var context: TamaContext = TamaContext.new()
 
 # Run the program from main. The interpreter must be in the scene tree
 # (added as a child) so that get_tree() works for wait.
-func start(program: TamaAst.ProgramNode) -> void:
+func start(program: TamaAst.ProgramNode, initial_scope: Dictionary = {}) -> void:
 	_program = program
 	if not _program.main:
 		push_error("TamaInterpreter: program has no main block")
 		return
 	_running = true
-	await _exec_action_body(_program.main.body, {})
+	await _exec_action_body(_program.main.body, initial_scope)
 	if _async_count > 0:
 		await _all_async_done
 	_running = false

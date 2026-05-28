@@ -52,7 +52,14 @@ VALUE_TYPE = "abs" | "rel" | "seq" ;
    PROGRAM
    ------------------------------------------------------------ *)
 
-program = main_def { top_level_def } EOF ;
+program = { export_decl } main_def { top_level_def } EOF ;
+
+export_decl = "export" ( "num" | "str" ) IDENT [ EXPR ] NEWLINE ;
+              (* declares a named variable exposed in the TamaEmitter inspector.
+                 num maps to float; str maps to String (used for qualifiers like aim/abs/rel/seq).
+                 the optional EXPR is the default value used when the field has not been set.
+                 exports must precede main. their values become the initial scope when the
+                 emitter starts, so all acts/fires/bullets in the script can read them.  *)
 
 top_level_def = fire_def
               | act_def
