@@ -173,7 +173,7 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 			push_error("TamaInterpreter: chdir requires both dir and over (L%d)" % node.line)
 		else:
 			var d := ChdirData.new()
-			d.dir_type  = cn.dir.dir_type
+			d.dir_type  = _get_dir_type(cn.dir, scope)
 			d.dir_value = _eval(cn.dir.expr, scope)
 			d.over      = _eval(cn.over.expr, scope)
 			changed_direction.emit(d)
@@ -184,7 +184,7 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 			push_error("TamaInterpreter: chspd requires both speed and over (L%d)" % node.line)
 		else:
 			var d := ChspdData.new()
-			d.speed_type  = cn.speed.speed_type
+			d.speed_type  = _get_speed_type(cn.speed, scope)
 			d.speed_value = _eval(cn.speed.expr, scope)
 			d.over        = _eval(cn.over.expr, scope)
 			changed_speed.emit(d)
@@ -197,11 +197,11 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 			var d := AccelData.new()
 			if cn.x:
 				d.has_x  = true
-				d.x_type = cn.x.axis_type
+				d.x_type = _get_axis_type(cn.x, scope)
 				d.x      = _eval(cn.x.expr, scope)
 			if cn.y:
 				d.has_y  = true
-				d.y_type = cn.y.axis_type
+				d.y_type = _get_axis_type(cn.y, scope)
 				d.y      = _eval(cn.y.expr, scope)
 			d.over = _eval(cn.over.expr, scope)
 			accelerated.emit(d)
@@ -220,6 +220,9 @@ func _exec_repeat(node: TamaAst.RepeatNode, scope: Dictionary) -> void:
 		i += 1
 
 func _exec_fire_call(node: TamaAst.FireCallNode, scope: Dictionary) -> void:
+	if scope.has(node.name) and scope[node.name] is TamaAst.InlineFireNode:
+		_exec_fire_node(scope[node.name] as TamaAst.InlineFireNode, scope)
+		return
 	var ref_name := node.name
 	var pre_bound: Array = []
 	if scope.has(node.name) and scope[node.name] is TamaRef:
@@ -234,6 +237,9 @@ func _exec_fire_call(node: TamaAst.FireCallNode, scope: Dictionary) -> void:
 	_exec_fire_node(fire_def, _bind_args_from_values(fire_def.params, pre_bound + extra, scope))
 
 func _exec_act_call(node: TamaAst.ActCallNode, scope: Dictionary) -> void:
+	if scope.has(node.name) and scope[node.name] is TamaAst.InlineActNode:
+		await _exec_action_body((scope[node.name] as TamaAst.InlineActNode).body, scope)
+		return
 	var ref_name := node.name
 	var pre_bound: Array = []
 	if scope.has(node.name) and scope[node.name] is TamaRef:
@@ -264,12 +270,12 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 
 	# Direction (default: AIM 0)
 	if node.dir:
-		data.dir_type  = node.dir.dir_type
+		data.dir_type  = _get_dir_type(node.dir, scope)
 		data.dir_value = _eval(node.dir.expr, scope)
 
 	# Speed (default: ABS 0)
 	if node.speed:
-		data.speed_type  = node.speed.speed_type
+		data.speed_type  = _get_speed_type(node.speed, scope)
 		data.speed_value = _eval(node.speed.expr, scope)
 
 	# Offset
@@ -280,10 +286,10 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 		data.offset_mode = TamaAst.OffsetMode.BLOCK
 		var on := node.offset as TamaAst.OffsetNode
 		if on.x:
-			data.offset_x_type = on.x.axis_type
+			data.offset_x_type = _get_axis_type(on.x, scope)
 			data.offset_x      = _eval(on.x.expr, scope)
 		if on.y:
-			data.offset_y_type = on.y.axis_type
+			data.offset_y_type = _get_axis_type(on.y, scope)
 			data.offset_y      = _eval(on.y.expr, scope)
 
 	# Bullet
@@ -297,23 +303,31 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 		var bcn      := node.bullet as TamaAst.BulletCallNode
 		var bul_name := bcn.name
 		var pre_bound: Array = []
-		if scope.has(bul_name) and scope[bul_name] is TamaRef:
-			var r: TamaRef = scope[bul_name]
-			pre_bound = r.bound_args
-			bul_name  = r.name
-		var bullet_def := _find_bullet(bul_name)
-		if not bullet_def:
-			push_error("TamaInterpreter: unknown bullet '%s'" % bul_name)
-			return
-		data.bullet_type           = bullet_def.bullet_type
-		data.bullet_spawner        = _resolve_ref_name(bullet_def.spawner_name, scope)
-		data.bullet_inline_emitter = bullet_def.inline_emitter
-		data.bullet_act            = bullet_def.act
-		data.bullet_params         = bullet_def.params.duplicate()
-		for val in pre_bound:
-			data.bullet_args.append(float(val) if val is float or val is int else 0.0)
-		for arg in bcn.args:
-			data.bullet_args.append(_eval_arg_as_float(arg, scope))
+		if scope.has(bul_name) and scope[bul_name] is TamaAst.InlineBulletNode:
+			# Inline bullet node stored directly in scope — use it like an InlineBulletNode.
+			var ib := scope[bul_name] as TamaAst.InlineBulletNode
+			data.bullet_type           = ib.bullet_type
+			data.bullet_spawner        = _resolve_ref_name(ib.spawner_name, scope)
+			data.bullet_inline_emitter = ib.inline_emitter
+			data.bullet_act            = ib.act
+		else:
+			if scope.has(bul_name) and scope[bul_name] is TamaRef:
+				var r: TamaRef = scope[bul_name]
+				pre_bound = r.bound_args
+				bul_name  = r.name
+			var bullet_def := _find_bullet(bul_name)
+			if not bullet_def:
+				push_error("TamaInterpreter: unknown bullet '%s'" % bul_name)
+				return
+			data.bullet_type           = bullet_def.bullet_type
+			data.bullet_spawner        = _resolve_ref_name(bullet_def.spawner_name, scope)
+			data.bullet_inline_emitter = bullet_def.inline_emitter
+			data.bullet_act            = bullet_def.act
+			data.bullet_params         = bullet_def.params.duplicate()
+			for val in pre_bound:
+				data.bullet_args.append(float(val) if val is float or val is int else 0.0)
+			for arg in bcn.args:
+				data.bullet_args.append(_eval_arg_as_float(arg, scope))
 
 	data.source_program = _program
 	bullet_fired.emit(data)
@@ -344,6 +358,43 @@ func _find_bullet(name: String) -> TamaAst.BulletDefNode:
 # Scope helpers
 # ---------------------------------------------------------------------------
 
+func _get_dir_type(node: TamaAst.DirNode, scope: Dictionary) -> TamaAst.DirType:
+	if node.dir_type_var.is_empty():
+		return node.dir_type
+	var val = _eval_arg(node.dir_type_var, scope)
+	if val is String:
+		match val:
+			"aim": return TamaAst.DirType.AIM
+			"abs": return TamaAst.DirType.ABS
+			"rel": return TamaAst.DirType.REL
+			"seq": return TamaAst.DirType.SEQ
+	push_error("TamaInterpreter: invalid dir type '%s'" % str(val))
+	return TamaAst.DirType.AIM
+
+func _get_axis_type(node: TamaAst.OffsetAxisNode, scope: Dictionary) -> TamaAst.ValueType:
+	if node.axis_type_var.is_empty():
+		return node.axis_type
+	var val = _eval_arg(node.axis_type_var, scope)
+	if val is String:
+		match val:
+			"abs": return TamaAst.ValueType.ABS
+			"rel": return TamaAst.ValueType.REL
+			"seq": return TamaAst.ValueType.SEQ
+	push_error("TamaInterpreter: invalid axis type '%s'" % str(val))
+	return TamaAst.ValueType.REL
+
+func _get_speed_type(node: TamaAst.SpeedNode, scope: Dictionary) -> TamaAst.ValueType:
+	if node.speed_type_var.is_empty():
+		return node.speed_type
+	var val = _eval_arg(node.speed_type_var, scope)
+	if val is String:
+		match val:
+			"abs": return TamaAst.ValueType.ABS
+			"rel": return TamaAst.ValueType.REL
+			"seq": return TamaAst.ValueType.SEQ
+	push_error("TamaInterpreter: invalid speed type '%s'" % str(val))
+	return TamaAst.ValueType.ABS
+
 func _find_emitter(name: String) -> TamaAst.EmitterDefNode:
 	for e: TamaAst.EmitterDefNode in _program.emitters:
 		if e.name == name:
@@ -372,9 +423,12 @@ func _resolve_ref_arg(ref_arg: TamaAst.RefCallArg, scope: Dictionary):
 	ref.bound_args = bound
 	return ref
 
-# Evaluates a single argument: a RefCallArg becomes a TamaRef; a plain String identifier that
-# holds a non-numeric scope value is passed through; everything else is evaluated as a float.
+# Evaluates a single argument: inline AST nodes pass through as-is, RefCallArg becomes a
+# TamaRef, a plain String identifier holding a non-numeric scope value passes through,
+# and everything else is evaluated as a float.
 func _eval_arg(arg, scope: Dictionary):
+	if arg is TamaAst.InlineBulletNode or arg is TamaAst.InlineActNode or arg is TamaAst.InlineFireNode:
+		return arg
 	if arg is TamaAst.RefCallArg:
 		return _resolve_ref_arg(arg as TamaAst.RefCallArg, scope)
 	var expr: String = arg as String
@@ -383,6 +437,9 @@ func _eval_arg(arg, scope: Dictionary):
 		var val = scope[stripped]
 		if not (val is float or val is int):
 			return val
+	# Qualifier keywords passed as string values — never evaluate them as expressions.
+	match stripped:
+		"aim", "abs", "rel", "seq": return stripped
 	return _eval(expr, scope)
 
 func _eval_arg_as_float(arg, scope: Dictionary) -> float:

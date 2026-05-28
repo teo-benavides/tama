@@ -220,25 +220,50 @@ func _collect_to_rparen(open_tok: TamaToken) -> String:
 		_pos += 1
 	return " ".join(parts)
 
-# Parses (arg, arg, ...) — each arg is a String expr or RefCallArg.
+# Parses (arg, arg, ...) — each arg is a String expr, RefCallArg, or inline AST node.
 func _parse_call_args(caller_tok: TamaToken) -> Array:
 	var args: Array = []
 	if _peek_type() != TamaToken.LPAREN:
 		return args
 	var lp := _consume(TamaToken.LPAREN)
+	# Skip newline/indent that follow an opening '(' on its own line.
+	_skip_newlines()
+	_try_consume(TamaToken.INDENT)
 	while _peek_type() != TamaToken.RPAREN and _peek_type() != TamaToken.EOF:
 		args.append(_parse_single_arg(lp))
 		_try_consume(TamaToken.COMMA)
+		_skip_newlines()
 	if _peek_type() != TamaToken.RPAREN:
 		_error_at(caller_tok, "Unclosed argument list")
 	else:
 		_consume(TamaToken.RPAREN)
 	return args
 
-# Parses one argument: a first-class ref if the token is a known definition name
-# (optionally followed by '(args)'), otherwise a raw expression string.
-func _parse_single_arg(open_tok: TamaToken):  # -> String | TamaAst.RefCallArg
+# Parses one argument: inline block node, first-class named ref, or raw expression string.
+func _parse_single_arg(open_tok: TamaToken):  # -> String | TamaAst.RefCallArg | TamaAst.ASTNode
 	var tok := _peek()
+	# Inline block as argument: keyword followed immediately by NEWLINE.
+	match tok.type:
+		TamaToken.KW_BULLET:
+			if _peek_type_at(1) == TamaToken.NEWLINE:
+				return _parse_inline_bullet()
+		TamaToken.KW_ACT:
+			if _peek_type_at(1) == TamaToken.NEWLINE:
+				return _parse_inline_act()
+		TamaToken.KW_FIRE:
+			if _peek_type_at(1) == TamaToken.NEWLINE:
+				return _parse_inline_fire()
+		TamaToken.KW_EMITTER:
+			if _peek_type_at(1) == TamaToken.NEWLINE:
+				return _parse_inline_emitter()
+	# Qualifier keywords (aim/abs/rel/seq) passed as type values.
+	if tok.type == TamaToken.KW_AIM or tok.type == TamaToken.KW_ABS \
+	or tok.type == TamaToken.KW_REL or tok.type == TamaToken.KW_SEQ:
+		var next := _peek_type_at(1)
+		if next == TamaToken.COMMA or next == TamaToken.RPAREN:
+			_pos += 1
+			return tok.value  # "aim", "abs", "rel", or "seq"
+	# Named first-class ref (known definition, optionally pre-applied).
 	if tok.type == TamaToken.WORD:
 		var is_def := _defined_fires.has(tok.value) or _defined_acts.has(tok.value) \
 		           or _defined_bullets.has(tok.value) or _defined_emitters.has(tok.value)
@@ -310,21 +335,37 @@ func _parse_block(parse_statement: Callable) -> Array[TamaAst.ASTNode]:
 
 func _parse_dir() -> TamaAst.DirNode:
 	var tok := _consume(TamaToken.KW_DIR)
-	var qualifier := _peek_dir_qualifier()
+	var qualifier := TamaAst.DirType.AIM
+	var qualifier_var := ""
+	if _peek_type() == TamaToken.WORD and _peek_type_at(1) != TamaToken.NEWLINE:
+		qualifier_var = _peek().value
+		_pos += 1
+	else:
+		qualifier = _peek_dir_qualifier()
 	var expr := _collect_to_eol()
 	if expr.strip_edges().is_empty():
 		_error_at(_peek(), "Expected expression after dir")
 	_consume(TamaToken.NEWLINE)
-	return TamaAst.DirNode.new(qualifier, expr, tok.line, tok.col)
+	var node := TamaAst.DirNode.new(qualifier, expr, tok.line, tok.col)
+	node.dir_type_var = qualifier_var
+	return node
 
 func _parse_speed() -> TamaAst.SpeedNode:
 	var tok := _consume(TamaToken.KW_SPEED)
-	var qualifier := _peek_value_qualifier(TamaAst.ValueType.ABS)
+	var qualifier := TamaAst.ValueType.ABS
+	var qualifier_var := ""
+	if _peek_type() == TamaToken.WORD and _peek_type_at(1) != TamaToken.NEWLINE:
+		qualifier_var = _peek().value
+		_pos += 1
+	else:
+		qualifier = _peek_value_qualifier(TamaAst.ValueType.ABS)
 	var expr := _collect_to_eol()
 	if expr.strip_edges().is_empty():
 		_error_at(_peek(), "Expected expression after speed")
 	_consume(TamaToken.NEWLINE)
-	return TamaAst.SpeedNode.new(qualifier, expr, tok.line, tok.col)
+	var node := TamaAst.SpeedNode.new(qualifier, expr, tok.line, tok.col)
+	node.speed_type_var = qualifier_var
+	return node
 
 func _parse_wait() -> TamaAst.WaitNode:
 	var tok := _consume(TamaToken.KW_WAIT)
@@ -358,10 +399,16 @@ func _parse_offset() -> TamaAst.ASTNode:
 			if t.type == TamaToken.KW_X or t.type == TamaToken.KW_Y:
 				var axis := t.value
 				_pos += 1
-				var qualifier := _peek_value_qualifier(TamaAst.ValueType.REL)
+				var qualifier := TamaAst.ValueType.REL
+				var qualifier_var := ""
+				if _peek_type() == TamaToken.WORD and _peek_type_at(1) != TamaToken.NEWLINE:
+					qualifier_var = _peek().value; _pos += 1
+				else:
+					qualifier = _peek_value_qualifier(TamaAst.ValueType.REL)
 				var expr := _collect_to_eol()
 				_consume(TamaToken.NEWLINE)
 				var axis_node := TamaAst.OffsetAxisNode.new(axis, qualifier, expr, t.line, t.col)
+				axis_node.axis_type_var = qualifier_var
 				if axis == "x":
 					node.x = axis_node
 				else:
@@ -435,10 +482,16 @@ func _parse_accel() -> TamaAst.AccelNode:
 			TamaToken.KW_X, TamaToken.KW_Y:
 				var axis := t.value
 				_pos += 1
-				var qualifier := _peek_value_qualifier(TamaAst.ValueType.ABS)
+				var qualifier := TamaAst.ValueType.ABS
+				var qualifier_var := ""
+				if _peek_type() == TamaToken.WORD and _peek_type_at(1) != TamaToken.NEWLINE:
+					qualifier_var = _peek().value; _pos += 1
+				else:
+					qualifier = _peek_value_qualifier(TamaAst.ValueType.ABS)
 				var expr := _collect_to_eol()
 				_consume(TamaToken.NEWLINE)
 				var axis_node := TamaAst.OffsetAxisNode.new(axis, qualifier, expr, t.line, t.col)
+				axis_node.axis_type_var = qualifier_var
 				if axis == "x":
 					node.x = axis_node
 				else:

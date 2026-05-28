@@ -103,8 +103,9 @@ class BulletDefNode extends ASTNode:
 
 # dir [aim|abs|rel|seq] <expr>   — default qualifier: aim
 class DirNode extends ASTNode:
-	var dir_type: DirType
-	var expr:     String
+	var dir_type:     DirType
+	var dir_type_var: String = ""  # non-empty: resolve qualifier from scope at runtime
+	var expr:         String
 
 	func _init(p_type: DirType, p_expr: String, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
@@ -113,8 +114,9 @@ class DirNode extends ASTNode:
 
 # speed [abs|rel|seq] <expr>   — default qualifier: abs
 class SpeedNode extends ASTNode:
-	var speed_type: ValueType
-	var expr:       String
+	var speed_type:     ValueType
+	var speed_type_var: String = ""  # non-empty: resolve qualifier from scope at runtime
+	var expr:           String
 
 	func _init(p_type: ValueType, p_expr: String, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
@@ -139,9 +141,10 @@ class OffsetInlineNode extends ASTNode:
 
 # x|y [abs|rel|seq] <expr>  — axis sub-node used by offset block and accel
 class OffsetAxisNode extends ASTNode:
-	var axis:      String
-	var axis_type: ValueType
-	var expr:      String
+	var axis:          String
+	var axis_type:     ValueType
+	var axis_type_var: String = ""  # non-empty: resolve qualifier from scope at runtime
+	var expr:          String
 
 	func _init(p_axis: String, p_type: ValueType, p_expr: String, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
