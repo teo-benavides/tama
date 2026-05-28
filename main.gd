@@ -10,7 +10,6 @@ func _ready() -> void:
 	reg.entries = {"example": EXAMPLE_BULLET_SCENE}
 	reg.default_bullet = EXAMPLE_BULLET_SCENE
 	TamaSpawnManager.registry = reg
-	$TamaEmitter.start()
 
 func create_emitter():
 	emitter = TamaEmitter.new()

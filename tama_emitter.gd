@@ -161,11 +161,25 @@ func _parse_script_file_for_exports() -> TamaAst.ProgramNode:
 	if source.is_empty():
 		return null
 	var tokens := TamaLexer.new().tokenize(source)
-	var result := TamaParser.new().parse(tokens)
+	var result := TamaParser.new().parse(tokens, _make_editor_resolver())
 	if not result.ok():
 		for err in result.errors:
 			push_warning("TamaEmitter [%s] parse error: %s" % [_script_filename, str(err)])
 	return result.program
+
+func _make_editor_resolver() -> Callable:
+	return func(name: String) -> TamaAst.ProgramNode:
+		for path in [
+			"res://tamascripts/" + name,
+			"res://tamascripts/" + name + ".tama",
+			"res://tamascripts/" + name + ".tam",
+		]:
+			if FileAccess.file_exists(path):
+				var src := FileAccess.get_file_as_string(path)
+				if not src.is_empty():
+					var tokens := TamaLexer.new().tokenize(src)
+					return TamaParser.new().parse(tokens).program
+		return null
 
 # ---------------------------------------------------------------------------
 # Public API

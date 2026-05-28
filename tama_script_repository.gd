@@ -23,7 +23,7 @@ func load_script(filename: String, full_path: String) -> void:
 
 ## Parse raw TamaScript source and cache it under the given name.
 func load_script_from_source(name: String, source: String) -> void:
-	var program := _parse_source(source, name)
+	var program := _parse_source(source, name, _make_resolver([]))
 	if program:
 		_scripts[name] = program
 
@@ -40,13 +40,45 @@ func _parse_and_store(filename: String, full_path: String) -> void:
 	if source.is_empty():
 		push_error("TamaScriptRepository: could not read '%s'" % full_path)
 		return
-	var program := _parse_source(source, full_path)
+	var program := _parse_source(source, full_path, _make_resolver([]))
 	if program:
 		_scripts[filename] = program
 
-func _parse_source(source: String, label: String) -> TamaAst.ProgramNode:
+func _parse_source(source: String, label: String, resolver: Callable = Callable()) -> TamaAst.ProgramNode:
 	var tokens := TamaLexer.new().tokenize(source)
-	var result := TamaParser.new().parse(tokens)
+	var result := TamaParser.new().parse(tokens, resolver)
 	if not result:
 		push_error("TamaScriptRepository: parse failed for '%s'" % label)
 	return result.program
+
+func _find_script_path(name: String) -> String:
+	for path in [
+		"res://tamascripts/" + name,
+		"res://tamascripts/" + name + ".tama",
+		"res://tamascripts/" + name + ".tam",
+	]:
+		if FileAccess.file_exists(path):
+			return path
+	return ""
+
+func _make_resolver(loading: Array) -> Callable:
+	return func(name: String) -> TamaAst.ProgramNode:
+		if name in loading:
+			push_warning("TamaScriptRepository: circular include '%s'" % name)
+			return null
+		if _scripts.has(name):
+			return _scripts[name]
+		var path := _find_script_path(name)
+		if path.is_empty():
+			push_warning("TamaScriptRepository: included script '%s' not found" % name)
+			return null
+		var source := FileAccess.get_file_as_string(path)
+		if source.is_empty():
+			return null
+		loading.append(name)
+		var tokens := TamaLexer.new().tokenize(source)
+		var result := TamaParser.new().parse(tokens, _make_resolver(loading))
+		loading.erase(name)
+		if result.program:
+			_scripts[name] = result.program
+		return result.program

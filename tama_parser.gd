@@ -47,19 +47,24 @@ var _fire_refs:   Array   # {name, line, col}
 var _act_refs:    Array   # {name, line, col}
 var _bullet_refs: Array   # {name, line, col}
 
+var _resolver:         Callable    # optional; (name: String) -> TamaAst.ProgramNode
+var _resolved_includes: Dictionary # name -> TamaAst.ProgramNode (cached)
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
-func parse(tokens: Array) -> ParseResult:
-	_tokens          = tokens
-	_pos             = 0
-	_errors          = []
-	_defined_fires   = {}
-	_defined_acts    = {}
-	_defined_bullets = {}
-	_fire_refs   = []
-	_act_refs    = []
-	_bullet_refs = []
+func parse(tokens: Array, resolver: Callable = Callable()) -> ParseResult:
+	_tokens            = tokens
+	_pos               = 0
+	_errors            = []
+	_defined_fires     = {}
+	_defined_acts      = {}
+	_defined_bullets   = {}
+	_fire_refs         = []
+	_act_refs          = []
+	_bullet_refs       = []
+	_resolver          = resolver
+	_resolved_includes = {}
 
 	var program := TamaAst.ProgramNode.new()
 
@@ -68,6 +73,8 @@ func parse(tokens: Array) -> ParseResult:
 	while _peek_type() != TamaToken.EOF:
 		var tok := _peek()
 		match tok.type:
+			TamaToken.KW_INCLUDE:
+				_parse_include(program)
 			TamaToken.KW_EXPORT:
 				var node := _parse_export()
 				if node:
@@ -170,6 +177,18 @@ func _pre_scan_definitions() -> void:
 		match _tokens[i].type:
 			TamaToken.INDENT:  depth += 1
 			TamaToken.DEDENT:  depth -= 1
+			TamaToken.KW_INCLUDE:
+				if depth == 0 and i + 1 < _tokens.size() and _tokens[i + 1].type == TamaToken.WORD:
+					var inc_name := _tokens[i + 1].value
+					if not _resolved_includes.has(inc_name):
+						var included: TamaAst.ProgramNode = null
+						if _resolver.is_valid():
+							included = _resolver.call(inc_name)
+						_resolved_includes[inc_name] = included
+						if included:
+							for f in included.fires:   _defined_fires[f.name]   = true
+							for a in included.acts:    _defined_acts[a.name]    = true
+							for b in included.bullets: _defined_bullets[b.name] = true
 			TamaToken.KW_FIRE:
 				if depth == 0 and i + 1 < _tokens.size() and _tokens[i + 1].type == TamaToken.WORD:
 					_defined_fires[_tokens[i + 1].value] = true
@@ -723,6 +742,22 @@ func _parse_fire_block(node, open_tok: TamaToken) -> void:
 # ---------------------------------------------------------------------------
 # Top-level definition parsers
 # ---------------------------------------------------------------------------
+
+func _parse_include(program: TamaAst.ProgramNode) -> void:
+	_consume(TamaToken.KW_INCLUDE)
+	var name_tok := _peek()
+	var name := _parse_identifier()
+	if name.is_empty():
+		_try_consume(TamaToken.NEWLINE)
+		return
+	_consume(TamaToken.NEWLINE)
+	var included: TamaAst.ProgramNode = _resolved_includes.get(name)
+	if not included:
+		_error_at(name_tok, "Cannot resolve include '%s'" % name)
+		return
+	program.fires.append_array(included.fires)
+	program.acts.append_array(included.acts)
+	program.bullets.append_array(included.bullets)
 
 func _parse_export() -> TamaAst.ExportVarNode:
 	var tok := _consume(TamaToken.KW_EXPORT)

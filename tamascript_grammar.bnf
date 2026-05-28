@@ -52,7 +52,13 @@ VALUE_TYPE = "abs" | "rel" | "seq" ;
    PROGRAM
    ------------------------------------------------------------ *)
 
-program = { export_decl } main_def { top_level_def } EOF ;
+program = { include_decl } { export_decl } [ main_def ] { top_level_def } EOF ;
+
+include_decl = "include" IDENT NEWLINE ;
+               (* resolves the named script from res://tamascripts/ and merges all of its
+                  top-level fire/act/bullet definitions into this program.
+                  included files need not define main — they act as libraries.
+                  includes are resolved at parse time; circular includes are rejected.   *)
 
 export_decl = "export" ( "num" | "str" ) IDENT [ EXPR ] NEWLINE ;
               (* declares a named variable exposed in the TamaEmitter inspector.
