@@ -1,0 +1,16 @@
+bullet homing
+    type example
+    act
+        repeat
+            chdir
+                dir aim 0
+                over 0
+            waitf 1
+
+main
+    repeat
+        fire
+            dir aim 0
+            spd 200
+            bul homing
+        wait 0.5

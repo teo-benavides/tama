@@ -45,7 +45,6 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 	bullet_runner.context = context
 	bullet.add_child(bullet_runner)
 	bullet._runner = bullet_runner
-	bullet.player_position = player_position
 
 	var angle := _resolve_angle(data, spawner)
 	var speed := _resolve_speed(data, spawner)

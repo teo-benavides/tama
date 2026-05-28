@@ -20,8 +20,6 @@ var _accel_tween:     Tween
 
 var _initial_position := Vector2.ZERO
 
-## Set externally by the spawning system so AIM direction can resolve.
-var player_position := Vector2.ZERO
 
 func _ready() -> void:
 	add_to_group(&"tama_bullets")
@@ -98,14 +96,14 @@ func _on_vanished() -> void:
 func _dir_to_angle(dir_type: TamaAst.DirType, value: float) -> float:
 	match dir_type:
 		TamaAst.DirType.AIM:
-			return (player_position - global_position).angle() + deg_to_rad(value)
+			return (TamaSpawnManager.player_position - global_position).angle() + deg_to_rad(value)
 		TamaAst.DirType.ABS:
 			return deg_to_rad(value)
 		TamaAst.DirType.REL:
 			return _angle + deg_to_rad(value)
 		TamaAst.DirType.SEQ:
 			return _last_angle + deg_to_rad(value)
-	return get_angle_to(player_position) + deg_to_rad(value)
+	return get_angle_to(TamaSpawnManager.player_position) + deg_to_rad(value)
 
 func _spd_to_value(speed_type: TamaAst.ValueType, value: float) -> float:
 	match speed_type:
