@@ -20,18 +20,16 @@ class ASTNode:
 # ---------------------------------------------------------------------------
 
 class ProgramNode extends ASTNode:
-	var main:     MainNode
-	var fires:    Array[FireDefNode]
-	var acts:     Array[ActDefNode]
-	var bullets:  Array[BulletDefNode]
-	var emitters: Array[EmitterDefNode]
+	var main:    MainNode
+	var fires:   Array[FireDefNode]
+	var acts:    Array[ActDefNode]
+	var bullets: Array[BulletDefNode]
 
 	func _init() -> void:
 		super(0, 0)
-		fires    = []
-		acts     = []
-		bullets  = []
-		emitters = []
+		fires   = []
+		acts    = []
+		bullets = []
 
 # ---------------------------------------------------------------------------
 # Top-level definitions
@@ -71,31 +69,19 @@ class ActDefNode extends ASTNode:
 		params = p_params
 		body   = []
 
-# emitter <name>
-class EmitterDefNode extends ASTNode:
-	var name: String
-	var body: Array[ASTNode]
-
-	func _init(p_name: String, p_line: int, p_col: int) -> void:
-		super(p_line, p_col)
-		name = p_name
-		body = []
-
 # bullet <name>([params...])
 class BulletDefNode extends ASTNode:
-	var name:            String
-	var params:          Array[String]
-	var bullet_type:     String
-	var spawner_name:    String
-	var inline_emitter:  InlineActNode  # null if absent or named
-	var act:             ASTNode   # InlineActNode or ActCallNode
+	var name:         String
+	var params:       Array[String]
+	var bullet_type:  String
+	var emitter_act:  ASTNode   # ActCallNode or InlineActNode, null if absent
+	var act:          ASTNode   # InlineActNode or ActCallNode
 
 	func _init(p_name: String, p_params: Array, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
-		name         = p_name
-		params       = p_params
-		bullet_type  = ""
-		spawner_name = ""
+		name        = p_name
+		params      = p_params
+		bullet_type = ""
 
 # ---------------------------------------------------------------------------
 # Fire body statements
@@ -175,21 +161,12 @@ class RefCallArg extends ASTNode:
 
 # bullet NEWLINE <block>  — anonymous inline bullet definition inside a fire block
 class InlineBulletNode extends ASTNode:
-	var bullet_type:    String = ""
-	var spawner_name:   String = ""
-	var inline_emitter: InlineActNode  # null if absent or named
-	var act:            ASTNode  # InlineActNode or ActCallNode, may be null
+	var bullet_type: String = ""
+	var emitter_act: ASTNode  # ActCallNode or InlineActNode, null if absent
+	var act:         ASTNode  # InlineActNode or ActCallNode, may be null
 
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
-
-# emitter <name>  — inside a bullet def, names the emitter script
-class FireSpawnerNode extends ASTNode:
-	var bullet_name: String
-
-	func _init(p_name: String, p_line: int, p_col: int) -> void:
-		super(p_line, p_col)
-		bullet_name = p_name
 
 # ---------------------------------------------------------------------------
 # Action statements

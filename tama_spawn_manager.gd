@@ -68,7 +68,7 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 			CONNECT_ONE_SHOT
 		)
 
-	if not data.bullet_spawner.is_empty() or data.bullet_inline_emitter != null:
+	if data.bullet_emitter_act != null:
 		# When the bullet also has an act, the act already owns bullet_runner.
 		# Create a separate interpreter so both run in parallel.
 		var spawner_runner: TamaInterpreter
@@ -79,27 +79,14 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 		else:
 			spawner_runner = bullet_runner
 		connect_interpreter(spawner_runner, bullet)
-		if not data.bullet_spawner.is_empty():
-			bullet.ready.connect(
-				func(): _start_spawner(spawner_runner, data.bullet_spawner, data.source_program),
-				CONNECT_ONE_SHOT
-			)
-		else:
-			bullet.ready.connect(
-				func(): spawner_runner.start_act(data.source_program, data.bullet_inline_emitter, {}),
-				CONNECT_ONE_SHOT
-			)
-
-# ---------------------------------------------------------------------------
-# Spawner support
-# ---------------------------------------------------------------------------
-
-func _start_spawner(interpreter: TamaInterpreter, emitter_name: String, source_program: TamaAst.ProgramNode) -> void:
-	for emitter_def: TamaAst.EmitterDefNode in source_program.emitters:
-		if emitter_def.name == emitter_name:
-			interpreter.start_emitter(source_program, emitter_def)
-			return
-	push_error("TamaSpawnManager: unknown emitter '%s'" % emitter_name)
+		# Build the bullet scope so emitter acts can resolve param-held act refs.
+		var emitter_scope: Dictionary = {}
+		for i in mini(data.bullet_params.size(), data.bullet_args.size()):
+			emitter_scope[data.bullet_params[i]] = data.bullet_args[i]
+		bullet.ready.connect(
+			func(): spawner_runner.start_act(data.source_program, data.bullet_emitter_act, emitter_scope),
+			CONNECT_ONE_SHOT
+		)
 
 
 # ---------------------------------------------------------------------------
