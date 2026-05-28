@@ -180,6 +180,14 @@ class WaitNode extends ASTNode:
 		super(p_line, p_col)
 		expr = p_expr
 
+# waitf <expr>  — wait for a number of physics frames
+class WaitFramesNode extends ASTNode:
+	var expr: String
+
+	func _init(p_expr: String, p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+		expr = p_expr
+
 # vanish
 class VanishNode extends ASTNode:
 	func _init(p_line: int, p_col: int) -> void:

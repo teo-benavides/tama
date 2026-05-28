@@ -117,6 +117,7 @@ bullet_call = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
 action_stmt = dir_stmt
              | speed_stmt
              | wait_stmt
+             | waitf_stmt
              | offset_stmt
              | chdir_stmt
              | accel_stmt
@@ -135,6 +136,8 @@ async_act  = "async" ( inline_act | act_call ) ;
 arg_list = "(" EXPR { "," EXPR } ")" ;
 
 wait_stmt  = "wait"  EXPR ;
+waitf_stmt = "waitf" EXPR ;
+             (* waits for EXPR physics frames *)
 repeat_stmt = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block ;
               (* IDENT names the loop index, 1-based; may be nested arbitrarily *)
               (* omitting EXPR means infinite repeat *)

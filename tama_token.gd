@@ -20,6 +20,7 @@ const KW_ACT     = "KW_ACT"
 const KW_BULLET  = "KW_BULLET"
 const KW_REPEAT  = "KW_REPEAT"
 const KW_WAIT    = "KW_WAIT"
+const KW_WAITF   = "KW_WAITF"
 const KW_VANISH  = "KW_VANISH"
 const KW_CHDIR   = "KW_CHDIR"
 const KW_CHSPD   = "KW_CHSPD"
@@ -46,6 +47,7 @@ const KEYWORDS: Dictionary = {
 	"bul":     KW_BULLET,
 	"repeat":  KW_REPEAT,
 	"wait":    KW_WAIT,
+	"waitf":   KW_WAITF,
 	"vanish":  KW_VANISH,
 	"chdir":   KW_CHDIR,
 	"chspd":   KW_CHSPD,

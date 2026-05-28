@@ -131,6 +131,11 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 		if secs > 0.0:
 			await get_tree().create_timer(secs, false, true).timeout
 
+	elif node is TamaAst.WaitFramesNode:
+		var frames := int(_eval((node as TamaAst.WaitFramesNode).expr, scope))
+		for _i in frames:
+			await get_tree().physics_frame
+
 	elif node is TamaAst.VanishNode:
 		_running = false
 		vanished.emit()

@@ -363,6 +363,14 @@ func _parse_wait() -> TamaAst.WaitNode:
 	_consume(TamaToken.NEWLINE)
 	return TamaAst.WaitNode.new(expr, tok.line, tok.col)
 
+func _parse_waitf() -> TamaAst.WaitFramesNode:
+	var tok := _consume(TamaToken.KW_WAITF)
+	var expr := _collect_to_eol()
+	if expr.strip_edges().is_empty():
+		_error_at(_peek(), "Expected expression after waitf")
+	_consume(TamaToken.NEWLINE)
+	return TamaAst.WaitFramesNode.new(expr, tok.line, tok.col)
+
 func _parse_vanish() -> TamaAst.VanishNode:
 	var tok := _consume(TamaToken.KW_VANISH)
 	_consume(TamaToken.NEWLINE)
@@ -651,6 +659,7 @@ func _parse_action_statement():   # -> TamaAst.ASTNode
 		TamaToken.KW_DIR:    return _parse_dir()
 		TamaToken.KW_SPEED:  return _parse_speed()
 		TamaToken.KW_WAIT:   return _parse_wait()
+		TamaToken.KW_WAITF:  return _parse_waitf()
 		TamaToken.KW_VANISH: return _parse_vanish()
 		TamaToken.KW_OFFSET: return _parse_offset()
 		TamaToken.KW_CHDIR:  return _parse_chdir()
