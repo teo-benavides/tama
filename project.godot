@@ -13,12 +13,11 @@ config_version=5
 config/name="Tama"
 run/main_scene="uid://ddi7qj5x80hqh"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="uid://2rof51lmjyrt"
 
 [autoload]
 
-TamaScriptRepository="*uid://cm8v6n37nsiq"
-TamaSpawnManager="*uid://tkvso0en214a"
+TamaManager="*uid://fvu4436xvglo"
 
 [physics]
 

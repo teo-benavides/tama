@@ -1,5 +1,5 @@
-class_name TamaContext
 extends RefCounted
+class_name TamaContext
 
 func time() -> float:
 	return float(Engine.get_physics_frames()) / float(Engine.physics_ticks_per_second)

@@ -1,7 +1,9 @@
 extends CharacterBody2D
 class_name TamaBullet
 
-var _runner: TamaInterpreter
+const _Ast = preload("res://tama_ast.gd")
+
+var _runner
 
 var _angle:   float = 0.0
 var _speed:   float = 0.0
@@ -55,7 +57,7 @@ func destroy() -> void:
 # Signal handlers
 # ---------------------------------------------------------------------------
 
-func _on_changed_direction(data: TamaInterpreter.ChdirData) -> void:
+func _on_changed_direction(data) -> void:
 	var target := _dir_to_angle(data.dir_type, data.dir_value)
 	_last_angle = _angle
 	if _direction_tween:
@@ -64,7 +66,7 @@ func _on_changed_direction(data: TamaInterpreter.ChdirData) -> void:
 	_direction_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	_direction_tween.tween_property(self, "_angle", target, data.over).set_trans(Tween.TRANS_LINEAR)
 
-func _on_changed_speed(data: TamaInterpreter.ChspdData) -> void:
+func _on_changed_speed(data) -> void:
 	var target := _spd_to_value(data.speed_type, data.speed_value)
 	_last_speed = _speed
 	if _speed_tween:
@@ -73,7 +75,7 @@ func _on_changed_speed(data: TamaInterpreter.ChspdData) -> void:
 	_speed_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	_speed_tween.tween_property(self, "_speed", target, data.over).set_trans(Tween.TRANS_LINEAR)
 
-func _on_accelerated(data: TamaInterpreter.AccelData) -> void:
+func _on_accelerated(data) -> void:
 	if _accel_tween:
 		_accel_tween.kill()
 	_accel_tween = create_tween()
@@ -93,32 +95,32 @@ func _on_vanished() -> void:
 # Conversion helpers
 # ---------------------------------------------------------------------------
 
-func _dir_to_angle(dir_type: TamaAst.DirType, value: float) -> float:
+func _dir_to_angle(dir_type, value: float) -> float:
 	match dir_type:
-		TamaAst.DirType.AIM:
-			return (TamaSpawnManager.player_position - global_position).angle() + deg_to_rad(value)
-		TamaAst.DirType.ABS:
+		_Ast.DirType.AIM:
+			return (TamaManager.player_position - global_position).angle() + deg_to_rad(value)
+		_Ast.DirType.ABS:
 			return deg_to_rad(value)
-		TamaAst.DirType.REL:
+		_Ast.DirType.REL:
 			return _angle + deg_to_rad(value)
-		TamaAst.DirType.SEQ:
+		_Ast.DirType.SEQ:
 			return _last_angle + deg_to_rad(value)
-	return get_angle_to(TamaSpawnManager.player_position) + deg_to_rad(value)
+	return get_angle_to(TamaManager.player_position) + deg_to_rad(value)
 
-func _spd_to_value(speed_type: TamaAst.ValueType, value: float) -> float:
+func _spd_to_value(speed_type, value: float) -> float:
 	match speed_type:
-		TamaAst.ValueType.ABS:
+		_Ast.ValueType.ABS:
 			return value
-		TamaAst.ValueType.REL:
+		_Ast.ValueType.REL:
 			return _speed + value
-		TamaAst.ValueType.SEQ:
+		_Ast.ValueType.SEQ:
 			return _last_speed + value
 	return value
 
-func _accel_axis_end(axis_type: TamaAst.ValueType, value: float, current: float, over: float) -> float:
+func _accel_axis_end(axis_type, value: float, current: float, over: float) -> float:
 	match axis_type:
-		TamaAst.ValueType.ABS, TamaAst.ValueType.SEQ:
+		_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
 			return value
-		TamaAst.ValueType.REL:
+		_Ast.ValueType.REL:
 			return (value - current) * over
 	return value

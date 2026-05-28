@@ -1,5 +1,3 @@
-class_name TamaAst
-
 enum DirType   { AIM, ABS, REL, SEQ }
 enum ValueType { ABS, REL, SEQ }
 enum OffsetMode { NONE, INLINE, BLOCK }

@@ -2,6 +2,11 @@
 extends Node2D
 class_name TamaEmitter
 
+const _Interpreter = preload("res://tama_interpreter.gd")
+const _Ast         = preload("res://tama_ast.gd")
+const _Lexer       = preload("res://tama_lexer.gd")
+const _Parser      = preload("res://tama_parser.gd")
+
 var _script_filename: String
 @export var script_filename: String:
 	set(value):
@@ -16,7 +21,7 @@ var _script_filename: String
 
 @export var excluded_from_group: bool = false
 
-var _interpreter: TamaInterpreter
+var _interpreter
 var _running: bool = false
 
 @warning_ignore("unused_private_class_variable")
@@ -119,12 +124,12 @@ func _refresh_exports() -> void:
 	_cached_export_defs = []
 	if _script_filename.is_empty():
 		return
-	var program: TamaAst.ProgramNode
+	var program: _Ast.ProgramNode
 	if Engine.is_editor_hint():
 		program = _parse_script_file_for_exports()
 	else:
-		if TamaScriptRepository.has_tama_script(_script_filename):
-			program = TamaScriptRepository.get_tama_script(_script_filename)
+		if TamaManager._has_tama_script(_script_filename):
+			program = TamaManager._get_script_from_repository(_script_filename)
 	if not program:
 		return
 	for exp in program.exports:
@@ -153,22 +158,22 @@ func _get_script_mtime() -> int:
 	var path := _find_script_path()
 	return FileAccess.get_modified_time(path) if not path.is_empty() else 0
 
-func _parse_script_file_for_exports() -> TamaAst.ProgramNode:
+func _parse_script_file_for_exports() -> _Ast.ProgramNode:
 	var path := _find_script_path()
 	if path.is_empty():
 		return null
 	var source := FileAccess.get_file_as_string(path)
 	if source.is_empty():
 		return null
-	var tokens := TamaLexer.new().tokenize(source)
-	var result := TamaParser.new().parse(tokens, _make_editor_resolver())
+	var tokens = _Lexer.new().tokenize(source)
+	var result = _Parser.new().parse(tokens, _make_editor_resolver())
 	if not result.ok():
 		for err in result.errors:
 			push_warning("TamaEmitter [%s] parse error: %s" % [_script_filename, str(err)])
 	return result.program
 
 func _make_editor_resolver() -> Callable:
-	return func(name: String) -> TamaAst.ProgramNode:
+	return func(name: String) -> _Ast.ProgramNode:
 		for path in [
 			"res://tamascripts/" + name,
 			"res://tamascripts/" + name + ".tama",
@@ -177,8 +182,8 @@ func _make_editor_resolver() -> Callable:
 			if FileAccess.file_exists(path):
 				var src := FileAccess.get_file_as_string(path)
 				if not src.is_empty():
-					var tokens := TamaLexer.new().tokenize(src)
-					return TamaParser.new().parse(tokens).program
+					var tokens = _Lexer.new().tokenize(src)
+					return _Parser.new().parse(tokens).program
 		return null
 
 # ---------------------------------------------------------------------------
@@ -189,12 +194,12 @@ func start() -> void:
 	if _script_filename.is_empty():
 		push_error("TamaEmitter: script_filename is not set")
 		return
-	var program: TamaAst.ProgramNode = TamaSpawnManager.get_tama_script(_script_filename)
+	var program = TamaManager._get_tama_script(_script_filename)
 	if not program:
 		return
-	_interpreter = TamaInterpreter.new()
-	_interpreter.context = TamaSpawnManager.context
-	TamaSpawnManager.connect_interpreter(_interpreter, self)
+	_interpreter = _Interpreter.new()
+	_interpreter.context = TamaManager._get_context()
+	TamaManager._connect_interpreter(_interpreter, self)
 	add_child(_interpreter)
 	_running = true
 	await _interpreter.start(program, _export_values.duplicate())

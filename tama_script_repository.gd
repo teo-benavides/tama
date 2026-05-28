@@ -1,6 +1,10 @@
 extends Node
 
-var _scripts: Dictionary[String, TamaAst.ProgramNode] = {}
+const _Ast    = preload("res://tama_ast.gd")
+const _Lexer  = preload("res://tama_lexer.gd")
+const _Parser = preload("res://tama_parser.gd")
+
+var _scripts: Dictionary = {}
 
 ## Parse every .tam/.tama file in path and cache the resulting ASTs.
 ## Call this once at startup before running any TamaEmitters.
@@ -28,7 +32,7 @@ func load_script_from_source(name: String, source: String) -> void:
 		_scripts[name] = program
 
 ## Retrieve a previously loaded program by filename.
-func get_tama_script(filename: String) -> TamaAst.ProgramNode:
+func get_tama_script(filename: String) -> _Ast.ProgramNode:
 	return _scripts.get(filename)
 
 ## True if a script with this filename has been loaded.
@@ -44,9 +48,9 @@ func _parse_and_store(filename: String, full_path: String) -> void:
 	if program:
 		_scripts[filename] = program
 
-func _parse_source(source: String, label: String, resolver: Callable = Callable()) -> TamaAst.ProgramNode:
-	var tokens := TamaLexer.new().tokenize(source)
-	var result := TamaParser.new().parse(tokens, resolver)
+func _parse_source(source: String, label: String, resolver: Callable = Callable()) -> _Ast.ProgramNode:
+	var tokens = _Lexer.new().tokenize(source)
+	var result = _Parser.new().parse(tokens, resolver)
 	if not result:
 		push_error("TamaScriptRepository: parse failed for '%s'" % label)
 	return result.program
@@ -62,7 +66,7 @@ func _find_script_path(name: String) -> String:
 	return ""
 
 func _make_resolver(loading: Array) -> Callable:
-	return func(name: String) -> TamaAst.ProgramNode:
+	return func(name: String) -> _Ast.ProgramNode:
 		if name in loading:
 			push_warning("TamaScriptRepository: circular include '%s'" % name)
 			return null
@@ -76,8 +80,8 @@ func _make_resolver(loading: Array) -> Callable:
 		if source.is_empty():
 			return null
 		loading.append(name)
-		var tokens := TamaLexer.new().tokenize(source)
-		var result := TamaParser.new().parse(tokens, _make_resolver(loading))
+		var tokens = _Lexer.new().tokenize(source)
+		var result = _Parser.new().parse(tokens, _make_resolver(loading))
 		loading.erase(name)
 		if result.program:
 			_scripts[name] = result.program

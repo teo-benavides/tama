@@ -1,5 +1,3 @@
-class_name TamaToken
-
 # --- Token type constants ---
 const NUMBER  = "NUMBER"
 const WORD    = "WORD"

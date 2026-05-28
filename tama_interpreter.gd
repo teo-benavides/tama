@@ -1,5 +1,6 @@
-class_name TamaInterpreter
 extends Node
+
+const _Ast = preload("res://tama_ast.gd")
 
 # ---------------------------------------------------------------------------
 # Signal payload — carries everything the spawning system needs
@@ -16,46 +17,46 @@ class TamaRef:
 
 class BulletFireData:
 	# Fire statement properties
-	var dir_type:      TamaAst.DirType    = TamaAst.DirType.AIM
+	var dir_type:      _Ast.DirType    = _Ast.DirType.AIM
 	var dir_value:     float
 
-	var speed_type:    TamaAst.ValueType  = TamaAst.ValueType.ABS
+	var speed_type:    _Ast.ValueType  = _Ast.ValueType.ABS
 	var speed_value:   float
 
-	var offset_mode:   TamaAst.OffsetMode = TamaAst.OffsetMode.NONE
+	var offset_mode:   _Ast.OffsetMode = _Ast.OffsetMode.NONE
 	var offset_value:  float                              # inline form only
-	var offset_x_type: TamaAst.ValueType  = TamaAst.ValueType.REL  # block form only
+	var offset_x_type: _Ast.ValueType  = _Ast.ValueType.REL  # block form only
 	var offset_x:      float
-	var offset_y_type: TamaAst.ValueType  = TamaAst.ValueType.REL
+	var offset_y_type: _Ast.ValueType  = _Ast.ValueType.REL
 	var offset_y:      float
 
 	# Bullet properties
 	var bullet_type:           String
-	var bullet_emitter_act:    TamaAst.ASTNode    # ActCallNode or InlineActNode, null if absent
-	var bullet_act:            TamaAst.ASTNode    # InlineActNode or ActCallNode, null if none
+	var bullet_emitter_act:    _Ast.ASTNode    # ActCallNode or InlineActNode, null if absent
+	var bullet_act:            _Ast.ASTNode    # InlineActNode or ActCallNode, null if none
 	var bullet_params:         Array[String] = [] # param names from the bullet def
 	var bullet_args:           Array        = [] # evaluated args matching bullet_params (float or String)
 
 	# The program that fired this bullet — needed so the bullet's act can resolve
 	# named fires/acts/bullets from the same script even without a spawner file.
-	var source_program: TamaAst.ProgramNode
+	var source_program: _Ast.ProgramNode
 
 class ChdirData:
-	var dir_type:  TamaAst.DirType
+	var dir_type:  _Ast.DirType
 	var dir_value: float
 	var over:      float
 
 class ChspdData:
-	var speed_type:  TamaAst.ValueType
+	var speed_type:  _Ast.ValueType
 	var speed_value: float
 	var over:        float
 
 class AccelData:
 	var has_x:  bool
-	var x_type: TamaAst.ValueType
+	var x_type: _Ast.ValueType
 	var x:      float
 	var has_y:  bool
-	var y_type: TamaAst.ValueType
+	var y_type: _Ast.ValueType
 	var y:      float
 	var over:   float
 
@@ -74,7 +75,7 @@ signal _all_async_done
 # State
 # ---------------------------------------------------------------------------
 
-var _program: TamaAst.ProgramNode
+var _program: _Ast.ProgramNode
 var _running: bool = false
 var _async_count: int = 0
 var context: TamaContext = TamaContext.new()
@@ -85,7 +86,7 @@ var context: TamaContext = TamaContext.new()
 
 # Run the program from main. The interpreter must be in the scene tree
 # (added as a child) so that get_tree() works for wait.
-func start(program: TamaAst.ProgramNode, initial_scope: Dictionary = {}) -> void:
+func start(program: _Ast.ProgramNode, initial_scope: Dictionary = {}) -> void:
 	_program = program
 	if not _program.main:
 		push_error("TamaInterpreter: program has no main block")
@@ -100,16 +101,16 @@ func start(program: TamaAst.ProgramNode, initial_scope: Dictionary = {}) -> void
 # program: the same program that fired the bullet (needed for fire/act lookups)
 # scope:   {param_name: value} built from BulletFireData.bullet_params/args
 func start_act(
-	program: TamaAst.ProgramNode,
-	act:     TamaAst.ASTNode,
+	program: _Ast.ProgramNode,
+	act:     _Ast.ASTNode,
 	scope:   Dictionary = {}
 ) -> void:
 	_program = program
 	_running = true
-	if act is TamaAst.InlineActNode:
-		await _exec_action_body((act as TamaAst.InlineActNode).body, scope)
-	elif act is TamaAst.ActCallNode:
-		await _exec_act_call(act as TamaAst.ActCallNode, scope)
+	if act is _Ast.InlineActNode:
+		await _exec_action_body((act as _Ast.InlineActNode).body, scope)
+	elif act is _Ast.ActCallNode:
+		await _exec_act_call(act as _Ast.ActCallNode, scope)
 	_running = false
 
 func stop() -> void:
@@ -120,51 +121,51 @@ func stop() -> void:
 # ---------------------------------------------------------------------------
 
 func _exec_action_body(body: Array, scope: Dictionary) -> void:
-	for node: TamaAst.ASTNode in body:
+	for node: _Ast.ASTNode in body:
 		if not _running:
 			return
 		await _exec_action_stmt(node, scope)
 
-func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
-	if node is TamaAst.WaitNode:
-		var secs := _eval((node as TamaAst.WaitNode).expr, scope)
+func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
+	if node is _Ast.WaitNode:
+		var secs := _eval((node as _Ast.WaitNode).expr, scope)
 		if secs > 0.0:
 			await get_tree().create_timer(secs, false, true).timeout
 
-	elif node is TamaAst.WaitFramesNode:
-		var frames := int(_eval((node as TamaAst.WaitFramesNode).expr, scope))
+	elif node is _Ast.WaitFramesNode:
+		var frames := int(_eval((node as _Ast.WaitFramesNode).expr, scope))
 		for _i in frames:
 			await get_tree().physics_frame
 
-	elif node is TamaAst.VanishNode:
+	elif node is _Ast.VanishNode:
 		_running = false
 		vanished.emit()
 
-	elif node is TamaAst.RepeatNode:
-		await _exec_repeat(node as TamaAst.RepeatNode, scope)
+	elif node is _Ast.RepeatNode:
+		await _exec_repeat(node as _Ast.RepeatNode, scope)
 
-	elif node is TamaAst.FireCallNode:
-		_exec_fire_call(node as TamaAst.FireCallNode, scope)
+	elif node is _Ast.FireCallNode:
+		_exec_fire_call(node as _Ast.FireCallNode, scope)
 
-	elif node is TamaAst.InlineFireNode:
+	elif node is _Ast.InlineFireNode:
 		_exec_fire_node(node, scope)
 
-	elif node is TamaAst.ActCallNode:
-		var acn := node as TamaAst.ActCallNode
+	elif node is _Ast.ActCallNode:
+		var acn := node as _Ast.ActCallNode
 		if acn.is_async:
 			_run_async(func(): await _exec_act_call(acn, scope))
 		else:
 			await _exec_act_call(acn, scope)
 
-	elif node is TamaAst.InlineActNode:
-		var ian := node as TamaAst.InlineActNode
+	elif node is _Ast.InlineActNode:
+		var ian := node as _Ast.InlineActNode
 		if ian.is_async:
 			_run_async(func(): await _exec_action_body(ian.body, scope))
 		else:
 			await _exec_action_body(ian.body, scope)
 
-	elif node is TamaAst.ChdirNode:
-		var cn := node as TamaAst.ChdirNode
+	elif node is _Ast.ChdirNode:
+		var cn := node as _Ast.ChdirNode
 		if not cn.dir or not cn.over:
 			push_error("TamaInterpreter: chdir requires both dir and over (L%d)" % node.line)
 		else:
@@ -174,8 +175,8 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 			d.over      = _eval(cn.over.expr, scope)
 			changed_direction.emit(d)
 
-	elif node is TamaAst.ChspdNode:
-		var cn := node as TamaAst.ChspdNode
+	elif node is _Ast.ChspdNode:
+		var cn := node as _Ast.ChspdNode
 		if not cn.speed or not cn.over:
 			push_error("TamaInterpreter: chspd requires both speed and over (L%d)" % node.line)
 		else:
@@ -185,8 +186,8 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 			d.over        = _eval(cn.over.expr, scope)
 			changed_speed.emit(d)
 
-	elif node is TamaAst.AccelNode:
-		var cn := node as TamaAst.AccelNode
+	elif node is _Ast.AccelNode:
+		var cn := node as _Ast.AccelNode
 		if not cn.over or (not cn.x and not cn.y):
 			push_error("TamaInterpreter: accel requires over and at least one of x/y (L%d)" % node.line)
 		else:
@@ -202,7 +203,7 @@ func _exec_action_stmt(node: TamaAst.ASTNode, scope: Dictionary) -> void:
 			d.over = _eval(cn.over.expr, scope)
 			accelerated.emit(d)
 
-func _exec_repeat(node: TamaAst.RepeatNode, scope: Dictionary) -> void:
+func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 	var count := -1
 	if not node.count.strip_edges().is_empty():
 		count = roundi(_eval(node.count, scope))
@@ -215,9 +216,9 @@ func _exec_repeat(node: TamaAst.RepeatNode, scope: Dictionary) -> void:
 		await _exec_action_body(node.body, iter_scope)
 		i += 1
 
-func _exec_fire_call(node: TamaAst.FireCallNode, scope: Dictionary) -> void:
-	if scope.has(node.name) and scope[node.name] is TamaAst.InlineFireNode:
-		_exec_fire_node(scope[node.name] as TamaAst.InlineFireNode, scope)
+func _exec_fire_call(node: _Ast.FireCallNode, scope: Dictionary) -> void:
+	if scope.has(node.name) and scope[node.name] is _Ast.InlineFireNode:
+		_exec_fire_node(scope[node.name] as _Ast.InlineFireNode, scope)
 		return
 	var ref_name := node.name
 	var pre_bound: Array = []
@@ -232,9 +233,9 @@ func _exec_fire_call(node: TamaAst.FireCallNode, scope: Dictionary) -> void:
 	var extra := node.args.map(func(a): return _eval_arg(a, scope))
 	_exec_fire_node(fire_def, _bind_args_from_values(fire_def.params, pre_bound + extra, scope))
 
-func _exec_act_call(node: TamaAst.ActCallNode, scope: Dictionary) -> void:
-	if scope.has(node.name) and scope[node.name] is TamaAst.InlineActNode:
-		await _exec_action_body((scope[node.name] as TamaAst.InlineActNode).body, scope)
+func _exec_act_call(node: _Ast.ActCallNode, scope: Dictionary) -> void:
+	if scope.has(node.name) and scope[node.name] is _Ast.InlineActNode:
+		await _exec_action_body((scope[node.name] as _Ast.InlineActNode).body, scope)
 		return
 	var ref_name := node.name
 	var pre_bound: Array = []
@@ -272,12 +273,12 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 		data.speed_value = _eval(node.speed.expr, scope)
 
 	# Offset
-	if node.offset is TamaAst.OffsetInlineNode:
-		data.offset_mode  = TamaAst.OffsetMode.INLINE
-		data.offset_value = _eval((node.offset as TamaAst.OffsetInlineNode).expr, scope)
-	elif node.offset is TamaAst.OffsetNode:
-		data.offset_mode = TamaAst.OffsetMode.BLOCK
-		var on := node.offset as TamaAst.OffsetNode
+	if node.offset is _Ast.OffsetInlineNode:
+		data.offset_mode  = _Ast.OffsetMode.INLINE
+		data.offset_value = _eval((node.offset as _Ast.OffsetInlineNode).expr, scope)
+	elif node.offset is _Ast.OffsetNode:
+		data.offset_mode = _Ast.OffsetMode.BLOCK
+		var on := node.offset as _Ast.OffsetNode
 		if on.x:
 			data.offset_x_type = _get_axis_type(on.x, scope)
 			data.offset_x      = _eval(on.x.expr, scope)
@@ -286,17 +287,17 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 			data.offset_y      = _eval(on.y.expr, scope)
 
 	# Bullet (optional — omitting uses the registry default)
-	if node.bullet is TamaAst.InlineBulletNode:
-		var ib := node.bullet as TamaAst.InlineBulletNode
+	if node.bullet is _Ast.InlineBulletNode:
+		var ib := node.bullet as _Ast.InlineBulletNode
 		data.bullet_type        = ib.bullet_type
 		data.bullet_emitter_act = ib.emitter_act
 		data.bullet_act         = ib.act
 	elif node.bullet != null:
-		var bcn      := node.bullet as TamaAst.BulletCallNode
+		var bcn      := node.bullet as _Ast.BulletCallNode
 		var bul_name := bcn.name
 		var pre_bound: Array = []
-		if scope.has(bul_name) and scope[bul_name] is TamaAst.InlineBulletNode:
-			var ib := scope[bul_name] as TamaAst.InlineBulletNode
+		if scope.has(bul_name) and scope[bul_name] is _Ast.InlineBulletNode:
+			var ib := scope[bul_name] as _Ast.InlineBulletNode
 			data.bullet_type        = ib.bullet_type
 			data.bullet_emitter_act = ib.emitter_act
 			data.bullet_act         = ib.act
@@ -327,20 +328,20 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 # Definition lookups
 # ---------------------------------------------------------------------------
 
-func _find_fire(name: String) -> TamaAst.FireDefNode:
-	for f: TamaAst.FireDefNode in _program.fires:
+func _find_fire(name: String) -> _Ast.FireDefNode:
+	for f: _Ast.FireDefNode in _program.fires:
 		if f.name == name:
 			return f
 	return null
 
-func _find_act(name: String) -> TamaAst.ActDefNode:
-	for a: TamaAst.ActDefNode in _program.acts:
+func _find_act(name: String) -> _Ast.ActDefNode:
+	for a: _Ast.ActDefNode in _program.acts:
 		if a.name == name:
 			return a
 	return null
 
-func _find_bullet(name: String) -> TamaAst.BulletDefNode:
-	for b: TamaAst.BulletDefNode in _program.bullets:
+func _find_bullet(name: String) -> _Ast.BulletDefNode:
+	for b: _Ast.BulletDefNode in _program.bullets:
 		if b.name == name:
 			return b
 	return null
@@ -349,42 +350,42 @@ func _find_bullet(name: String) -> TamaAst.BulletDefNode:
 # Scope helpers
 # ---------------------------------------------------------------------------
 
-func _get_dir_type(node: TamaAst.DirNode, scope: Dictionary) -> TamaAst.DirType:
+func _get_dir_type(node: _Ast.DirNode, scope: Dictionary) -> _Ast.DirType:
 	if node.dir_type_var.is_empty():
 		return node.dir_type
 	var val = _eval_arg(node.dir_type_var, scope)
 	if val is String:
 		match val:
-			"aim": return TamaAst.DirType.AIM
-			"abs": return TamaAst.DirType.ABS
-			"rel": return TamaAst.DirType.REL
-			"seq": return TamaAst.DirType.SEQ
+			"aim": return _Ast.DirType.AIM
+			"abs": return _Ast.DirType.ABS
+			"rel": return _Ast.DirType.REL
+			"seq": return _Ast.DirType.SEQ
 	push_error("TamaInterpreter: invalid dir type '%s'" % str(val))
-	return TamaAst.DirType.AIM
+	return _Ast.DirType.AIM
 
-func _get_axis_type(node: TamaAst.OffsetAxisNode, scope: Dictionary) -> TamaAst.ValueType:
+func _get_axis_type(node: _Ast.OffsetAxisNode, scope: Dictionary) -> _Ast.ValueType:
 	if node.axis_type_var.is_empty():
 		return node.axis_type
 	var val = _eval_arg(node.axis_type_var, scope)
 	if val is String:
 		match val:
-			"abs": return TamaAst.ValueType.ABS
-			"rel": return TamaAst.ValueType.REL
-			"seq": return TamaAst.ValueType.SEQ
+			"abs": return _Ast.ValueType.ABS
+			"rel": return _Ast.ValueType.REL
+			"seq": return _Ast.ValueType.SEQ
 	push_error("TamaInterpreter: invalid axis type '%s'" % str(val))
-	return TamaAst.ValueType.REL
+	return _Ast.ValueType.REL
 
-func _get_speed_type(node: TamaAst.SpeedNode, scope: Dictionary) -> TamaAst.ValueType:
+func _get_speed_type(node: _Ast.SpeedNode, scope: Dictionary) -> _Ast.ValueType:
 	if node.speed_type_var.is_empty():
 		return node.speed_type
 	var val = _eval_arg(node.speed_type_var, scope)
 	if val is String:
 		match val:
-			"abs": return TamaAst.ValueType.ABS
-			"rel": return TamaAst.ValueType.REL
-			"seq": return TamaAst.ValueType.SEQ
+			"abs": return _Ast.ValueType.ABS
+			"rel": return _Ast.ValueType.REL
+			"seq": return _Ast.ValueType.SEQ
 	push_error("TamaInterpreter: invalid speed type '%s'" % str(val))
-	return TamaAst.ValueType.ABS
+	return _Ast.ValueType.ABS
 
 # Returns the canonical definition name, resolving through a TamaRef in scope if present.
 func _resolve_ref_name(name: String, scope: Dictionary) -> String:
@@ -393,7 +394,7 @@ func _resolve_ref_name(name: String, scope: Dictionary) -> String:
 	return name
 
 # Resolves a RefCallArg at runtime: evaluates its sub-args and builds a TamaRef.
-func _resolve_ref_arg(ref_arg: TamaAst.RefCallArg, scope: Dictionary):
+func _resolve_ref_arg(ref_arg: _Ast.RefCallArg, scope: Dictionary):
 	var bound: Array = []
 	for sub_arg in ref_arg.args:
 		bound.append(_eval_arg(sub_arg, scope))
@@ -412,10 +413,10 @@ func _resolve_ref_arg(ref_arg: TamaAst.RefCallArg, scope: Dictionary):
 # TamaRef, a plain String identifier holding a non-numeric scope value passes through,
 # and everything else is evaluated as a float.
 func _eval_arg(arg, scope: Dictionary):
-	if arg is TamaAst.InlineBulletNode or arg is TamaAst.InlineActNode or arg is TamaAst.InlineFireNode:
+	if arg is _Ast.InlineBulletNode or arg is _Ast.InlineActNode or arg is _Ast.InlineFireNode:
 		return arg
-	if arg is TamaAst.RefCallArg:
-		return _resolve_ref_arg(arg as TamaAst.RefCallArg, scope)
+	if arg is _Ast.RefCallArg:
+		return _resolve_ref_arg(arg as _Ast.RefCallArg, scope)
 	var expr: String = arg as String
 	var stripped := expr.strip_edges()
 	if stripped.is_valid_identifier() and scope.has(stripped):

@@ -8,4 +8,4 @@ func _physics_process(delta):
 	set_velocity(velocity)
 	move_and_slide()
 	
-	TamaSpawnManager.player_position = global_position
+	TamaManager.player_position = global_position

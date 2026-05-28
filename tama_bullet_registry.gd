@@ -1,6 +1,5 @@
-class_name TamaBulletRegistry
 extends Resource
-
+class_name TamaBulletRegistry
 ## Maps bullet type strings to their PackedScenes.
 @export var entries: Dictionary = {}
 

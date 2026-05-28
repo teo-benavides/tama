@@ -1,4 +1,4 @@
-class_name TamaLexer
+const _Token = preload("res://tama_token.gd")
 
 # Precompiled regex rules: [RegEx, token_type]
 # Order matters — more specific patterns first.
@@ -9,14 +9,14 @@ func _init() -> void:
 
 func _compile_rules() -> void:
 	var patterns := [
-		["^\\d+\\.\\d+",            TamaToken.NUMBER],  # float before int
-		["^\\d+",                       TamaToken.NUMBER],
-		["^[a-zA-Z_][a-zA-Z0-9_]*",    TamaToken.WORD],
-		["^\\(",                        TamaToken.LPAREN],
-		["^\\)",                        TamaToken.RPAREN],
-		["^(==|!=|<=|>=|&&|\\|\\|)",    TamaToken.OP],  # two-char operators before single-char
-		["^[*/+\\-<>!&|=%]",            TamaToken.OP],
-		["^,",                          TamaToken.COMMA],
+		["^\\d+\\.\\d+",            _Token.NUMBER],  # float before int
+		["^\\d+",                       _Token.NUMBER],
+		["^[a-zA-Z_][a-zA-Z0-9_]*",    _Token.WORD],
+		["^\\(",                        _Token.LPAREN],
+		["^\\)",                        _Token.RPAREN],
+		["^(==|!=|<=|>=|&&|\\|\\|)",    _Token.OP],  # two-char operators before single-char
+		["^[*/+\\-<>!&|=%]",            _Token.OP],
+		["^,",                          _Token.COMMA],
 	]
 	for entry in patterns:
 		var rx := RegEx.new()
@@ -26,8 +26,8 @@ func _compile_rules() -> void:
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
-func tokenize(source: String) -> Array[TamaToken]:
-	var tokens: Array[TamaToken] = []
+func tokenize(source: String) -> Array[_Token]:
+	var tokens: Array[_Token] = []
 	# Normalize line endings
 	var lines := source.replace("\r\n", "\n").replace("\r", "\n").split("\n")
 	var indent_stack := [0]
@@ -54,14 +54,14 @@ func tokenize(source: String) -> Array[TamaToken]:
 		var current_indent: int = indent_stack.back()
 		if indent > current_indent:
 			indent_stack.push_back(indent)
-			tokens.append(TamaToken.new(TamaToken.INDENT, "", line_idx, 0))
+			tokens.append(_Token.new(_Token.INDENT, "", line_idx, 0))
 		elif indent < current_indent:
 			while indent_stack.back() > indent:
 				indent_stack.pop_back()
-				tokens.append(TamaToken.new(TamaToken.DEDENT, "", line_idx, 0))
+				tokens.append(_Token.new(_Token.DEDENT, "", line_idx, 0))
 			if indent_stack.back() != indent:
-				tokens.append(TamaToken.new(
-					TamaToken.ERROR,
+				tokens.append(_Token.new(
+					_Token.ERROR,
 					"Indentation mismatch",
 					line_idx, 0
 				))
@@ -90,23 +90,23 @@ func tokenize(source: String) -> Array[TamaToken]:
 				if result and result.get_start() == 0:
 					var val := result.get_string()
 					# Reclassify WORDs that are keywords
-					if tok_type == TamaToken.WORD and TamaToken.KEYWORDS.has(val):
-						tok_type = TamaToken.KEYWORDS[val]
-					tokens.append(TamaToken.new(tok_type, val, line_idx, pos))
+					if tok_type == _Token.WORD and _Token.KEYWORDS.has(val):
+						tok_type = _Token.KEYWORDS[val]
+					tokens.append(_Token.new(tok_type, val, line_idx, pos))
 					pos += val.length()
 					matched = true
 					break
 
 			if not matched:
-				tokens.append(TamaToken.new(TamaToken.ERROR, ch, line_idx, pos))
+				tokens.append(_Token.new(_Token.ERROR, ch, line_idx, pos))
 				pos += 1
 
-		tokens.append(TamaToken.new(TamaToken.NEWLINE, "", line_idx, raw_line.length()))
+		tokens.append(_Token.new(_Token.NEWLINE, "", line_idx, raw_line.length()))
 
 	# Close any remaining open indent levels
 	while indent_stack.size() > 1:
 		indent_stack.pop_back()
-		tokens.append(TamaToken.new(TamaToken.DEDENT, "", lines.size() - 1, 0))
+		tokens.append(_Token.new(_Token.DEDENT, "", lines.size() - 1, 0))
 
-	tokens.append(TamaToken.new(TamaToken.EOF, "", lines.size(), 0))
+	tokens.append(_Token.new(_Token.EOF, "", lines.size(), 0))
 	return tokens

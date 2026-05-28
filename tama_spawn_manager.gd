@@ -1,6 +1,12 @@
 extends Node
+
+const _Interpreter = preload("res://tama_interpreter.gd")
+const _Ast         = preload("res://tama_ast.gd")
+
 ## Registry resource mapping bullet type strings to PackedScenes, with an optional default.
 var registry: TamaBulletRegistry
+
+var _repository: Node
 
 ## Node under which spawned bullets are added.
 var spawn_parent: NodePath
@@ -17,12 +23,12 @@ var player_position: Vector2 = Vector2.ZERO
 
 ## Connect an interpreter's bullet_fired signal so this manager handles spawning.
 ## spawner is the Node2D that owns the interpreter (TamaEmitter or TamaBullet).
-func connect_interpreter(interpreter: TamaInterpreter, spawner: Node2D) -> void:
+func connect_interpreter(interpreter, spawner: Node2D) -> void:
 	interpreter.bullet_fired.connect(func(data): _on_bullet_fired(data, spawner))
 
 ## Retrieve a program from the repository by filename.
-func get_tama_script(filename: String) -> TamaAst.ProgramNode:
-	var prog: TamaAst.ProgramNode = TamaScriptRepository.get_tama_script(filename)
+func get_tama_script(filename: String):
+	var prog = _repository.get_tama_script(filename)
 	if not prog:
 		push_error("TamaSpawnManager: script '%s' not found in repository" % filename)
 	return prog
@@ -31,7 +37,7 @@ func get_tama_script(filename: String) -> TamaAst.ProgramNode:
 # Bullet firing
 # ---------------------------------------------------------------------------
 
-func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> void:
+func _on_bullet_fired(data: _Interpreter.BulletFireData, spawner: Node2D) -> void:
 	var scene: PackedScene
 	if registry:
 		if data.bullet_type.is_empty():
@@ -49,7 +55,7 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 		push_error("TamaSpawnManager: scene for type '%s' is not a TamaBullet" % data.bullet_type)
 		return
 
-	var bullet_runner := TamaInterpreter.new()
+	var bullet_runner = _Interpreter.new()
 	bullet_runner.context = context
 	bullet.add_child(bullet_runner)
 	bullet._runner = bullet_runner
@@ -78,9 +84,9 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 	if data.bullet_emitter_act != null:
 		# When the bullet also has an act, the act already owns bullet_runner.
 		# Create a separate interpreter so both run in parallel.
-		var spawner_runner: TamaInterpreter
+		var spawner_runner
 		if data.bullet_act:
-			spawner_runner = TamaInterpreter.new()
+			spawner_runner = _Interpreter.new()
 			spawner_runner.context = context
 			bullet.add_child(spawner_runner)
 		else:
@@ -100,41 +106,41 @@ func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> 
 # Resolution helpers
 # ---------------------------------------------------------------------------
 
-func _resolve_angle(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> float:
+func _resolve_angle(data: _Interpreter.BulletFireData, spawner: Node2D) -> float:
 	match data.dir_type:
-		TamaAst.DirType.AIM:
+		_Ast.DirType.AIM:
 			return (player_position - spawner.global_position).angle() + deg_to_rad(data.dir_value)
-		TamaAst.DirType.ABS:
+		_Ast.DirType.ABS:
 			return deg_to_rad(data.dir_value)
-		TamaAst.DirType.REL:
+		_Ast.DirType.REL:
 			return spawner.rotation + deg_to_rad(data.dir_value)
-		TamaAst.DirType.SEQ:
+		_Ast.DirType.SEQ:
 			return spawner.get("_last_angle") + deg_to_rad(data.dir_value)
 	return spawner.get_angle_to(player_position) + deg_to_rad(data.dir_value)
 
-func _resolve_speed(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> float:
+func _resolve_speed(data: _Interpreter.BulletFireData, spawner: Node2D) -> float:
 	match data.speed_type:
-		TamaAst.ValueType.ABS:
+		_Ast.ValueType.ABS:
 			return data.speed_value
-		TamaAst.ValueType.REL, TamaAst.ValueType.SEQ:
+		_Ast.ValueType.REL, _Ast.ValueType.SEQ:
 			return spawner.get("_last_speed") + data.speed_value
 	return data.speed_value
 
-func _resolve_position(data: TamaInterpreter.BulletFireData, spawner: Node2D, bullet_angle: float) -> Vector2:
+func _resolve_position(data: _Interpreter.BulletFireData, spawner: Node2D, bullet_angle: float) -> Vector2:
 	match data.offset_mode:
-		TamaAst.OffsetMode.INLINE:
+		_Ast.OffsetMode.INLINE:
 			return spawner.global_position + Vector2(0.0, -data.offset_value).rotated(bullet_angle)
-		TamaAst.OffsetMode.BLOCK:
+		_Ast.OffsetMode.BLOCK:
 			var pos := spawner.global_position
 			match data.offset_x_type:
-				TamaAst.ValueType.ABS, TamaAst.ValueType.SEQ:
+				_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
 					pos.x = data.offset_x
-				TamaAst.ValueType.REL:
+				_Ast.ValueType.REL:
 					pos.x += data.offset_x
 			match data.offset_y_type:
-				TamaAst.ValueType.ABS, TamaAst.ValueType.SEQ:
+				_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
 					pos.y = data.offset_y
-				TamaAst.ValueType.REL:
+				_Ast.ValueType.REL:
 					pos.y += data.offset_y
 			return pos
 	return spawner.global_position
@@ -144,4 +150,4 @@ func _get_spawn_parent() -> Node:
 		var n := get_node_or_null(spawn_parent)
 		if n:
 			return n
-	return get_parent()
+	return get_tree().get_current_scene()
