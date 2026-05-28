@@ -10,7 +10,7 @@ main
 
 act e
     waitf randi_range(30, 45)
-    repeat (8 * (1 if randi() % 32 == 0 else 0)) i
+    repeat 8*get_1_in(32) i
         fire
             dir abs (360/8)*i
             spd 100

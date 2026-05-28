@@ -14,7 +14,8 @@ func _compile_rules() -> void:
 		["^[a-zA-Z_][a-zA-Z0-9_]*",    TamaToken.WORD],
 		["^\\(",                        TamaToken.LPAREN],
 		["^\\)",                        TamaToken.RPAREN],
-		["^[*/+\\-%]",                  TamaToken.OP],
+		["^(==|!=|<=|>=|&&|\\|\\|)",    TamaToken.OP],  # two-char operators before single-char
+		["^[*/+\\-<>!&|=%]",            TamaToken.OP],
 		["^,",                          TamaToken.COMMA],
 	]
 	for entry in patterns:
