@@ -35,7 +35,7 @@ class BulletFireData:
 	var bullet_inline_emitter: TamaAst.InlineActNode  # null if named/absent
 	var bullet_act:            TamaAst.ASTNode    # InlineActNode or ActCallNode, null if none
 	var bullet_params:         Array[String] = [] # param names from the bullet def
-	var bullet_args:           Array[float]  = [] # evaluated args matching bullet_params
+	var bullet_args:           Array        = [] # evaluated args matching bullet_params (float or String)
 
 	# The program that fired this bullet — needed so the bullet's act can resolve
 	# named fires/acts/bullets from the same script even without a spawner file.
@@ -325,9 +325,9 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 			data.bullet_act            = bullet_def.act
 			data.bullet_params         = bullet_def.params.duplicate()
 			for val in pre_bound:
-				data.bullet_args.append(float(val) if val is float or val is int else 0.0)
+				data.bullet_args.append(val)
 			for arg in bcn.args:
-				data.bullet_args.append(_eval_arg_as_float(arg, scope))
+				data.bullet_args.append(_eval_arg(arg, scope))
 
 	data.source_program = _program
 	bullet_fired.emit(data)

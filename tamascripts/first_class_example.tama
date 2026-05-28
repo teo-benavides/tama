@@ -3,15 +3,16 @@ fire simpleFire(proj, dir_type, spd_type)
     spd spd_type 200
     bullet proj
     
-bullet myBullet(chspd_val)
+bullet myBullet(accel_val, accel_type)
    type example
    act
        wait 1.0
-       chspd
-           spd chspd_val
+       accel
+           x accel_type accel_val
+           y accel_type accel_val
            over 1.0
          
 main
     repeat
-        fire simpleFire(myBullet(500), aim, abs)
+        fire simpleFire(myBullet(500, abs), aim, abs)
         wait 0.5
