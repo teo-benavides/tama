@@ -198,11 +198,7 @@ bullet tracker
             wait 0.5
 ```
 
-### 4.5 `emitter` (top-level, not yet parsed as a distinct def)
-
-The grammar defines `emitter_def` but the parser currently treats named `emitter` references inside bullet blocks as `act` calls. Top-level `emitter` definitions are parsed as `act` definitions internally. This distinction may be formalised in future.
-
-### 4.6 Parameter lists
+### 4.5 Parameter lists
 
 ```
 param_list = "(" IDENT { "," IDENT } ")"
@@ -497,13 +493,13 @@ type spawner
 ### 8.2 `emitter` / `emt`
 
 ```
-emitter_stmt = ( "emitter" | "emt" ) ( IDENT NEWLINE | NEWLINE action_block )
+emitter_stmt = ( "emitter" | "emt" ) ( IDENT [ arg_list ] NEWLINE | NEWLINE action_block )
 ```
 
-Attaches a firing emitter to the bullet. Two forms:
+Attaches a firing emitter to the bullet. There is no top-level `emitter` definition — the keyword is only valid inside bullet blocks. Two forms:
 
-- **Named**: `emt my_emitter_act` — references a top-level `act` definition by name. That act is run as the bullet's spawner.
-- **Inline**: `emt` followed by an indented action block — an anonymous emitter defined inline.
+- **Named act**: `emt my_act` — references a top-level `act` definition by name (optionally with args). That act is run as the bullet's spawner emitter.
+- **Inline**: `emt` followed by an indented action block — an anonymous emitter body written inline.
 
 The emitter interpreter runs in parallel with the bullet's `act` if both are present (separate interpreter instances).
 
@@ -904,7 +900,7 @@ If `main` is absent (library file), `program.main` is null. The interpreter chec
 | `fire` | — | Top-level def, action stmt, fire block |
 | `act` | — | Top-level def, action stmt, bullet stmt |
 | `bullet` | `bul` | Top-level def, fire block stmt |
-| `emitter` | `emt` | Top-level def (as act), bullet stmt |
+| `emitter` | `emt` | Bullet stmt only — references or inlines an act as the bullet's spawner |
 | `repeat` | — | Action stmt |
 | `wait` | — | Action stmt |
 | `waitf` | — | Action stmt |
