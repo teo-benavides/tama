@@ -2,9 +2,8 @@ fire simpleFire(proj, dir_type, spd_type)
     dir dir_type 0
     spd spd_type 200
     bullet proj
-    
+
 bullet myBullet(accel_val, accel_type, emt_)
-   type example
    emt emt_
 
 main
@@ -18,5 +17,3 @@ act simpleEmitter(spd_)
         fire
             dir aim 0
             spd spd_
-            bullet
-                type example

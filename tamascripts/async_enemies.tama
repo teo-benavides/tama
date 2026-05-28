@@ -20,14 +20,11 @@ act spawn_zakos_wiggle(enemies, spawn_x, spawn_y, direction)
         wait 0.25
 
 bullet wiggle_zako(wiggle_distance, wiggle_frequency)
-    type example
     emt
         wait 0.5 + randf() * 1.8
         fire
             dir aim 0
             speed 130
-            bullet
-                type example
     act
         repeat
             accel

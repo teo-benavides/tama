@@ -85,10 +85,10 @@ param_list = "(" IDENT { "," IDENT } ")" ;
 
 fire_block = INDENT
                  { fire_prop NEWLINE }
-                 bullet_call NEWLINE
+                 [ bullet_call NEWLINE ]
                  { fire_prop NEWLINE }
              DEDENT ;
-            # bullet_call is mandatory, the other 3 statements are optional. there can only be one of each.
+            # bullet_call is optional; omitting it uses the registry's default_bullet. there can only be one of each.
 action_block = INDENT { action_stmt NEWLINE } DEDENT ;
 bullet_block = INDENT { bullet_stmt NEWLINE } DEDENT ;
 chdir_block  = INDENT { chdir_stmt  NEWLINE } DEDENT ;
@@ -153,7 +153,9 @@ bullet_stmt = bullet_type_stmt
              | inline_act ;
 
 bullet_type_stmt           = "type" IDENT ;
-                      (* declares the bullet's gameplay type, e.g. "zako", "spawner" *)
+                      (* declares the bullet's gameplay type, e.g. "zako", "spawner"
+                         optional — omitting it causes the bullet to use the registry's
+                         default_bullet scene                                          *)
 bullet_spawner_stmt = ( "emitter" | "emt" ) ( IDENT | NEWLINE action_block ) ;
                       (* IDENT references a top-level emitter_def by name;
                          NEWLINE starts an anonymous inline emitter block    *)

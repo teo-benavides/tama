@@ -4,7 +4,6 @@ main
             dir seq 360/32
             spd 200
             bullet
-                type example
                 act e
         waitf 2
 
@@ -14,6 +13,4 @@ act e
         fire
             dir abs (360/8)*i
             spd 100
-            bullet
-                type example
     vanish

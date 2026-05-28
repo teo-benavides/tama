@@ -1,5 +1,4 @@
 bullet homing
-    type example
     act
         repeat
             chdir

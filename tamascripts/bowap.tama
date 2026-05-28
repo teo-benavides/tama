@@ -15,12 +15,12 @@ main
 fire bwp(direction)
     dir rel direction # we set the firing direction, using the passed in direction argument. This direction is relative to the direction of the bullet that spawned it.
     speed abs 250 # fire with speed of 250
+    # the bullet block or the type statement can be omitted if we want to spawn the default bullet
     bullet # we define a bullet to fire...
         type example # ...and set its type to "example". In the engine, "example" equals that purple godot square scene
 
 # We define a bullet.
 bullet shooter
-    type example
     act # This is an action. Essentially, a place where you *do stuff*, such as changing the bullet's angle or speed.
         repeat # loop through the below code forever (there's no expression indicating how many times we want to repeat)
             repeat 8 i # repeat the code below 8 times and save the current iteration count in i

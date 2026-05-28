@@ -6,7 +6,10 @@ var emitter: TamaEmitter
 
 func _ready() -> void:
 	TamaScriptRepository.load_scripts("res://tamascripts")
-	TamaSpawnManager.bullet_registry = {"example": EXAMPLE_BULLET_SCENE}
+	var reg := TamaBulletRegistry.new()
+	reg.entries = {"example": EXAMPLE_BULLET_SCENE}
+	reg.default_bullet = EXAMPLE_BULLET_SCENE
+	TamaSpawnManager.registry = reg
 
 func create_emitter():
 	emitter = TamaEmitter.new()

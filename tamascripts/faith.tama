@@ -22,7 +22,6 @@ fire f(direction)
     bullet b(direction)
 
 bul b(direction)
-    type example
     act
         wait 0.5
         chdir

@@ -1,6 +1,6 @@
 extends Node
-## Registry mapping bullet type strings to PackedScenes extending TamaBullet.
-var bullet_registry: Dictionary[String, PackedScene] = {}
+## Registry resource mapping bullet type strings to PackedScenes, with an optional default.
+var registry: TamaBulletRegistry
 
 ## Node under which spawned bullets are added.
 var spawn_parent: NodePath
@@ -32,9 +32,17 @@ func get_tama_script(filename: String) -> TamaAst.ProgramNode:
 # ---------------------------------------------------------------------------
 
 func _on_bullet_fired(data: TamaInterpreter.BulletFireData, spawner: Node2D) -> void:
-	var scene := bullet_registry.get(data.bullet_type) as PackedScene
+	var scene: PackedScene
+	if registry:
+		if data.bullet_type.is_empty():
+			scene = registry.default_bullet
+		else:
+			scene = registry.entries.get(data.bullet_type) as PackedScene
+			if not scene:
+				push_error("TamaSpawnManager: unknown bullet type '%s', using default bullet" % data.bullet_type)
+				scene = registry.default_bullet
 	if not scene:
-		push_error("TamaSpawnManager: unknown bullet type '%s'" % data.bullet_type)
+		push_error("TamaSpawnManager: no scene for bullet type '%s' (no default set)" % data.bullet_type)
 		return
 	var bullet := scene.instantiate() as TamaBullet
 	if not bullet:

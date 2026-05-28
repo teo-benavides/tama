@@ -258,9 +258,6 @@ func _run_async(fn: Callable) -> void:
 
 # Duck-typed: accepts FireDefNode or InlineFireNode — both share dir/speed/offset/bullet.
 func _exec_fire_node(node, scope: Dictionary) -> void:
-	if not node.bullet:
-		push_error("TamaInterpreter: fire block has no bullet")
-		return
 
 	var data := BulletFireData.new()
 
@@ -288,13 +285,13 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 			data.offset_y_type = _get_axis_type(on.y, scope)
 			data.offset_y      = _eval(on.y.expr, scope)
 
-	# Bullet
+	# Bullet (optional — omitting uses the registry default)
 	if node.bullet is TamaAst.InlineBulletNode:
 		var ib := node.bullet as TamaAst.InlineBulletNode
 		data.bullet_type        = ib.bullet_type
 		data.bullet_emitter_act = ib.emitter_act
 		data.bullet_act         = ib.act
-	else:
+	elif node.bullet != null:
 		var bcn      := node.bullet as TamaAst.BulletCallNode
 		var bul_name := bcn.name
 		var pre_bound: Array = []
