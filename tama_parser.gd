@@ -715,8 +715,6 @@ func _parse_fire_block(node, open_tok: TamaToken) -> void:
 		_consume(TamaToken.DEDENT)
 	else:
 		_error_at(_peek(), "Unclosed block (missing dedent)")
-	if not node.bullet:
-		_error_at(open_tok, "Fire block is missing a bullet call")
 
 # ---------------------------------------------------------------------------
 # Top-level definition parsers

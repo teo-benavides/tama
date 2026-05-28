@@ -1,0 +1,10 @@
+main
+    repeat
+        act shots(5, 90)
+        wait 0.5
+
+act shots(amount, spread)
+    repeat amount i
+        fire
+            dir aim (2*i - 1 - amount) * spread / (2 * max(amount - 1, 1))
+            spd 200
