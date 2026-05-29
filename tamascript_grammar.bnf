@@ -166,9 +166,10 @@ bullet_stmt = bullet_type_stmt
              | inline_act ;
 
 bullet_type_stmt           = "type" IDENT ;
-                      (* declares the bullet's gameplay type, e.g. "zako", "spawner"
-                         optional — omitting it causes the bullet to use the registry's
-                         default_bullet scene                                          *)
+                      (* IDENT is resolved at runtime: if a variable with that name exists
+                         in scope (fire param or exported str var), its value is used;
+                         otherwise the identifier itself is the literal type string.
+                         Optional — omitting uses the registry's default_bullet scene. *)
 bullet_spawner_stmt = ( "emitter" | "emt" ) ( IDENT | NEWLINE action_block ) ;
                       (* IDENT references a top-level emitter_def by name;
                          NEWLINE starts an anonymous inline emitter block    *)

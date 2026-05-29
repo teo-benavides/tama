@@ -38,6 +38,12 @@ func get_tama_script(filename: String):
 # ---------------------------------------------------------------------------
 
 func _on_bullet_fired(data: _Interpreter.BulletFireData, spawner: Node2D) -> void:
+	# Resolve bullet_type if it's a bullet param variable name rather than a literal
+	if not data.bullet_type.is_empty() and not data.bullet_params.is_empty():
+		for i in mini(data.bullet_params.size(), data.bullet_args.size()):
+			if data.bullet_params[i] == data.bullet_type:
+				data.bullet_type = str(data.bullet_args[i])
+				break
 	var scene: PackedScene
 	if registry:
 		if data.bullet_type.is_empty():

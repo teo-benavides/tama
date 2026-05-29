@@ -289,7 +289,7 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 	# Bullet (optional — omitting uses the registry default)
 	if node.bullet is _Ast.InlineBulletNode:
 		var ib := node.bullet as _Ast.InlineBulletNode
-		data.bullet_type        = ib.bullet_type
+		data.bullet_type        = scope.get(ib.bullet_type, ib.bullet_type)
 		data.bullet_emitter_act = ib.emitter_act
 		data.bullet_act         = ib.act
 	elif node.bullet != null:
@@ -298,7 +298,7 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 		var pre_bound: Array = []
 		if scope.has(bul_name) and scope[bul_name] is _Ast.InlineBulletNode:
 			var ib := scope[bul_name] as _Ast.InlineBulletNode
-			data.bullet_type        = ib.bullet_type
+			data.bullet_type        = scope.get(ib.bullet_type, ib.bullet_type)
 			data.bullet_emitter_act = ib.emitter_act
 			data.bullet_act         = ib.act
 		else:
@@ -314,7 +314,7 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 			for arg in bcn.args:
 				extra.append(_eval_arg(arg, scope))
 			var all_bullet_args := pre_bound + extra
-			data.bullet_type        = bullet_def.bullet_type
+			data.bullet_type        = scope.get(bullet_def.bullet_type, bullet_def.bullet_type)
 			data.bullet_emitter_act = bullet_def.emitter_act
 			data.bullet_act         = bullet_def.act
 			data.bullet_params      = bullet_def.params.duplicate()
@@ -419,13 +419,18 @@ func _eval_arg(arg, scope: Dictionary):
 		return _resolve_ref_arg(arg as _Ast.RefCallArg, scope)
 	var expr: String = arg as String
 	var stripped := expr.strip_edges()
-	if stripped.is_valid_identifier() and scope.has(stripped):
-		var val = scope[stripped]
-		if not (val is float or val is int):
-			return val
-	# Qualifier keywords passed as string values — never evaluate them as expressions.
-	match stripped:
-		"aim", "abs", "rel", "seq": return stripped
+	if stripped.is_valid_identifier():
+		if scope.has(stripped):
+			var val = scope[stripped]
+			if not (val is float or val is int):
+				return val
+			# float/int in scope — fall through to _eval to retrieve it
+		else:
+			# Qualifier keywords passed as string values.
+			match stripped:
+				"aim", "abs", "rel", "seq": return stripped
+			# Bare identifier not in scope — treat as a string name (e.g. bullet type).
+			return stripped
 	return _eval(expr, scope)
 
 func _eval_arg_as_float(arg, scope: Dictionary) -> float:

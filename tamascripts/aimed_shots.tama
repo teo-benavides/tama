@@ -1,9 +1,10 @@
 include builtin
 
 main
-#    act act_everyf(30, x_way(5, 0, 200))
-    act fire_every(0.5, f(0, 200))
+    act fire_every(0.5, f(0, 200, example))
 
-fire f(direction, spd_)
+fire f(direction, spd_, btype)
     dir aim direction
     spd spd_
+    bullet
+        type btype
