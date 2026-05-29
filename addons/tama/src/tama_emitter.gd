@@ -159,9 +159,7 @@ func _exports_signature() -> String:
 	return ",".join(parts)
 
 func _find_script_path() -> String:
-	var dir: String = TamaManager._get_scripts_path()
-	if dir.is_empty():
-		return ""
+	var dir := ProjectSettings.get_setting("tama/scripts_path", "res://tamascripts") as String
 	for path in [
 		dir.path_join(_script_filename),
 		dir.path_join(_script_filename + ".tama"),
@@ -191,9 +189,7 @@ func _parse_script_file_for_exports() -> _Ast.ProgramNode:
 
 func _make_editor_resolver() -> Callable:
 	return func(name: String) -> _Ast.ProgramNode:
-		var dir: String = TamaManager._get_scripts_path()
-		if dir.is_empty():
-			return null
+		var dir := ProjectSettings.get_setting("tama/scripts_path", "res://tamascripts") as String
 		for path in [
 			dir.path_join(name),
 			dir.path_join(name + ".tama"),

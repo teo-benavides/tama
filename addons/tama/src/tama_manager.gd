@@ -1,14 +1,14 @@
 ## Global manager for the Tama bullet hell framework.
 ##
-## The single entry point for loading TamaScript files, registering bullet scenes,
-## and configuring runtime behaviour. [TamaEmitter] and [TamaBullet] communicate with it
-## automatically — user code only needs to call it directly during setup and to keep
-## [member player_position] updated.
+## The single entry point for registering bullet scenes and configuring runtime behaviour.
+## [TamaEmitter] and [TamaBullet] communicate with it automatically — user code only needs
+## to call it directly to configure the registry and keep [member player_position] updated.
+## TamaScript files are loaded automatically from the path set in Project Settings under
+## [b]tama/scripts_path[/b] (default: [code]res://tamascripts[/code]).
 ##
 ## [codeblock]
 ## func _ready() -> void:
-##     TamaManager.load_scripts("res://tamascripts")
-##     TamaManager.registry(load("res://my_bullet_registry.tres"))
+##     TamaManager.registry = load("res://my_bullet_registry.tres")
 ##     $TamaEmitter.start()
 ## [/codeblock]
 extends Node
@@ -17,16 +17,22 @@ const _SpawnManagerScript  = preload("res://addons/tama/src/tama_spawn_manager.g
 const _RepositoryScript    = preload("res://addons/tama/src/tama_script_repository.gd")
 const _RegistryScript      = preload("res://addons/tama/src/tama_bullet_registry.gd")
 
+const _SETTING_SCRIPTS_PATH := "tama/scripts_path"
+const _DEFAULT_SCRIPTS_PATH := "res://tamascripts"
+
 var _spawn_manager: Node
 var _repository:    Node
 var _scripts_path:  String = ""
 
-func _ready() -> void:
+func _init() -> void:
 	_repository    = _RepositoryScript.new()
 	_spawn_manager = _SpawnManagerScript.new()
 	_spawn_manager._repository = _repository
+
+func _ready() -> void:
 	add_child(_repository)
 	add_child(_spawn_manager)
+	_load_scripts()
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -44,9 +50,9 @@ var spawn_parent: NodePath:
 	set(v): _spawn_manager.spawn_parent = v
 	get:    return _spawn_manager.spawn_parent
 
-## Parses and caches every [code].tama[/code] / [code].tam[/code] file found directly inside [param path].
-## Call once at startup before calling [method TamaEmitter.start].
-func load_scripts(path: String) -> void:
+func _load_scripts(path: String = "") -> void:
+	if path.is_empty():
+		path = ProjectSettings.get_setting(_SETTING_SCRIPTS_PATH, _DEFAULT_SCRIPTS_PATH)
 	_scripts_path = path
 	_repository.load_scripts(path)
 
@@ -97,6 +103,8 @@ func _ensure_registry() -> void:
 # ---------------------------------------------------------------------------
 
 func _get_scripts_path() -> String:
+	if _scripts_path.is_empty():
+		return ProjectSettings.get_setting(_SETTING_SCRIPTS_PATH, _DEFAULT_SCRIPTS_PATH)
 	return _scripts_path
 
 func _get_tama_script(filename: String):

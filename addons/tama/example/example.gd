@@ -5,7 +5,6 @@ const EXAMPLE_BULLET_SCENE = preload("res://addons/tama/example/bullets/example_
 var emitter: TamaEmitter
 
 func _ready() -> void:
-	TamaManager.load_scripts("res://addons/tama/example/tamascripts")
 	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
 	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)
 	TamaManager.context = ExampleTamaContext.new()

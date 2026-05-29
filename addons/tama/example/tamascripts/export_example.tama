@@ -1,6 +1,8 @@
+export num speed_ 300
+
 main
     repeat
         fire
             dir abs 135
-            speed 300
+            speed speed_
         wait 0.1

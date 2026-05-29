@@ -13,16 +13,15 @@ Check out the `example` folder inside the addon to see example TamaScript script
 1. Drag and drop the `addons` folder from this repo into your project and enable it through Project Settings -> Plugins.
 2. Create a bullet scene from a `TamaBullet` node, or a node extending `TamaBullet`.
 3. Create a `TamaBulletRegistry` resource and add your bullet to `entries` and `default_bullet`. When adding to `entries`, you need to give the bullet a type name.
-4. Write a TamaScript file and save it somewhere in your project.
-5. Add a `TamaEmitter` to your scene and set its `script_filename` to the name of one of your TamaScript files.
-6. Configure `TamaManager`, like so:
+4. Set Tama -> Scripts Path in Project Settings to the folder you'd like to save your TamaScript scripts in. It's `res://tamascripts` by default.
+5. Write a TamaScript file and save it in the previously set folder.
+6. Add a `TamaEmitter` to your scene and set its `script_filename` to the name of one of your TamaScript files.
+7. Configure `TamaManager`, like so:
     ```gdscript
-    # directory where you keep your TamaScript files
-    TamaManager.load_scripts("res://tamascripts")
     # registry you created in Step 3
     TamaManager.registry(load("res://my_bullet_registry.tres"))
-7. Call `start()` on your `TamaEmitter` to make it start executing your TamaScript.
-8. (Optional) Configure a custom `TamaContext` to expose your own GDScript functions to TamaScript. Like this:
+8. Call `start()` on your `TamaEmitter` to make it start executing your TamaScript.
+9. (Optional) Configure a custom `TamaContext` to expose your own GDScript functions to TamaScript. Like this:
     ```
     # example_tama_context.gd
     extends TamaContext
