@@ -8,8 +8,7 @@
 ## [codeblock]
 ## func _ready() -> void:
 ##     TamaManager.load_scripts("res://tamascripts")
-##     TamaManager.register_bullet("enemy", ENEMY_BULLET_SCENE)
-##     TamaManager.set_default_bullet(DEFAULT_BULLET_SCENE)
+##     TamaManager.registry(load("res://my_bullet_registry.tres"))
 ##     $TamaEmitter.start()
 ## [/codeblock]
 extends Node
@@ -60,6 +59,15 @@ func load_script(filename: String, full_path: String) -> void:
 ## Useful for loading scripts from a [TextEdit] or other in-memory source.
 func load_script_from_source(script_name: String, source: String) -> void:
 	_repository.load_script_from_source(script_name, source)
+
+## The bullet registry used for all spawned bullets.
+## Assign a [TamaBulletRegistry] resource created in the editor, or populate it at
+## runtime with [method register_bullet] and [method set_default_bullet].
+var registry: TamaBulletRegistry:
+	set(v):
+		_spawn_manager.registry = v
+	get:
+		return _spawn_manager.registry
 
 ## Registers a [PackedScene] for the bullet type string [param type].
 ## The [param type] string must match the value used in a TamaScript [code]type[/code] statement.

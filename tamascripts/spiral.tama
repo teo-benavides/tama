@@ -1,0 +1,4 @@
+include builtin
+
+main
+    act spiral(30, 0.1, 200, 110)

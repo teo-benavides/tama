@@ -7,11 +7,12 @@ act x_way(x_, spin, spd_)
             dir seq 360/x_
             spd spd_
             
-act spiral(steps, interval, spd_)
+act spiral(steps, interval, spd_, offset_)
     repeat
         fire
             dir seq 360/steps
             spd spd_
+            offset offset_
         wait interval
 
 act aimed_shots(amount, spread, spd_)

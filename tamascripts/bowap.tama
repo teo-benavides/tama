@@ -17,7 +17,7 @@ fire bwp(direction)
     speed abs 250 # fire with speed of 250
     # the bullet block or the type statement can be omitted if we want to spawn the default bullet
     bullet # we define a bullet to fire...
-        type example # ...and set its type to "example". In the engine, "example" equals that purple godot square scene
+        type example # ...and set its type to "example", which loads the appropriate scene from the bullet registry.
 
 # We define a bullet.
 bullet shooter

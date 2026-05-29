@@ -135,7 +135,7 @@ func _resolve_speed(data: _Interpreter.BulletFireData, spawner: Node2D) -> float
 func _resolve_position(data: _Interpreter.BulletFireData, spawner: Node2D, bullet_angle: float) -> Vector2:
 	match data.offset_mode:
 		_Ast.OffsetMode.INLINE:
-			return spawner.global_position + Vector2(0.0, -data.offset_value).rotated(bullet_angle)
+			return spawner.global_position + Vector2(data.offset_value, 0.0).rotated(bullet_angle)
 		_Ast.OffsetMode.BLOCK:
 			var pos := spawner.global_position
 			match data.offset_x_type:

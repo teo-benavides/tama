@@ -1,15 +1,13 @@
 [gd_scene format=3 uid="uid://du2cceq7rvnfu"]
 
 [ext_resource type="Script" uid="uid://b1jfjgnmfghq" path="res://example_bullet.gd" id="1_v5ve1"]
-[ext_resource type="Texture2D" uid="uid://dtq7qop3sbprp" path="res://icon.svg" id="2_v5ve1"]
+[ext_resource type="Texture2D" uid="uid://bicx42bqqr652" path="res://example_bullet.png" id="2_v5ve1"]
 
 [node name="ExampleBullet" type="CharacterBody2D" unique_id=972656954]
 script = ExtResource("1_v5ve1")
-rotates = false
 metadata/_custom_type_script = "uid://cenfsbi0vwpig"
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=281565911]
-modulate = Color(1, 0, 1, 1)
 scale = Vector2(0.2, 0.2)
 texture = ExtResource("2_v5ve1")
 
