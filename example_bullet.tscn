@@ -5,6 +5,7 @@
 
 [node name="ExampleBullet" type="CharacterBody2D" unique_id=972656954]
 script = ExtResource("1_v5ve1")
+rotates = false
 metadata/_custom_type_script = "uid://cenfsbi0vwpig"
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=281565911]

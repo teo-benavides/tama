@@ -119,7 +119,7 @@ func _resolve_angle(data: _Interpreter.BulletFireData, spawner: Node2D) -> float
 		_Ast.DirType.ABS:
 			return deg_to_rad(data.dir_value)
 		_Ast.DirType.REL:
-			return spawner.rotation + deg_to_rad(data.dir_value)
+			return spawner.get("_angle") + deg_to_rad(data.dir_value)
 		_Ast.DirType.SEQ:
 			return spawner.get("_last_angle") + deg_to_rad(data.dir_value)
 	return spawner.get_angle_to(player_position) + deg_to_rad(data.dir_value)
