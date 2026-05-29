@@ -40,7 +40,7 @@ COMMENT = "#" { any character except newline } ;
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "wait" | "chdir" | "chspd" | "accel"
    | "wait" | "vanish"
-   | "dir" | "speed" | "spd" | "offset" | "emitter" | "emt"
+   | "dir" | "speed" | "spd" | "offset" | "pos" | "emitter" | "emt"
    | "abs" | "rel" | "seq"
    | "over" | "x" | "y" | "type" | "async" ;
 
@@ -117,6 +117,7 @@ offset_block = INDENT { offset_stmt NEWLINE } DEDENT ;
 fire_stmt = dir_stmt
            | speed_stmt
            | offset_stmt
+           | pos_stmt
            | bullet_call ;
 
 bullet_call = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
@@ -206,6 +207,14 @@ offset_block = INDENT { offset_axis_stmt NEWLINE } DEDENT ;
 offset_axis_stmt = axis [ VALUE_TYPE ] EXPR ;
                     # default VALUE_TYPE = rel
                     # inline form offsets relative to the spawner's local (accounts for rotation/angle) up direction
+
+pos_stmt   = "pos" NEWLINE pos_block ;
+pos_block  = INDENT { pos_axis_stmt NEWLINE } DEDENT ;
+pos_axis_stmt = axis [ VALUE_TYPE ] EXPR ;
+                # default VALUE_TYPE = abs
+                # abs/seq: sets global position directly (world coordinates)
+                # rel: sets position relative to spawner (spawner.global_position + value)
+                # pos takes priority over offset when both are present
 
 chdir_stmt = "chdir" NEWLINE chdir_block ;
 chdir_block = INDENT { chdir_inner NEWLINE } DEDENT ;

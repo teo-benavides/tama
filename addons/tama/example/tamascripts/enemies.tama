@@ -13,7 +13,7 @@ act spawn_zakos_wiggle(enemies, spawn_x, spawn_y, direction)
         fire
             dir abs direction
             speed abs 130
-            offset
+            pos
                 x abs spawn_x
                 y abs spawn_y
             bullet wiggle_zako(100, 0.4)

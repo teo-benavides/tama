@@ -1,0 +1,22 @@
+main
+    repeat
+        repeat 10 i
+            act fire_arrow((360/10)*(i-1))
+        wait 1.0
+
+act fire_arrow(direction)
+    fire
+        dir aim direction
+        spd 200
+    fire
+        dir aim direction+3
+        spd 190
+    fire
+        dir aim direction-3
+        spd 190
+    fire
+        dir aim direction+6
+        spd 180
+    fire
+        dir aim direction-6
+        spd 180

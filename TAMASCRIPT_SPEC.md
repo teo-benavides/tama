@@ -14,7 +14,7 @@ TamaScript is an indentation-based DSL for describing bullet-hell patterns, insp
 6. [Action Block Statements](#6-action-block-statements)
 7. [Fire Block Statements](#7-fire-block-statements)
 8. [Bullet Block Statements](#8-bullet-block-statements)
-9. [Shared Sub-Statements](#9-shared-sub-statements)
+9. [Shared Sub-Statements](#9-shared-sub-statements) (`dir`, `speed`, `offset`, `pos`, `over`)
 10. [Expressions](#10-expressions)
 11. [Qualifiers](#11-qualifiers)
 12. [First-Class Definitions](#12-first-class-definitions)
@@ -83,7 +83,7 @@ The following identifiers are reserved and cannot be used as variable or definit
 main    fire    act     bullet  bul
 repeat  wait    waitf   vanish
 chdir   chspd   accel   over
-dir     speed   spd     offset
+dir     speed   spd     offset  pos
 aim     abs     rel     seq
 x       y       type
 emitter emt     async
@@ -218,7 +218,7 @@ fire_block   = INDENT { fire_prop   NEWLINE } DEDENT
 bullet_block = INDENT { bullet_stmt NEWLINE } DEDENT
 ```
 
-`chdir`, `chspd`, `accel`, and `offset` have their own inner block forms (see §9).
+`chdir`, `chspd`, `accel`, `offset`, and `pos` have their own inner block forms (see §9).
 
 ---
 
@@ -442,10 +442,10 @@ The interpreter tracks async act count and waits for all async acts to finish be
 Valid inside `fire` definitions and inline `fire` blocks.
 
 ```
-fire_block_stmt = dir_stmt | speed_stmt | offset_stmt | bullet_call | inline_bullet
+fire_block_stmt = dir_stmt | speed_stmt | offset_stmt | pos_stmt | bullet_call | inline_bullet
 ```
 
-All properties are optional. A fire with no `bullet` uses the registry's default bullet.
+All properties are optional. A fire with no `bullet` uses the registry's default bullet. When both `offset` and `pos` are present, `pos` takes priority.
 
 ### 7.1 `bullet <name>` (named call)
 
@@ -585,7 +585,7 @@ Two forms:
 ```
 offset EXPR NEWLINE
 ```
-Offsets the spawn position along the spawner's local "up" direction (perpendicular to the spawner's rotation, accounting for its angle). Positive values go "forward-left"; negative go "forward-right".
+Offsets the spawn position along the bullet's local axis (rotated by the bullet's angle). Positive values push in the local-forward direction; negative values push backward.
 
 **Block:**
 ```
@@ -593,9 +593,42 @@ offset NEWLINE
     x [ VALUE_QUALIFIER ] EXPR
     y [ VALUE_QUALIFIER ] EXPR
 ```
-Offsets along world X and Y axes independently. Default qualifier for each axis is `rel`. Qualifier `abs` sets an absolute world coordinate; `rel` adds to the spawner's position; `seq` is treated the same as `rel`.
+Offsets along world X and Y axes independently. Default qualifier for each axis is `rel`.
 
-### 9.4 `over`
+| Qualifier | Meaning |
+|---|---|
+| `abs` / `seq` | World-space offset added to the spawner's global position (`spawner.global_position + offset`). |
+| `rel` | Local-axis offset: the full offset vector is rotated by the bullet's angle before being added to the spawner's position. Use this to displace a bullet sideways or forward relative to its travel direction. |
+
+Per-axis types are independent; when mixing `abs` and `rel` on different axes, each contributes to its respective world/local component and they are combined after rotation.
+
+### 9.4 `pos`
+
+```
+pos NEWLINE
+    x [ VALUE_QUALIFIER ] EXPR
+    y [ VALUE_QUALIFIER ] EXPR
+```
+
+Sets the bullet's spawn position directly. Default qualifier for each axis is `abs`. When `pos` is present it takes priority over `offset`.
+
+| Qualifier | Meaning |
+|---|---|
+| `abs` / `seq` | Sets global position directly (world coordinates). |
+| `rel` | Adds to the spawner's global position (`spawner.global_position + value`). |
+
+Both axes are optional; unspecified axes inherit the spawner's position for that axis.
+
+```
+fire
+    dir abs 0
+    speed 130
+    pos
+        x abs spawn_x
+        y abs spawn_y
+```
+
+### 9.5 `over`
 
 ```
 over_stmt = "over" EXPR NEWLINE
@@ -909,6 +942,7 @@ If `main` is absent (library file), `program.main` is null. The interpreter chec
 | `dir` | — | Fire/action/chdir stmt |
 | `speed` | `spd` | Fire/action/chspd stmt |
 | `offset` | — | Fire/action stmt |
+| `pos` | — | Fire stmt only |
 | `chdir` | — | Action stmt |
 | `chspd` | — | Action stmt |
 | `accel` | — | Action stmt |
@@ -998,7 +1032,7 @@ inline_act    = "act"   NEWLINE action_block ;
 
 (* ---- Fire statements ---- *)
 
-fire_stmt     = dir_stmt | speed_stmt | offset_stmt
+fire_stmt     = dir_stmt | speed_stmt | offset_stmt | pos_stmt
               | bullet_call | inline_bullet ;
 bullet_call   = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
 inline_bullet = ( "bullet" | "bul" ) NEWLINE bullet_block ;
@@ -1023,6 +1057,18 @@ offset_stmt = "offset" ( NEWLINE offset_block | EXPR ) ;
 offset_block = INDENT
                    { ( "x" | "y" ) [ VALUE_QUALIFIER | IDENT ] EXPR NEWLINE }
                DEDENT ;
+               (* default VALUE_QUALIFIER = rel;
+                  abs/seq: world-space offset from spawner;
+                  rel: local-axis offset rotated by bullet angle *)
+
+pos_stmt    = "pos" NEWLINE pos_block ;
+pos_block   = INDENT
+                  { ( "x" | "y" ) [ VALUE_QUALIFIER | IDENT ] EXPR NEWLINE }
+              DEDENT ;
+              (* default VALUE_QUALIFIER = abs;
+                 abs/seq: sets global position directly;
+                 rel: adds to spawner's global position;
+                 takes priority over offset when both present *)
 
 chdir_stmt  = "chdir" NEWLINE chdir_block ;
 chdir_block = INDENT { ( dir_stmt | over_stmt ) NEWLINE } DEDENT ;

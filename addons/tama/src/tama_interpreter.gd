@@ -30,6 +30,14 @@ class BulletFireData:
 	var offset_y_type: _Ast.ValueType  = _Ast.ValueType.REL
 	var offset_y:      float
 
+	var has_pos:    bool = false
+	var pos_x_set:  bool = false
+	var pos_x_type: _Ast.ValueType = _Ast.ValueType.ABS
+	var pos_x:      float = 0.0
+	var pos_y_set:  bool = false
+	var pos_y_type: _Ast.ValueType = _Ast.ValueType.ABS
+	var pos_y:      float = 0.0
+
 	# Bullet properties
 	var bullet_type:           String
 	var bullet_emitter_act:    _Ast.ASTNode    # ActCallNode or InlineActNode, null if absent
@@ -285,6 +293,19 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 		if on.y:
 			data.offset_y_type = _get_axis_type(on.y, scope)
 			data.offset_y      = _eval(on.y.expr, scope)
+
+	# Pos
+	if node.pos is _Ast.PosNode:
+		var pn := node.pos as _Ast.PosNode
+		data.has_pos = true
+		if pn.x:
+			data.pos_x_set  = true
+			data.pos_x_type = _get_axis_type(pn.x, scope)
+			data.pos_x      = _eval(pn.x.expr, scope)
+		if pn.y:
+			data.pos_y_set  = true
+			data.pos_y_type = _get_axis_type(pn.y, scope)
+			data.pos_y      = _eval(pn.y.expr, scope)
 
 	# Bullet (optional — omitting uses the registry default)
 	if node.bullet is _Ast.InlineBulletNode:

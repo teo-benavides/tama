@@ -133,22 +133,38 @@ func _resolve_speed(data: _Interpreter.BulletFireData, spawner: Node2D) -> float
 	return data.speed_value
 
 func _resolve_position(data: _Interpreter.BulletFireData, spawner: Node2D, bullet_angle: float) -> Vector2:
+	if data.has_pos:
+		var pos := spawner.global_position
+		if data.pos_x_set:
+			match data.pos_x_type:
+				_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
+					pos.x = data.pos_x
+				_Ast.ValueType.REL:
+					pos.x += data.pos_x
+		if data.pos_y_set:
+			match data.pos_y_type:
+				_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
+					pos.y = data.pos_y
+				_Ast.ValueType.REL:
+					pos.y += data.pos_y
+		return pos
 	match data.offset_mode:
 		_Ast.OffsetMode.INLINE:
 			return spawner.global_position + Vector2(data.offset_value, 0.0).rotated(bullet_angle)
 		_Ast.OffsetMode.BLOCK:
-			var pos := spawner.global_position
-			match data.offset_x_type:
-				_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
-					pos.x = data.offset_x
-				_Ast.ValueType.REL:
-					pos.x += data.offset_x
-			match data.offset_y_type:
-				_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
-					pos.y = data.offset_y
-				_Ast.ValueType.REL:
-					pos.y += data.offset_y
-			return pos
+			# ABS/SEQ: world-space offset from spawner; REL: local-axis offset (rotated by bullet angle).
+			# Split per-axis so mixed types work correctly.
+			var world_offset := Vector2.ZERO
+			var local_offset := Vector2.ZERO
+			if data.offset_x_type == _Ast.ValueType.REL:
+				local_offset.x = data.offset_x
+			else:
+				world_offset.x = data.offset_x
+			if data.offset_y_type == _Ast.ValueType.REL:
+				local_offset.y = data.offset_y
+			else:
+				world_offset.y = data.offset_y
+			return spawner.global_position + world_offset + local_offset.rotated(bullet_angle)
 	return spawner.global_position
 
 func _get_spawn_parent() -> Node:

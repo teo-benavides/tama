@@ -62,6 +62,7 @@ class FireDefNode extends ASTNode:
 	var dir:    DirNode  # optional
 	var speed:  SpeedNode  # optional
 	var offset: ASTNode  # optional — OffsetNode or OffsetInlineNode
+	var pos:    PosNode  # optional — takes priority over offset
 	var bullet: ASTNode  # mandatory — BulletCallNode or InlineBulletNode
 
 	func _init(p_name: String, p_params: Array[String], p_line: int, p_col: int) -> void:
@@ -123,6 +124,14 @@ class SpeedNode extends ASTNode:
 
 # offset NEWLINE offset_block  — block form with x/y axes
 class OffsetNode extends ASTNode:
+	var x: OffsetAxisNode
+	var y: OffsetAxisNode
+
+	func _init(p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+
+# pos NEWLINE pos_block  — block form; sets the bullet's spawn position
+class PosNode extends ASTNode:
 	var x: OffsetAxisNode
 	var y: OffsetAxisNode
 
@@ -271,6 +280,7 @@ class InlineFireNode extends ASTNode:
 	var dir:    DirNode       # optional
 	var speed:  SpeedNode     # optional
 	var offset: ASTNode       # optional — OffsetNode or OffsetInlineNode
+	var pos:    PosNode       # optional — takes priority over offset
 	var bullet: ASTNode  # mandatory — BulletCallNode or InlineBulletNode
 
 	func _init(p_line: int, p_col: int) -> void:

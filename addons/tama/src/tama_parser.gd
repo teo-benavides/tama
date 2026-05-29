@@ -448,6 +448,37 @@ func _parse_offset() -> _Ast.ASTNode:
 		_consume(_Token.NEWLINE)
 		return _Ast.OffsetInlineNode.new(expr, tok.line, tok.col)
 
+func _parse_pos() -> _Ast.PosNode:
+	var tok := _consume(_Token.KW_POS)
+	var node := _Ast.PosNode.new(tok.line, tok.col)
+	_consume(_Token.NEWLINE)
+	_parse_block(func():
+		var t := _peek()
+		if t.type == _Token.KW_X or t.type == _Token.KW_Y:
+			var axis := t.value
+			_pos += 1
+			var qualifier := _Ast.ValueType.ABS
+			var qualifier_var := ""
+			if _peek_type() == _Token.WORD and _peek_type_at(1) != _Token.NEWLINE:
+				qualifier_var = _peek().value; _pos += 1
+			else:
+				qualifier = _peek_value_qualifier(_Ast.ValueType.ABS)
+			var expr := _collect_to_eol()
+			_consume(_Token.NEWLINE)
+			var axis_node := _Ast.OffsetAxisNode.new(axis, qualifier, expr, t.line, t.col)
+			axis_node.axis_type_var = qualifier_var
+			if axis == "x":
+				node.x = axis_node
+			else:
+				node.y = axis_node
+		else:
+			_error_at(t, "Expected 'x' or 'y' in pos block, got '%s'" % _tok_display(t))
+			_pos += 1
+			_try_consume(_Token.NEWLINE)
+			return null
+	)
+	return node
+
 func _parse_chdir() -> _Ast.ChdirNode:
 	var tok := _consume(_Token.KW_CHDIR)
 	var node := _Ast.ChdirNode.new(tok.line, tok.col)
@@ -725,6 +756,7 @@ func _parse_fire_block(node, _open_tok: _Token) -> void:
 			_Token.KW_DIR:    node.dir    = _parse_dir()
 			_Token.KW_SPEED:  node.speed  = _parse_speed()
 			_Token.KW_OFFSET: node.offset = _parse_offset()
+			_Token.KW_POS:    node.pos    = _parse_pos()
 			_Token.KW_BULLET:
 				if _peek_type_at(1) == _Token.NEWLINE:
 					node.bullet = _parse_inline_bullet()
