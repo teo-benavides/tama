@@ -1,11 +1,13 @@
-act x_way(x_, spin, spd_)
+act x_way(x_, spin, spd_, offset_)
     fire
         dir abs -90 + spin
         spd spd_
+        offset offset_
     repeat x_-1 i
         fire
             dir seq 360/x_
             spd spd_
+            offset offset_
             
 act spiral(steps, interval, spd_, offset_)
     repeat

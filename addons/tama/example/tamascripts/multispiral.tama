@@ -1,0 +1,6 @@
+include builtin
+
+main
+    repeat -1 i
+        act x_way(5, time()*240, 200, 110)
+        waitf 2
