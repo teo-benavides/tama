@@ -1,0 +1,8 @@
+main
+    repeat
+        fire
+            dir abs 180
+            spd 200
+            pos
+                x abs end_x()
+        wait 0.2

@@ -19,5 +19,6 @@ offset_left = 750.0
 offset_top = 6.0
 offset_right = 1134.0
 offset_bottom = 640.0
+theme_override_font_sizes/font_size = 12
 
 [connection signal="text_changed" from="CanvasLayer/TextEdit" to="." method="_on_text_edit_text_changed"]

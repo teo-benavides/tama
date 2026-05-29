@@ -8,7 +8,8 @@ func _ready() -> void:
 	TamaManager.load_scripts("res://addons/tama/example/tamascripts")
 	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
 	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)
-	
+	TamaManager.context = ExampleTamaContext.new()
+
 func create_emitter():
 	emitter = TamaEmitter.new()
 	emitter.global_position = $EmitterPosition.global_position

@@ -60,6 +60,13 @@ func load_script(filename: String, full_path: String) -> void:
 func load_script_from_source(script_name: String, source: String) -> void:
 	_repository.load_script_from_source(script_name, source)
 
+## The [TamaContext] instance shared across all interpreters.
+## Assign a custom subclass to expose additional functions to TamaScript expressions.
+## Should be set before calling [method TamaEmitter.start].
+var context: TamaContext:
+	set(v): _spawn_manager.context = v
+	get:    return _spawn_manager.context
+
 ## The bullet registry used for all spawned bullets.
 ## Assign a [TamaBulletRegistry] resource created in the editor, or populate it at
 ## runtime with [method register_bullet] and [method set_default_bullet].
@@ -105,4 +112,4 @@ func _connect_interpreter(interpreter, spawner: Node2D) -> void:
 	_spawn_manager.connect_interpreter(interpreter, spawner)
 
 func _get_context():
-	return _spawn_manager.context
+	return context

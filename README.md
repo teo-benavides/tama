@@ -22,6 +22,24 @@ Check out the `example` folder inside the addon to see example TamaScript script
     # registry you created in Step 3
     TamaManager.registry(load("res://my_bullet_registry.tres"))
 7. Call `start()` on your `TamaEmitter` to make it start executing your TamaScript.
+8. (Optional) Configure a custom `TamaContext` to expose your own GDScript functions to TamaScript. Like this:
+    ```
+    # example_tama_context.gd
+    extends TamaContext
+    class_name MyTamaContext
+
+    func some_func()
+        # return value here
+
+    # main.gd
+    TamaManager.context = MyTamaContext.new()
+
+    # example.tama
+    main
+        fire
+            dir abs some_func()
+            spd 200
+    ```
 
 ## TamaScript Syntax
 
