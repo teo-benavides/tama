@@ -1,0 +1,8 @@
+include builtin
+
+main
+    act fire_every(0.1, f)
+
+fire f
+    dir aim 0
+    spd 200

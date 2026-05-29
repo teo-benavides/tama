@@ -17,7 +17,7 @@ var _direction_tween: Tween
 var _speed_tween:     Tween
 var _accel_tween:     Tween
 
-## Whether the bullet sprite rotates to match its direction.
+## Whether the bullet rotates to match the direction it's going in.
 @export var rotates: bool = true
 
 var _initial_position := Vector2.ZERO
@@ -34,6 +34,9 @@ func _ready() -> void:
 		set_physics_process(false)
 		destroy()
 		return
+
+	if rotates:
+		rotation = _angle
 
 	_runner.changed_direction.connect(_on_changed_direction)
 	_runner.changed_speed.connect(_on_changed_speed)
