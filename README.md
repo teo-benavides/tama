@@ -138,3 +138,5 @@ export str dir_mode aim ← exposes a string field (use for aim/abs/rel/seq)
 include builtin         ← merges fire/act/bullet defs from another .tama file
 ```
 
+## Special thanks
+[@icons](https://github.com/Voxybuns/at-icons)
