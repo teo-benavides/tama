@@ -1,8 +1,8 @@
 extends Node
 
-const _Ast    = preload("res://tama_ast.gd")
-const _Lexer  = preload("res://tama_lexer.gd")
-const _Parser = preload("res://tama_parser.gd")
+const _Ast    = preload("res://addons/tama/src/tama_ast.gd")
+const _Lexer  = preload("res://addons/tama/src/tama_lexer.gd")
+const _Parser = preload("res://addons/tama/src/tama_parser.gd")
 
 var _scripts: Dictionary = {}
 var _scripts_dir: String = ""

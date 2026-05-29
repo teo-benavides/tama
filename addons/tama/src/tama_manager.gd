@@ -13,9 +13,9 @@
 ## [/codeblock]
 extends Node
 
-const _SpawnManagerScript  = preload("res://tama_spawn_manager.gd")
-const _RepositoryScript    = preload("res://tama_script_repository.gd")
-const _RegistryScript      = preload("res://tama_bullet_registry.gd")
+const _SpawnManagerScript  = preload("res://addons/tama/src/tama_spawn_manager.gd")
+const _RepositoryScript    = preload("res://addons/tama/src/tama_script_repository.gd")
+const _RegistryScript      = preload("res://addons/tama/src/tama_bullet_registry.gd")
 
 var _spawn_manager: Node
 var _repository:    Node

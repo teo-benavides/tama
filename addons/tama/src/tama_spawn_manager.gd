@@ -1,7 +1,7 @@
 extends Node
 
-const _Interpreter = preload("res://tama_interpreter.gd")
-const _Ast         = preload("res://tama_ast.gd")
+const _Interpreter = preload("res://addons/tama/src/tama_interpreter.gd")
+const _Ast         = preload("res://addons/tama/src/tama_ast.gd")
 
 ## Registry resource mapping bullet type strings to PackedScenes, with an optional default.
 var registry: TamaBulletRegistry

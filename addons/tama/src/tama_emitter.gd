@@ -8,13 +8,14 @@
 ## automatically in the Godot inspector under [b]TamaScript Exports[/b] and can also be
 ## set at runtime via [method set_export_num] / [method set_export_str].
 @tool
+@icon("res://addons/tama/icons/ammunition.svg")
 extends Node2D
 class_name TamaEmitter
 
-const _Interpreter = preload("res://tama_interpreter.gd")
-const _Ast         = preload("res://tama_ast.gd")
-const _Lexer       = preload("res://tama_lexer.gd")
-const _Parser      = preload("res://tama_parser.gd")
+const _Interpreter = preload("res://addons/tama/src/tama_interpreter.gd")
+const _Ast         = preload("res://addons/tama/src/tama_ast.gd")
+const _Lexer       = preload("res://addons/tama/src/tama_lexer.gd")
+const _Parser      = preload("res://addons/tama/src/tama_parser.gd")
 
 var _script_filename: String
 ## Name of the TamaScript to run (no path, no extension).

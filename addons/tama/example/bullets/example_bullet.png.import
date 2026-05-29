@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bicx42bqqr652"
-path="res://.godot/imported/example_bullet.png-0d4d2ef261a82c4908f598967673bb4a.ctex"
+path="res://.godot/imported/example_bullet.png-5cde5febdd9eb39635df53fbbaf62024.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example_bullet.png"
-dest_files=["res://.godot/imported/example_bullet.png-0d4d2ef261a82c4908f598967673bb4a.ctex"]
+source_file="res://addons/tama/example/bullets/example_bullet.png"
+dest_files=["res://.godot/imported/example_bullet.png-5cde5febdd9eb39635df53fbbaf62024.ctex"]
 
 [params]
 

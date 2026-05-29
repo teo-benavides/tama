@@ -1,5 +1,5 @@
-const _Token = preload("res://tama_token.gd")
-const _Ast   = preload("res://tama_ast.gd")
+const _Token = preload("res://addons/tama/src/tama_token.gd")
+const _Ast   = preload("res://addons/tama/src/tama_ast.gd")
 
 # ---------------------------------------------------------------------------
 # Diagnostic (error) structure
@@ -278,7 +278,7 @@ func _parse_single_arg(open_tok: _Token):  # -> String | _Ast.RefCallArg | _Ast.
 	# Named first-class ref (known definition, optionally pre-applied).
 	if tok.type == _Token.WORD:
 		var is_def := _defined_fires.has(tok.value) or _defined_acts.has(tok.value) \
-		           or _defined_bullets.has(tok.value)
+				   or _defined_bullets.has(tok.value)
 		var next := _peek_type_at(1)
 		var at_terminator := next == _Token.COMMA or next == _Token.RPAREN
 		var at_call       := next == _Token.LPAREN

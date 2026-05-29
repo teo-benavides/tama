@@ -1,11 +1,11 @@
 extends Node
 
-const EXAMPLE_BULLET_SCENE = preload("res://example_bullet.tscn")
+const EXAMPLE_BULLET_SCENE = preload("res://addons/tama/example/bullets/example_bullet.tscn")
 
 var emitter: TamaEmitter
 
 func _ready() -> void:
-	TamaManager.load_scripts("res://tamascripts")
+	TamaManager.load_scripts("res://addons/tama/example/tamascripts")
 	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
 	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)
 	

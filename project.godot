@@ -19,6 +19,10 @@ config/icon="uid://2rof51lmjyrt"
 
 TamaManager="*uid://fvu4436xvglo"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/tama/plugin.cfg")
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

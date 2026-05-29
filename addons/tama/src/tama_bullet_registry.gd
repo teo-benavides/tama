@@ -4,6 +4,7 @@
 ## and [method TamaManager.set_default_bullet] to populate it at runtime, or create a
 ## [code].tres[/code] file and assign it as a [TamaBulletRegistry] resource if you prefer
 ## asset-based configuration.
+@icon("res://addons/tama/icons/tama.svg")
 extends Resource
 class_name TamaBulletRegistry
 

@@ -6,10 +6,11 @@
 ##
 ## Override [method destroy] to add custom death effects such as particles or sounds
 ## before the bullet is freed.
+@icon("res://addons/tama/icons/bullet.svg")
 extends CharacterBody2D
 class_name TamaBullet
 
-const _Ast = preload("res://tama_ast.gd")
+const _Ast = preload("res://addons/tama/src/tama_ast.gd")
 
 var _runner
 

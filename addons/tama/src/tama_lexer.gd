@@ -1,4 +1,4 @@
-const _Token = preload("res://tama_token.gd")
+const _Token = preload("res://addons/tama/src/tama_token.gd")
 
 # Precompiled regex rules: [RegEx, token_type]
 # Order matters — more specific patterns first.

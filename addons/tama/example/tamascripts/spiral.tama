@@ -1,0 +1,12 @@
+include builtin
+
+main
+    async act spiral(45, 0.01, 200, -110)
+    wait (45/5)*0.01
+    async act spiral(45, 0.01, 200, -110)
+    wait (45/5)*0.01
+    async act spiral(45, 0.01, 200, -110)
+    wait (45/5)*0.01
+    async act spiral(45, 0.01, 200, -110)
+    wait (45/5)*0.01
+    async act spiral(45, 0.01, 200, -110)

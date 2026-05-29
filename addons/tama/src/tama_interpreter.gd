@@ -1,6 +1,6 @@
 extends Node
 
-const _Ast = preload("res://tama_ast.gd")
+const _Ast = preload("res://addons/tama/src/tama_ast.gd")
 
 # ---------------------------------------------------------------------------
 # Signal payload — carries everything the spawning system needs

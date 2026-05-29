@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://ddi7qj5x80hqh"]
 
-[ext_resource type="Script" uid="uid://dqx5h1mrsshyt" path="res://main.gd" id="1_ig7tw"]
-[ext_resource type="PackedScene" uid="uid://4me0elvt3ywq" path="res://example_player.tscn" id="3_h2yge"]
+[ext_resource type="Script" uid="uid://dqx5h1mrsshyt" path="res://addons/tama/example/example.gd" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://4me0elvt3ywq" path="res://addons/tama/example/player/example_player.tscn" id="3_h2yge"]
 
-[node name="Main" type="Node2D" unique_id=1817544635]
+[node name="TamaExample" type="Node2D" unique_id=1817544635]
 script = ExtResource("1_ig7tw")
 
 [node name="EmitterPosition" type="Marker2D" parent="." unique_id=1648329798]
