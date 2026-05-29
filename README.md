@@ -3,7 +3,7 @@
 </p>
 
 # Tama for Godot 
-[![Discord](https://img.shields.io/discord/1509716856489906337?style=flat&logo=discord&logoColor=white&label=discord)](https://discord.gg/7qs72jGrub)
+[![Discord](https://img.shields.io/discord/1509716856489906337?style=flat&logo=discord&logoColor=white&label=discord&labelColor=5865F2)](https://discord.gg/7qs72jGrub)
 
 Tama is a simple framework for creating bullet hell games, powered by an original bullet pattern definition language, TamaScript.
 
