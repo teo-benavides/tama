@@ -1,0 +1,32 @@
+main
+    repeat
+        act a(100, 10, 100.0, 60.0, 200.0, 3.0, randf_range(10.0, 20.0))
+        waitf 30
+        act a(100, 10, 100.0, 60.0, 200.0, 2.5, randf_range(10.0, 20.0))
+        waitf 30
+        act a(100, 10, 100.0, 60.0, 200.0, 2.0, randf_range(10.0, 20.0))
+        waitf 30
+        act a(100, 10, 100.0, 60.0, 200.0, 1.5, randf_range(10.0, 20.0))
+        waitf 30
+        act a(100, 10, 100.0, 60.0, 200.0, 1.0, randf_range(10.0, 20.0))
+        waitf 30
+        wait 5.0
+
+act a(amt, peaks, start_speed, min_ch_speed, max_ch_speed, stop_time, spin)
+    repeat amt i
+        fire
+            dir abs (360.0/amt)*i+spin
+            spd start_speed
+            bul b((pow(absf(sin(peaks*((360.0/amt)*i) * (PI/360.0))), 2.5)*max_ch_speed)+min_ch_speed, stop_time)
+
+
+bullet b(spd_change, stop_time)
+    act
+        wait stop_time
+        chspd
+            spd 10.0
+            over 1.5
+        wait 1.5
+        chspd
+            spd spd_change
+            over 3.0
