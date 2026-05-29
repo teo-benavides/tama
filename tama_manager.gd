@@ -1,3 +1,17 @@
+## Global manager for the Tama bullet hell framework.
+##
+## The single entry point for loading TamaScript files, registering bullet scenes,
+## and configuring runtime behaviour. [TamaEmitter] and [TamaBullet] communicate with it
+## automatically — user code only needs to call it directly during setup and to keep
+## [member player_position] updated.
+##
+## [codeblock]
+## func _ready() -> void:
+##     TamaManager.load_scripts("res://tamascripts")
+##     TamaManager.register_bullet("enemy", ENEMY_BULLET_SCENE)
+##     TamaManager.set_default_bullet(DEFAULT_BULLET_SCENE)
+##     $TamaEmitter.start()
+## [/codeblock]
 extends Node
 
 const _SpawnManagerScript  = preload("res://tama_spawn_manager.gd")
@@ -6,6 +20,7 @@ const _RegistryScript      = preload("res://tama_bullet_registry.gd")
 
 var _spawn_manager: Node
 var _repository:    Node
+var _scripts_path:  String = ""
 
 func _ready() -> void:
 	_repository    = _RepositoryScript.new()
@@ -18,35 +33,42 @@ func _ready() -> void:
 # Public API
 # ---------------------------------------------------------------------------
 
-## Set each frame to the player's world position so AIM directions resolve correctly.
+## Global position of the player, used to resolve [code]aim[/code] directions.
+## Update this every frame (e.g. in [code]_physics_process[/code]) to keep aimed bullets tracking correctly.
 var player_position: Vector2:
 	set(v): _spawn_manager.player_position = v
 	get:    return _spawn_manager.player_position
 
-## NodePath to the node under which bullets are spawned.
-## Defaults to the current scene root when not set.
+## Node under which spawned bullets are added as children.
+## Defaults to the current scene root when left empty.
 var spawn_parent: NodePath:
 	set(v): _spawn_manager.spawn_parent = v
 	get:    return _spawn_manager.spawn_parent
 
-## Load all .tama / .tam scripts found in path into the repository.
+## Parses and caches every [code].tama[/code] / [code].tam[/code] file found directly inside [param path].
+## Call once at startup before calling [method TamaEmitter.start].
 func load_scripts(path: String) -> void:
+	_scripts_path = path
 	_repository.load_scripts(path)
 
-## Load a single script file into the repository under filename.
+## Parses and caches a single TamaScript file located at [param full_path],
+## storing it under [param filename] (the key used by [TamaEmitter]).
 func load_script(filename: String, full_path: String) -> void:
 	_repository.load_script(filename, full_path)
 
-## Parse raw TamaScript source and cache it under name.
+## Parses raw TamaScript [param source] and caches it under [param script_name].
+## Useful for loading scripts from a [TextEdit] or other in-memory source.
 func load_script_from_source(script_name: String, source: String) -> void:
 	_repository.load_script_from_source(script_name, source)
 
-## Map a bullet type string to a PackedScene.
+## Registers a [PackedScene] for the bullet type string [param type].
+## The [param type] string must match the value used in a TamaScript [code]type[/code] statement.
 func register_bullet(type: String, scene: PackedScene) -> void:
 	_ensure_registry()
 	_spawn_manager.registry.entries[type] = scene
 
-## Set the fallback scene used when a bullet has no type or its type is not registered.
+## Sets the fallback [PackedScene] used when a bullet has no [code]type[/code] statement
+## or its type string is not registered.
 func set_default_bullet(scene: PackedScene) -> void:
 	_ensure_registry()
 	_spawn_manager.registry.default_bullet = scene
@@ -58,6 +80,9 @@ func _ensure_registry() -> void:
 # ---------------------------------------------------------------------------
 # Internal — used by TamaEmitter. Not part of the public API.
 # ---------------------------------------------------------------------------
+
+func _get_scripts_path() -> String:
+	return _scripts_path
 
 func _get_tama_script(filename: String):
 	return _spawn_manager.get_tama_script(filename)

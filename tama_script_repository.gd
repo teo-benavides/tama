@@ -5,10 +5,12 @@ const _Lexer  = preload("res://tama_lexer.gd")
 const _Parser = preload("res://tama_parser.gd")
 
 var _scripts: Dictionary = {}
+var _scripts_dir: String = ""
 
 ## Parse every .tam/.tama file in path and cache the resulting ASTs.
 ## Call this once at startup before running any TamaEmitters.
 func load_scripts(path: String) -> void:
+	_scripts_dir = path
 	var dir := DirAccess.open(path)
 	if not dir:
 		push_error("TamaScriptRepository: cannot open directory '%s'" % path)
@@ -56,10 +58,12 @@ func _parse_source(source: String, label: String, resolver: Callable = Callable(
 	return result.program
 
 func _find_script_path(name: String) -> String:
+	if _scripts_dir.is_empty():
+		return ""
 	for path in [
-		"res://tamascripts/" + name,
-		"res://tamascripts/" + name + ".tama",
-		"res://tamascripts/" + name + ".tam",
+		_scripts_dir.path_join(name),
+		_scripts_dir.path_join(name + ".tama"),
+		_scripts_dir.path_join(name + ".tam"),
 	]:
 		if FileAccess.file_exists(path):
 			return path

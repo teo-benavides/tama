@@ -1,3 +1,11 @@
+## Base class for all Tama-managed bullets.
+##
+## Attach this script (or a script that extends it) to your bullet scene.
+## The framework sets the initial position, angle, and speed automatically, then runs
+## the bullet's TamaScript [code]act[/code] once the bullet enters the scene tree.
+##
+## Override [method destroy] to add custom death effects such as particles or sounds
+## before the bullet is freed.
 extends CharacterBody2D
 class_name TamaBullet
 
@@ -17,7 +25,7 @@ var _direction_tween: Tween
 var _speed_tween:     Tween
 var _accel_tween:     Tween
 
-## Whether the bullet rotates to match the direction it's going in.
+## When [code]true[/code], the bullet's sprite rotation follows its travel direction each frame.
 @export var rotates: bool = true
 
 var _initial_position := Vector2.ZERO
@@ -53,6 +61,13 @@ func _physics_process(_delta: float) -> void:
 		rotation = _angle
 	move_and_slide()
 
+## Removes the bullet from the scene. Override to add a death effect before freeing.
+## [codeblock]
+## func destroy() -> void:
+##     $DeathParticles.emitting = true
+##     await get_tree().create_timer(0.5).timeout
+##     queue_free()
+## [/codeblock]
 func destroy() -> void:
 	queue_free()
 

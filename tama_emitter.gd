@@ -1,3 +1,12 @@
+## Node that runs a TamaScript bullet pattern.
+##
+## Place a [TamaEmitter] anywhere in your scene tree. Set [member script_filename] to the
+## name of a TamaScript file (without path or extension), then call [method start] at
+## runtime after [method TamaManager.load_scripts] has finished.
+##
+## Export variables declared in the TamaScript with the [code]export[/code] keyword appear
+## automatically in the Godot inspector under [b]TamaScript Exports[/b] and can also be
+## set at runtime via [method set_export_num] / [method set_export_str].
 @tool
 extends Node2D
 class_name TamaEmitter
@@ -8,6 +17,8 @@ const _Lexer       = preload("res://tama_lexer.gd")
 const _Parser      = preload("res://tama_parser.gd")
 
 var _script_filename: String
+## Name of the TamaScript to run (no path, no extension).
+## The file is looked up in the directory passed to [method TamaManager.load_scripts].
 @export var script_filename: String:
 	set(value):
 		_script_filename = value
@@ -19,6 +30,8 @@ var _script_filename: String
 	get():
 		return _script_filename
 
+## When [code]true[/code], this emitter is not added to the [code]tama_emitters[/code] group
+## and will not be affected by group-wide calls such as [code]get_tree().call_group()[/code].
 @export var excluded_from_group: bool = false
 
 var _interpreter
@@ -145,10 +158,13 @@ func _exports_signature() -> String:
 	return ",".join(parts)
 
 func _find_script_path() -> String:
+	var dir: String = TamaManager._get_scripts_path()
+	if dir.is_empty():
+		return ""
 	for path in [
-		"res://tamascripts/" + _script_filename,
-		"res://tamascripts/" + _script_filename + ".tama",
-		"res://tamascripts/" + _script_filename + ".tam",
+		dir.path_join(_script_filename),
+		dir.path_join(_script_filename + ".tama"),
+		dir.path_join(_script_filename + ".tam"),
 	]:
 		if FileAccess.file_exists(path):
 			return path
@@ -174,10 +190,13 @@ func _parse_script_file_for_exports() -> _Ast.ProgramNode:
 
 func _make_editor_resolver() -> Callable:
 	return func(name: String) -> _Ast.ProgramNode:
+		var dir: String = TamaManager._get_scripts_path()
+		if dir.is_empty():
+			return null
 		for path in [
-			"res://tamascripts/" + name,
-			"res://tamascripts/" + name + ".tama",
-			"res://tamascripts/" + name + ".tam",
+			dir.path_join(name),
+			dir.path_join(name + ".tama"),
+			dir.path_join(name + ".tam"),
 		]:
 			if FileAccess.file_exists(path):
 				var src := FileAccess.get_file_as_string(path)
@@ -190,6 +209,8 @@ func _make_editor_resolver() -> Callable:
 # Public API
 # ---------------------------------------------------------------------------
 
+## Starts executing the TamaScript. Has no effect if [member script_filename] is not set
+## or the script has not been loaded via [TamaManager].
 func start() -> void:
 	if _script_filename.is_empty():
 		push_error("TamaEmitter: script_filename is not set")
@@ -205,6 +226,7 @@ func start() -> void:
 	await _interpreter.start(program, _export_values.duplicate())
 	_running = false
 
+## Stops the running TamaScript immediately. Safe to call when not running.
 func stop() -> void:
 	if _interpreter and _running:
 		_interpreter.stop()
@@ -214,14 +236,20 @@ func stop() -> void:
 # Export variable API
 # ---------------------------------------------------------------------------
 
+## Sets a TamaScript export variable at runtime, bypassing the inspector.
+## Use [method set_export_num] or [method set_export_str] for typed variants.
 func set_export(name: String, value: Variant) -> void:
 	_export_values[name] = value
 
+## Sets a [code]num[/code] export variable named [param name] to [param value].
 func set_export_num(name: String, value: float) -> void:
 	_export_values[name] = value
 
+## Sets a [code]str[/code] export variable named [param name] to [param value].
 func set_export_str(name: String, value: String) -> void:
 	_export_values[name] = value
 
+## Returns the current value of the export variable named [param name],
+## or [code]null[/code] if it has not been set.
 func get_export(name: String) -> Variant:
 	return _export_values.get(name)
