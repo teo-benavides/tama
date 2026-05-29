@@ -5,6 +5,8 @@
 # Tama for Godot 
 [![Discord](https://img.shields.io/discord/1509716856489906337?style=flat&logo=discord&logoColor=white&label=discord&labelColor=5865F2)](https://discord.gg/7qs72jGrub)
 
+[日本語版はこちらに](README.ja.md)
+
 Tama is a simple framework for creating bullet hell games, powered by an original bullet pattern definition language, TamaScript.
 
 Check out the `example` folder inside the addon to see example TamaScript scripts and learn what you can do with it. Running `example.tscn` you'll find a text field where you can paste TamaScript and it will be run automatically.
