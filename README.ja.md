@@ -19,7 +19,7 @@ Tamaは、独自の弾幕パターン定義言語「TamaScript」を搭載した
 7. `TamaManager` を設定します:
     ```gdscript
     # ステップ3で作成したレジストリ
-    TamaManager.registry(load("res://my_bullet_registry.tres"))
+    TamaManager.registry = load("res://my_bullet_registry.tres")
     ```
 8. `TamaEmitter` の `start()` を呼び出してTamaScriptを実行します。
 9. （任意）カスタムの `TamaContext` を設定することで、独自のGDScript関数をTamaScriptに公開できます:

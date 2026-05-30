@@ -15,7 +15,7 @@ func create_emitter():
 	add_child(emitter)
 
 func _on_text_edit_text_changed() -> void:
-	TamaManager.load_script_from_source("temp", $CanvasLayer/TextEdit.text)
+	TamaManager.load_script_from_source("temp", $CanvasLayer/Container/TextEdit.text)
 	get_tree().call_group(&"tama_emitters", &"queue_free")
 	get_tree().call_group(&"tama_bullets", &"destroy")
 	if emitter:

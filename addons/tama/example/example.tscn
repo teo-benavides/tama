@@ -14,11 +14,18 @@ position = Vector2(372, 446)
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1693199720]
 
-[node name="TextEdit" type="TextEdit" parent="CanvasLayer" unique_id=68398283]
-offset_left = 750.0
-offset_top = 6.0
-offset_right = 1134.0
-offset_bottom = 640.0
+[node name="Container" type="VBoxContainer" parent="CanvasLayer" unique_id=248366487]
+offset_left = 710.0
+offset_top = 1.0
+offset_right = 1147.0
+offset_bottom = 649.0
+
+[node name="OptionButton" type="OptionButton" parent="CanvasLayer/Container" unique_id=1406359509]
+layout_mode = 2
+
+[node name="TextEdit" type="TextEdit" parent="CanvasLayer/Container" unique_id=68398283]
+layout_mode = 2
+size_flags_vertical = 3
 theme_override_font_sizes/font_size = 12
 
-[connection signal="text_changed" from="CanvasLayer/TextEdit" to="." method="_on_text_edit_text_changed"]
+[connection signal="text_changed" from="CanvasLayer/Container/TextEdit" to="." method="_on_text_edit_text_changed"]
