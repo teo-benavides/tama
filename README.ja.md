@@ -5,7 +5,9 @@
 # Tama for Godot
 [![Discord](https://img.shields.io/discord/1509716856489906337?style=flat&logo=discord&logoColor=white&label=discord&labelColor=5865F2)](https://discord.gg/7qs72jGrub)
 
-Tamaは、独自の弾幕パターン定義言語「TamaScript」を搭載した、弾幕STG制作のためのシンプルなフレームワークです。
+[TamaScript用のVSCode拡張機能をダウンロード](https://marketplace.visualstudio.com/items?itemName=teo-benavides.tamascript)
+
+Tamaは、独自の弾幕定義言語「TamaScript」を搭載した、弾幕STG制作のためのシンプルなフレームワークです。
 
 アドオン内の `example` フォルダにサンプルのTamaScriptファイルがあります。`example.tscn` を実行すると、TamaScriptを貼り付けてすぐに動作確認できるテキストフィールドが表示されます。
 

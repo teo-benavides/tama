@@ -5,7 +5,8 @@
 # Tama for Godot 
 [![Discord](https://img.shields.io/discord/1509716856489906337?style=flat&logo=discord&logoColor=white&label=discord&labelColor=5865F2)](https://discord.gg/7qs72jGrub)
 
-[日本語版はこちらに](README.ja.md)
+[日本語版はこちらに](README.ja.md)  
+[Get the VSCode extension for TamaScript](https://marketplace.visualstudio.com/items?itemName=teo-benavides.tamascript)
 
 Tama is a simple framework for creating bullet hell games, powered by an original bullet pattern definition language, TamaScript.
 
