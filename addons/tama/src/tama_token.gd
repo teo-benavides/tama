@@ -39,6 +39,7 @@ const KW_ASYNC   = "KW_ASYNC"
 const KW_EXPORT  = "KW_EXPORT"
 const KW_INCLUDE = "KW_INCLUDE"
 const KW_POS     = "KW_POS"
+const KW_CHPOS   = "KW_CHPOS"
 
 const KEYWORDS: Dictionary = {
 	"main":    KW_MAIN,
@@ -71,6 +72,7 @@ const KEYWORDS: Dictionary = {
 	"export":  KW_EXPORT,
 	"include": KW_INCLUDE,
 	"pos":     KW_POS,
+	"chpos":   KW_CHPOS,
 }
 
 # --- Instance fields ---

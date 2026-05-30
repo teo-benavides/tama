@@ -59,6 +59,15 @@ class ChspdData:
 	var speed_value: float
 	var over:        float
 
+class ChposData:
+	var has_x:  bool = false
+	var x_type: _Ast.ValueType = _Ast.ValueType.ABS
+	var x:      float = 0.0
+	var has_y:  bool = false
+	var y_type: _Ast.ValueType = _Ast.ValueType.ABS
+	var y:      float = 0.0
+	var over:   float = 0.0
+
 class AccelData:
 	var has_x:  bool
 	var x_type: _Ast.ValueType
@@ -76,6 +85,7 @@ signal bullet_fired(data: BulletFireData)
 signal vanished
 signal changed_direction(data: ChdirData)
 signal changed_speed(data: ChspdData)
+signal changed_position(data: ChposData)
 signal accelerated(data: AccelData)
 signal _all_async_done
 
@@ -210,6 +220,20 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 				d.y      = _eval(cn.y.expr, scope)
 			d.over = _eval(cn.over.expr, scope)
 			accelerated.emit(d)
+
+	elif node is _Ast.ChposNode:
+		var cn := node as _Ast.ChposNode
+		var d := ChposData.new()
+		if cn.x:
+			d.has_x  = true
+			d.x_type = _get_axis_type(cn.x, scope)
+			d.x      = _eval(cn.x.expr, scope)
+		if cn.y:
+			d.has_y  = true
+			d.y_type = _get_axis_type(cn.y, scope)
+			d.y      = _eval(cn.y.expr, scope)
+		d.over = _eval(cn.over.expr, scope) if cn.over else 0.0
+		changed_position.emit(d)
 
 func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 	var count := -1

@@ -246,6 +246,18 @@ class ChspdNode extends ASTNode:
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 
+# chpos
+#   x:    OffsetAxisNode | null  — abs: world coord; rel: offset from current position
+#   y:    OffsetAxisNode | null
+#   over: OverNode | null        — default 0 (instant)
+class ChposNode extends ASTNode:
+	var x:    OffsetAxisNode
+	var y:    OffsetAxisNode
+	var over: OverNode
+
+	func _init(p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+
 # accel
 #   x:    OffsetAxisNode | null
 #   y:    OffsetAxisNode | null

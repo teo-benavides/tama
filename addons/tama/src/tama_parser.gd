@@ -523,6 +523,42 @@ func _parse_chspd() -> _Ast.ChspdNode:
 		_error_at(tok, "chspd requires an over statement")
 	return node
 
+func _parse_chpos() -> _Ast.ChposNode:
+	var tok := _consume(_Token.KW_CHPOS)
+	var node := _Ast.ChposNode.new(tok.line, tok.col)
+	_consume(_Token.NEWLINE)
+	_parse_block(func():
+		var t := _peek()
+		match t.type:
+			_Token.KW_X, _Token.KW_Y:
+				var axis := t.value
+				_pos += 1
+				var qualifier := _Ast.ValueType.ABS
+				var qualifier_var := ""
+				if _peek_type() == _Token.WORD and _peek_type_at(1) != _Token.NEWLINE:
+					qualifier_var = _peek().value; _pos += 1
+				else:
+					qualifier = _peek_value_qualifier(_Ast.ValueType.ABS)
+				var expr := _collect_to_eol()
+				_consume(_Token.NEWLINE)
+				var axis_node := _Ast.OffsetAxisNode.new(axis, qualifier, expr, t.line, t.col)
+				axis_node.axis_type_var = qualifier_var
+				if axis == "x":
+					node.x = axis_node
+				else:
+					node.y = axis_node
+			_Token.KW_OVER:
+				node.over = _parse_over()
+			_:
+				_error_at(t, "Unexpected token in chpos block: '%s'" % _tok_display(t))
+				_pos += 1
+				_try_consume(_Token.NEWLINE)
+				return null
+	)
+	if not node.x and not node.y:
+		_error_at(tok, "chpos requires at least one of x/y")
+	return node
+
 func _parse_accel() -> _Ast.AccelNode:
 	var tok := _consume(_Token.KW_ACCEL)
 	var node := _Ast.AccelNode.new(tok.line, tok.col)
@@ -719,6 +755,7 @@ func _parse_action_statement():   # -> _Ast.ASTNode
 		_Token.KW_OFFSET: return _parse_offset()
 		_Token.KW_CHDIR:  return _parse_chdir()
 		_Token.KW_CHSPD:  return _parse_chspd()
+		_Token.KW_CHPOS:  return _parse_chpos()
 		_Token.KW_ACCEL:  return _parse_accel()
 		_Token.KW_REPEAT: return _parse_repeat()
 		_Token.KW_ACT:

@@ -1,0 +1,19 @@
+main
+    repeat 60 i
+        fire f(50, (2.0 * PI * i / 60.0), time(), 160, 1, 1)
+
+fire f(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
+    dir abs 0
+    spd 0
+    pos
+        x rel 0 #radius * cos(ofs)
+        y rel 0 #radius * sin(ofs)
+    bullet orbiter(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
+
+bullet orbiter(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
+    act
+        repeat
+            chpos
+                x abs spawn_x + (radius + exp_spd * (time() - t0)) * cos(ofs + rot_dir * rot_spd * (time() - t0))
+                y abs spawn_y + (radius + exp_spd * (time() - t0)) * sin(ofs + rot_dir * rot_spd * (time() - t0))
+            waitf 1

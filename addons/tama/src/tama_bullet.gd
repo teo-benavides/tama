@@ -24,6 +24,7 @@ var _last_speed: float = 0.0
 
 var _direction_tween: Tween
 var _speed_tween:     Tween
+var _pos_tween:       Tween
 var _accel_tween:     Tween
 
 ## When [code]true[/code], the bullet's sprite rotation follows its travel direction each frame.
@@ -49,6 +50,7 @@ func _ready() -> void:
 
 	_runner.changed_direction.connect(_on_changed_direction)
 	_runner.changed_speed.connect(_on_changed_speed)
+	_runner.changed_position.connect(_on_changed_position)
 	_runner.accelerated.connect(_on_accelerated)
 	_runner.vanished.connect(_on_vanished)
 
@@ -106,6 +108,29 @@ func _on_accelerated(data) -> void:
 	if data.has_y:
 		var end_y := _accel_axis_end(data.y_type, data.y, _speed_y, data.over)
 		_accel_tween.tween_property(self, "_speed_y", end_y, data.over).set_trans(Tween.TRANS_LINEAR)
+
+func _on_changed_position(data) -> void:
+	var target := global_position
+	if data.has_x:
+		match data.x_type:
+			_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
+				target.x = data.x
+			_Ast.ValueType.REL:
+				target.x += data.x
+	if data.has_y:
+		match data.y_type:
+			_Ast.ValueType.ABS, _Ast.ValueType.SEQ:
+				target.y = data.y
+			_Ast.ValueType.REL:
+				target.y += data.y
+	if _pos_tween:
+		_pos_tween.kill()
+	if data.over <= 0.0:
+		global_position = target
+	else:
+		_pos_tween = create_tween()
+		_pos_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+		_pos_tween.tween_property(self, "global_position", target, data.over).set_trans(Tween.TRANS_LINEAR)
 
 func _on_vanished() -> void:
 	destroy()

@@ -81,6 +81,8 @@ func _on_bullet_fired(data: _Interpreter.BulletFireData, spawner: Node2D) -> voi
 		var act_scope: Dictionary = {}
 		for i in mini(data.bullet_params.size(), data.bullet_args.size()):
 			act_scope[data.bullet_params[i]] = data.bullet_args[i]
+		act_scope["spawn_x"] = bullet._initial_position.x
+		act_scope["spawn_y"] = bullet._initial_position.y
 		connect_interpreter(bullet_runner, bullet)
 		bullet.ready.connect(
 			func(): bullet_runner.start_act(data.source_program, data.bullet_act, act_scope),
@@ -102,6 +104,8 @@ func _on_bullet_fired(data: _Interpreter.BulletFireData, spawner: Node2D) -> voi
 		var emitter_scope: Dictionary = {}
 		for i in mini(data.bullet_params.size(), data.bullet_args.size()):
 			emitter_scope[data.bullet_params[i]] = data.bullet_args[i]
+		emitter_scope["spawn_x"] = bullet._initial_position.x
+		emitter_scope["spawn_y"] = bullet._initial_position.y
 		bullet.ready.connect(
 			func(): spawner_runner.start_act(data.source_program, data.bullet_emitter_act, emitter_scope),
 			CONNECT_ONE_SHOT
