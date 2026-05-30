@@ -158,5 +158,16 @@ export str dir_mode aim ← string型フィールドを公開する（aim/abs/re
 include builtin         ← 別の.tamaファイルからfire/act/bulletの定義をマージする
 ```
 
+## 予定している機能
+- RenderingServerおよびPhysicsServer2Dを用いた最適化（弾にNodeを使わない方式）
+- 詳細なドキュメント
+### TamaScript
+- 制御フロー（`if/elif/else`、`while/for` など）
+- 変数
+- 文字列（`"` で囲む）
+- 小さなサンプルゲーム
+- ドキュメントコメント
+- ノードグラフ式スクリプトエディター
+
 ## スペシャルサンクス
 [@icons](https://github.com/Voxybuns/at-icons)

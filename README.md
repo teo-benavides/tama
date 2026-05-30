@@ -159,5 +159,16 @@ export str dir_mode aim ← exposes a string field (use for aim/abs/rel/seq)
 include builtin         ← merges fire/act/bullet defs from another .tama file
 ```
 
+## Planned features
+- Optimization via RenderingServer and PhysicsServer2D, forgoing Nodes for bullets
+- In-depth documentation
+### TamaScript
+- Control flow (`if/elif/else`, `while/for`, etc.)
+- Variables
+- Strings, delimited by `"`
+- Small example game
+- Documentation comments
+- Node graph script editor
+
 ## Special thanks
 [@icons](https://github.com/Voxybuns/at-icons)
