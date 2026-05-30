@@ -98,17 +98,27 @@ var _running: bool = false
 var _async_count: int = 0
 var context: TamaContext = TamaContext.new()
 
+var _fires_map:   Dictionary = {}
+var _acts_map:    Dictionary = {}
+var _bullets_map: Dictionary = {}
+
 # ---------------------------------------------------------------------------
 # Entry points
 # ---------------------------------------------------------------------------
 
 # Run the program from main. The interpreter must be in the scene tree
 # (added as a child) so that get_tree() works for wait.
+func _build_lookup_tables() -> void:
+	for f: _Ast.FireDefNode   in _program.fires:   _fires_map[f.name]   = f
+	for a: _Ast.ActDefNode    in _program.acts:    _acts_map[a.name]    = a
+	for b: _Ast.BulletDefNode in _program.bullets: _bullets_map[b.name] = b
+
 func start(program: _Ast.ProgramNode, initial_scope: Dictionary = {}) -> void:
 	_program = program
 	if not _program.main:
 		push_error("TamaInterpreter: program has no main block")
 		return
+	_build_lookup_tables()
 	_running = true
 	await _exec_action_body(_program.main.body, initial_scope)
 	if _async_count > 0:
@@ -124,6 +134,7 @@ func start_act(
 	scope:   Dictionary = {}
 ) -> void:
 	_program = program
+	_build_lookup_tables()
 	_running = true
 	if act is _Ast.InlineActNode:
 		await _exec_action_body((act as _Ast.InlineActNode).body, scope)
@@ -140,9 +151,59 @@ func stop() -> void:
 
 func _exec_action_body(body: Array, scope: Dictionary) -> void:
 	for node: _Ast.ASTNode in body:
-		if not _running:
-			return
-		await _exec_action_stmt(node, scope)
+		if not _running: return
+		# R3: dispatch synchronous nodes directly — no coroutine overhead
+		if node is _Ast.FireCallNode:
+			_exec_fire_call(node as _Ast.FireCallNode, scope)
+		elif node is _Ast.InlineFireNode:
+			_exec_fire_node(node, scope)
+		elif node is _Ast.VanishNode:
+			_running = false; vanished.emit()
+		elif node is _Ast.ChdirNode:
+			var cn := node as _Ast.ChdirNode
+			if cn.dir and cn.over:
+				var d := ChdirData.new()
+				d.dir_type  = _get_dir_type(cn.dir, scope)
+				d.dir_value = _eval(cn.dir.expr, scope)
+				d.over      = _eval(cn.over.expr, scope)
+				changed_direction.emit(d)
+		elif node is _Ast.ChspdNode:
+			var cn := node as _Ast.ChspdNode
+			if cn.speed and cn.over:
+				var d := ChspdData.new()
+				d.speed_type  = _get_speed_type(cn.speed, scope)
+				d.speed_value = _eval(cn.speed.expr, scope)
+				d.over        = _eval(cn.over.expr, scope)
+				changed_speed.emit(d)
+		elif node is _Ast.ChposNode:
+			var cn := node as _Ast.ChposNode
+			var d := ChposData.new()
+			if cn.x:
+				d.has_x  = true
+				d.x_type = _get_axis_type(cn.x, scope)
+				d.x      = _eval(cn.x.expr, scope)
+			if cn.y:
+				d.has_y  = true
+				d.y_type = _get_axis_type(cn.y, scope)
+				d.y      = _eval(cn.y.expr, scope)
+			d.over = _eval(cn.over.expr, scope) if cn.over else 0.0
+			changed_position.emit(d)
+		elif node is _Ast.AccelNode:
+			var cn := node as _Ast.AccelNode
+			if cn.over and (cn.x or cn.y):
+				var d := AccelData.new()
+				if cn.x:
+					d.has_x  = true
+					d.x_type = _get_axis_type(cn.x, scope)
+					d.x      = _eval(cn.x.expr, scope)
+				if cn.y:
+					d.has_y  = true
+					d.y_type = _get_axis_type(cn.y, scope)
+					d.y      = _eval(cn.y.expr, scope)
+				d.over = _eval(cn.over.expr, scope)
+				accelerated.emit(d)
+		else:
+			await _exec_action_stmt(node, scope)
 
 func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 	if node is _Ast.WaitNode:
@@ -373,23 +434,9 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 # Definition lookups
 # ---------------------------------------------------------------------------
 
-func _find_fire(name: String) -> _Ast.FireDefNode:
-	for f: _Ast.FireDefNode in _program.fires:
-		if f.name == name:
-			return f
-	return null
-
-func _find_act(name: String) -> _Ast.ActDefNode:
-	for a: _Ast.ActDefNode in _program.acts:
-		if a.name == name:
-			return a
-	return null
-
-func _find_bullet(name: String) -> _Ast.BulletDefNode:
-	for b: _Ast.BulletDefNode in _program.bullets:
-		if b.name == name:
-			return b
-	return null
+func _find_fire(name: String)   -> _Ast.FireDefNode:   return _fires_map.get(name)
+func _find_act(name: String)    -> _Ast.ActDefNode:    return _acts_map.get(name)
+func _find_bullet(name: String) -> _Ast.BulletDefNode: return _bullets_map.get(name)
 
 # ---------------------------------------------------------------------------
 # Scope helpers
@@ -484,6 +531,7 @@ func _eval_arg_as_float(arg, scope: Dictionary) -> float:
 
 # Binds already-evaluated values to param names, merging into a copy of outer_scope.
 func _bind_args_from_values(params: Array[String], values: Array, outer_scope: Dictionary) -> Dictionary:
+	if params.is_empty(): return outer_scope
 	var new_scope := outer_scope.duplicate()
 	for i in mini(params.size(), values.size()):
 		new_scope[params[i]] = values[i]
@@ -493,11 +541,19 @@ func _bind_args_from_values(params: Array[String], values: Array, outer_scope: D
 # Expression evaluation
 # ---------------------------------------------------------------------------
 
+static var _expr_cache: Dictionary = {}
+
 func _eval(expr: String, scope: Dictionary) -> float:
 	expr = expr.strip_edges()
 	if expr.is_empty():
 		return 0.0
-	var expression := Expression.new()
+	# R1: literal fast-paths — no Expression needed
+	if expr.is_valid_float():
+		return float(expr)
+	if scope.has(expr):
+		var sv = scope[expr]
+		if sv is float or sv is int:
+			return float(sv)
 	# Filter scope to only float-compatible values so Expression doesn't choke on TamaRefs.
 	var float_keys:   Array[String] = []
 	var float_values: Array         = []
@@ -506,10 +562,18 @@ func _eval(expr: String, scope: Dictionary) -> float:
 		if val is float or val is int:
 			float_keys.append(key)
 			float_values.append(val)
-	var names := PackedStringArray(float_keys)
-	if expression.parse(expr, names) != OK:
-		push_error("TamaScript expression parse error '%s': %s" % [expr, expression.get_error_text()])
-		return 0.0
+	# R2: reuse compiled Expression; key on both expr string and variable names so that
+	# the same expression used with different scope structures doesn't collide.
+	var cache_key := expr + "|" + ",".join(float_keys)
+	var expression: Expression
+	if _expr_cache.has(cache_key):
+		expression = _expr_cache[cache_key]
+	else:
+		expression = Expression.new()
+		if expression.parse(expr, PackedStringArray(float_keys)) != OK:
+			push_error("TamaScript expression parse error '%s': %s" % [expr, expression.get_error_text()])
+			return 0.0
+		_expr_cache[cache_key] = expression
 	var result = expression.execute(float_values, context)
 	if expression.has_execute_failed():
 		push_error("TamaScript expression execute error '%s': %s" % [expr, expression.get_error_text()])
