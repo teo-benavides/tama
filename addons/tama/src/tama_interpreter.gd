@@ -102,6 +102,17 @@ var _fires_map:   Dictionary = {}
 var _acts_map:    Dictionary = {}
 var _bullets_map: Dictionary = {}
 
+# Reusable arrays for scope filtering — avoids allocating new Arrays every _eval call.
+var _fk: Array[String] = []
+var _fv: Array         = []
+
+# Shared signal payload objects — safe to reuse because signal handlers run synchronously
+# before emit() returns, so the next bullet's emit never overlaps with the previous handler.
+static var _chpos_buf := ChposData.new()
+static var _chdir_buf := ChdirData.new()
+static var _chspd_buf := ChspdData.new()
+static var _accel_buf := AccelData.new()
+
 # ---------------------------------------------------------------------------
 # Entry points
 # ---------------------------------------------------------------------------
@@ -162,46 +173,48 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 		elif node is _Ast.ChdirNode:
 			var cn := node as _Ast.ChdirNode
 			if cn.dir and cn.over:
-				var d := ChdirData.new()
-				d.dir_type  = _get_dir_type(cn.dir, scope)
-				d.dir_value = _eval(cn.dir.expr, scope)
-				d.over      = _eval(cn.over.expr, scope)
-				changed_direction.emit(d)
+				var ks := _prep_scope(scope)
+				_chdir_buf.dir_type  = _get_dir_type(cn.dir, scope)
+				_chdir_buf.dir_value = _eval_f(cn.dir.expr, ks)
+				_chdir_buf.over      = _eval_f(cn.over.expr, ks)
+				changed_direction.emit(_chdir_buf)
 		elif node is _Ast.ChspdNode:
 			var cn := node as _Ast.ChspdNode
 			if cn.speed and cn.over:
-				var d := ChspdData.new()
-				d.speed_type  = _get_speed_type(cn.speed, scope)
-				d.speed_value = _eval(cn.speed.expr, scope)
-				d.over        = _eval(cn.over.expr, scope)
-				changed_speed.emit(d)
+				var ks := _prep_scope(scope)
+				_chspd_buf.speed_type  = _get_speed_type(cn.speed, scope)
+				_chspd_buf.speed_value = _eval_f(cn.speed.expr, ks)
+				_chspd_buf.over        = _eval_f(cn.over.expr, ks)
+				changed_speed.emit(_chspd_buf)
 		elif node is _Ast.ChposNode:
 			var cn := node as _Ast.ChposNode
-			var d := ChposData.new()
+			var ks := _prep_scope(scope)
+			_chpos_buf.has_x = false; _chpos_buf.has_y = false; _chpos_buf.over = 0.0
 			if cn.x:
-				d.has_x  = true
-				d.x_type = _get_axis_type(cn.x, scope)
-				d.x      = _eval(cn.x.expr, scope)
+				_chpos_buf.has_x  = true
+				_chpos_buf.x_type = _get_axis_type(cn.x, scope)
+				_chpos_buf.x      = _eval_f(cn.x.expr, ks)
 			if cn.y:
-				d.has_y  = true
-				d.y_type = _get_axis_type(cn.y, scope)
-				d.y      = _eval(cn.y.expr, scope)
-			d.over = _eval(cn.over.expr, scope) if cn.over else 0.0
-			changed_position.emit(d)
+				_chpos_buf.has_y  = true
+				_chpos_buf.y_type = _get_axis_type(cn.y, scope)
+				_chpos_buf.y      = _eval_f(cn.y.expr, ks)
+			if cn.over: _chpos_buf.over = _eval_f(cn.over.expr, ks)
+			changed_position.emit(_chpos_buf)
 		elif node is _Ast.AccelNode:
 			var cn := node as _Ast.AccelNode
 			if cn.over and (cn.x or cn.y):
-				var d := AccelData.new()
+				var ks := _prep_scope(scope)
+				_accel_buf.has_x = false; _accel_buf.has_y = false
 				if cn.x:
-					d.has_x  = true
-					d.x_type = _get_axis_type(cn.x, scope)
-					d.x      = _eval(cn.x.expr, scope)
+					_accel_buf.has_x  = true
+					_accel_buf.x_type = _get_axis_type(cn.x, scope)
+					_accel_buf.x      = _eval_f(cn.x.expr, ks)
 				if cn.y:
-					d.has_y  = true
-					d.y_type = _get_axis_type(cn.y, scope)
-					d.y      = _eval(cn.y.expr, scope)
-				d.over = _eval(cn.over.expr, scope)
-				accelerated.emit(d)
+					_accel_buf.has_y  = true
+					_accel_buf.y_type = _get_axis_type(cn.y, scope)
+					_accel_buf.y      = _eval_f(cn.y.expr, ks)
+				_accel_buf.over = _eval_f(cn.over.expr, ks)
+				accelerated.emit(_accel_buf)
 		else:
 			await _exec_action_stmt(node, scope)
 
@@ -543,39 +556,47 @@ func _bind_args_from_values(params: Array[String], values: Array, outer_scope: D
 
 static var _expr_cache: Dictionary = {}
 
-func _eval(expr: String, scope: Dictionary) -> float:
-	expr = expr.strip_edges()
-	if expr.is_empty():
-		return 0.0
-	# R1: literal fast-paths — no Expression needed
-	if expr.is_valid_float():
-		return float(expr)
-	if scope.has(expr):
-		var sv = scope[expr]
-		if sv is float or sv is int:
-			return float(sv)
-	# Filter scope to only float-compatible values so Expression doesn't choke on TamaRefs.
-	var float_keys:   Array[String] = []
-	var float_values: Array         = []
-	for key in scope.keys():
+# Filter scope into the reusable _fk / _fv arrays and return the key-signature string.
+# Call this once before a batch of _eval_f calls that share the same scope.
+func _prep_scope(scope: Dictionary) -> String:
+	_fk.clear()
+	_fv.clear()
+	for key in scope:
 		var val = scope[key]
 		if val is float or val is int:
-			float_keys.append(key)
-			float_values.append(val)
-	# R2: reuse compiled Expression; key on both expr string and variable names so that
-	# the same expression used with different scope structures doesn't collide.
-	var cache_key := expr + "|" + ",".join(float_keys)
+			_fk.append(key)
+			_fv.append(val)
+	return ",".join(_fk)
+
+# Evaluate using pre-filtered _fk / _fv — call _prep_scope first.
+func _eval_f(expr: String, keys_sig: String) -> float:
+	if expr.is_valid_float(): return float(expr)
+	var ki := _fk.find(expr)
+	if ki >= 0: return float(_fv[ki])
+	var cache_key := expr + "|" + keys_sig
 	var expression: Expression
 	if _expr_cache.has(cache_key):
 		expression = _expr_cache[cache_key]
 	else:
 		expression = Expression.new()
-		if expression.parse(expr, PackedStringArray(float_keys)) != OK:
+		if expression.parse(expr, PackedStringArray(_fk)) != OK:
 			push_error("TamaScript expression parse error '%s': %s" % [expr, expression.get_error_text()])
 			return 0.0
 		_expr_cache[cache_key] = expression
-	var result = expression.execute(float_values, context)
+	var result = expression.execute(_fv, context)
 	if expression.has_execute_failed():
 		push_error("TamaScript expression execute error '%s': %s" % [expr, expression.get_error_text()])
 		return 0.0
 	return float(result)
+
+func _eval(expr: String, scope: Dictionary) -> float:
+	expr = expr.strip_edges()
+	if expr.is_empty(): return 0.0
+	# R1: literal fast-paths — no Expression needed
+	if expr.is_valid_float(): return float(expr)
+	if scope.has(expr):
+		var sv = scope[expr]
+		if sv is float or sv is int: return float(sv)
+	# Filter scope into reusable arrays (no allocation)
+	var keys_sig := _prep_scope(scope)
+	return _eval_f(expr, keys_sig)
