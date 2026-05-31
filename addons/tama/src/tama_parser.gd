@@ -640,6 +640,31 @@ func _parse_accel() -> _Ast.AccelNode:
 		_error_at(tok, "accel requires at least one of x or y")
 	return node
 
+func _parse_if() -> _Ast.IfNode:
+	var tok := _consume(_Token.KW_IF)
+	var node := _Ast.IfNode.new(tok.line, tok.col)
+	var cond := _collect_to_eol()
+	if cond.strip_edges().is_empty():
+		_error_at(_peek(), "Expected condition after 'if'")
+	_consume(_Token.NEWLINE)
+	node.conditions.append(cond)
+	node.bodies.append(_parse_block(_parse_action_statement))
+	_skip_newlines()
+	while _peek_type() == _Token.KW_ELIF:
+		_consume(_Token.KW_ELIF)
+		cond = _collect_to_eol()
+		if cond.strip_edges().is_empty():
+			_error_at(_peek(), "Expected condition after 'elif'")
+		_consume(_Token.NEWLINE)
+		node.conditions.append(cond)
+		node.bodies.append(_parse_block(_parse_action_statement))
+		_skip_newlines()
+	if _peek_type() == _Token.KW_ELSE:
+		_consume(_Token.KW_ELSE)
+		_consume(_Token.NEWLINE)
+		node.else_body = _parse_block(_parse_action_statement)
+	return node
+
 func _parse_var_decl() -> _Ast.VarDeclNode:
 	var tok := _consume(_Token.KW_VAR)
 	var name_tok := _peek()
@@ -839,6 +864,8 @@ func _parse_action_statement():   # -> _Ast.ASTNode
 				return _parse_inline_fire()
 			else:
 				return _parse_fire_call()
+		_Token.KW_IF:
+			return _parse_if()
 		_Token.KW_VAR:
 			return _parse_var_decl()
 		_Token.WORD:
@@ -903,8 +930,9 @@ func _parse_include(program: _Ast.ProgramNode) -> void:
 func _parse_export() -> _Ast.ExportVarNode:
 	var tok := _consume(_Token.KW_EXPORT)
 	var type_tok := _peek()
-	if type_tok.type != _Token.WORD or (type_tok.value != "num" and type_tok.value != "str"):
-		_error_at(type_tok, "Expected 'num' or 'str' after 'export'")
+	var valid_types := ["num", "str", "bool"]
+	if type_tok.type != _Token.WORD or not valid_types.has(type_tok.value):
+		_error_at(type_tok, "Expected 'num', 'str', or 'bool' after 'export'")
 		_try_consume(_Token.NEWLINE)
 		return null
 	var export_type := type_tok.value
@@ -918,7 +946,12 @@ func _parse_export() -> _Ast.ExportVarNode:
 	if _peek_type() != _Token.NEWLINE and _peek_type() != _Token.EOF:
 		var raw := _collect_to_eol().strip_edges()
 		if not raw.is_empty():
-			default_value = float(raw) if export_type == "num" else raw
+			if export_type == "num":
+				default_value = float(raw)
+			elif export_type == "bool":
+				default_value = raw == "true"  # stored as GDScript bool
+			else:
+				default_value = raw
 	_consume(_Token.NEWLINE)
 	return _Ast.ExportVarNode.new(name, export_type, default_value, tok.line, tok.col)
 

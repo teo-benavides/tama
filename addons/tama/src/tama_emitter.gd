@@ -96,9 +96,14 @@ func _get_property_list() -> Array[Dictionary]:
 			"hint_string": "tama_export_",
 		})
 		for def in _cached_export_defs:
+			var prop_type: int
+			match def["type"]:
+				"num":  prop_type = TYPE_FLOAT
+				"bool": prop_type = TYPE_BOOL
+				_:      prop_type = TYPE_STRING
 			list.append({
 				"name": "tama_export_" + def["name"],
-				"type": TYPE_FLOAT if def["type"] == "num" else TYPE_STRING,
+				"type": prop_type,
 				"usage": PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_SCRIPT_VARIABLE,
 				"hint": PROPERTY_HINT_NONE,
 				"hint_string": "",
@@ -131,7 +136,7 @@ func _property_get_revert(property: StringName) -> Variant:
 	var name := str(property).substr("tama_export_".length())
 	for def in _cached_export_defs:
 		if def["name"] == name:
-			return def["default"]
+			return def["default"]  # already stored as the correct GDScript type
 	return null
 
 func _refresh_exports() -> void:
@@ -244,6 +249,10 @@ func set_export_num(name: String, value: float) -> void:
 
 ## Sets a [code]str[/code] export variable named [param name] to [param value].
 func set_export_str(name: String, value: String) -> void:
+	_export_values[name] = value
+
+## Sets a [code]bool[/code] export variable named [param name] to [param value].
+func set_export_bool(name: String, value: bool) -> void:
 	_export_values[name] = value
 
 ## Returns the current value of the export variable named [param name],

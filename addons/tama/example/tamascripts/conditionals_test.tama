@@ -1,0 +1,21 @@
+main
+    var bullets 100
+    var total_over_portion 4.0/3.0
+
+    if bullets >= 100
+        total_over_portion 1.0
+    elif bullets >= 50 and bullets < 100
+        total_over_portion 2.0/1.0
+    else
+        total_over_portion 4.0/1.0
+ 
+    repeat bullets i
+        fire f(140, (2.0 * PI * i / (bullets * total_over_portion)))
+        waitf 1.0
+
+fire f(radius, ofs)
+    dir abs 0
+    spd abs 0
+    pos
+        x rel radius * cos(ofs)
+        y rel radius * sin(ofs)

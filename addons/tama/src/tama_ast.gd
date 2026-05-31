@@ -326,6 +326,20 @@ class FireCallNode extends ASTNode:
 		name = p_name
 		args = p_args
 
+# if <cond> / elif <cond> / else  —  conditional branching inside an action block
+# conditions are evaluated as floats; non-zero is truthy.
+# conditions[i] corresponds to bodies[i]; else_body is used when no branch matches.
+class IfNode extends ASTNode:
+	var conditions: Array  # Array[String]
+	var bodies:     Array  # Array[Array[ASTNode]], parallel to conditions
+	var else_body:  Array  # Array[ASTNode], empty if no else clause
+
+	func _init(p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+		conditions = []
+		bodies     = []
+		else_body  = []
+
 # var <name> <expr>  —  declares or reassigns a local variable in scope
 # also used for bare assignment (IDENT EXPR) without the var keyword
 class VarDeclNode extends ASTNode:

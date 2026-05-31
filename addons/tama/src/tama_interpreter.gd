@@ -315,6 +315,24 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 		elif node is _Ast.VarDeclNode:
 			var vn := node as _Ast.VarDeclNode
 			scope[vn.var_name] = _eval_arg(vn.expr, scope)
+		elif node is _Ast.IfNode:
+			var ifn := node as _Ast.IfNode
+			var taken := false
+			for bi in ifn.conditions.size():
+				if _eval(ifn.conditions[bi], scope) != 0.0:
+					var pre_keys: Dictionary = {}
+					for k in scope: pre_keys[k] = true
+					_exec_body_sync(ifn.bodies[bi], scope)
+					for key in scope.keys():
+						if not pre_keys.has(key): scope.erase(key)
+					taken = true
+					break
+			if not taken and not ifn.else_body.is_empty():
+				var pre_keys: Dictionary = {}
+				for k in scope: pre_keys[k] = true
+				_exec_body_sync(ifn.else_body, scope)
+				for key in scope.keys():
+					if not pre_keys.has(key): scope.erase(key)
 		# WaitNode, WaitFramesNode, ActCallNode, InlineActNode: no-op in sync context
 
 func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
@@ -417,6 +435,25 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 	elif node is _Ast.VarDeclNode:
 		var vn := node as _Ast.VarDeclNode
 		scope[vn.var_name] = _eval_arg(vn.expr, scope)
+
+	elif node is _Ast.IfNode:
+		var ifn := node as _Ast.IfNode
+		var taken := false
+		for bi in ifn.conditions.size():
+			if _eval(ifn.conditions[bi], scope) != 0.0:
+				var pre_keys: Dictionary = {}
+				for k in scope: pre_keys[k] = true
+				await _exec_action_body(ifn.bodies[bi], scope)
+				for key in scope.keys():
+					if not pre_keys.has(key): scope.erase(key)
+				taken = true
+				break
+		if not taken and not ifn.else_body.is_empty():
+			var pre_keys: Dictionary = {}
+			for k in scope: pre_keys[k] = true
+			await _exec_action_body(ifn.else_body, scope)
+			for key in scope.keys():
+				if not pre_keys.has(key): scope.erase(key)
 
 func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 	var count := -1
@@ -660,20 +697,22 @@ func _eval_arg(arg, scope: Dictionary):
 	if stripped.is_valid_identifier():
 		if scope.has(stripped):
 			var val = scope[stripped]
-			if not (val is float or val is int):
+			if not (val is float or val is int or val is bool):
 				return val
-			# float/int in scope — fall through to _eval to retrieve it
+			# numeric / bool in scope — fall through to _eval to retrieve it as float
 		else:
-			# Qualifier keywords passed as string values.
+			# Qualifier keywords and bool literals passed as special values.
 			match stripped:
 				"aim", "abs", "rel", "seq": return stripped
+				"true":  return 1.0
+				"false": return 0.0
 			# Bare identifier not in scope — treat as a string name (e.g. bullet type).
 			return stripped
 	return _eval(expr, scope)
 
 func _eval_arg_as_float(arg, scope: Dictionary) -> float:
 	var val = _eval_arg(arg, scope)
-	return float(val) if (val is float or val is int) else 0.0
+	return float(val) if (val is float or val is int or val is bool) else 0.0
 
 # Binds already-evaluated values to param names, merging into a copy of outer_scope.
 func _bind_args_from_values(params: Array[String], values: Array, outer_scope: Dictionary) -> Dictionary:
@@ -696,9 +735,9 @@ func _prep_scope(scope: Dictionary) -> String:
 	_fv.clear()
 	for key in scope:
 		var val = scope[key]
-		if val is float or val is int:
+		if val is float or val is int or val is bool:
 			_fk.append(key)
-			_fv.append(val)
+			_fv.append(float(val))
 	return ",".join(_fk)
 
 # Evaluate using pre-filtered _fk / _fv — call _prep_scope first.
@@ -729,7 +768,7 @@ func _eval(expr: String, scope: Dictionary) -> float:
 	if expr.is_valid_float(): return float(expr)
 	if scope.has(expr):
 		var sv = scope[expr]
-		if sv is float or sv is int: return float(sv)
+		if sv is float or sv is int or sv is bool: return float(sv)
 	# Filter scope into reusable arrays (no allocation)
 	var keys_sig := _prep_scope(scope)
 	return _eval_f(expr, keys_sig)

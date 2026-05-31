@@ -40,9 +40,11 @@ COMMENT = "#" { any character except newline } ;
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "wait" | "chdir" | "chspd" | "accel"
    | "wait" | "vanish" | "var"
+   | "if" | "elif" | "else"
    | "dir" | "speed" | "spd" | "offset" | "pos" | "emitter" | "emt"
    | "abs" | "rel" | "seq"
-   | "over" | "x" | "y" | "type" | "async" ;
+   | "over" | "x" | "y" | "type" | "async"
+   | "true" | "false" ;
 
 DIR_TYPE = "aim" | "abs" | "rel" | "seq" ;
 VALUE_TYPE = "abs" | "rel" | "seq" ;
@@ -60,7 +62,7 @@ include_decl = "include" IDENT NEWLINE ;
                   included files need not define main — they act as libraries.
                   includes are resolved at parse time; circular includes are rejected.   *)
 
-export_decl = "export" ( "num" | "str" ) IDENT [ EXPR ] NEWLINE ;
+export_decl = "export" ( "num" | "str" | "bool" ) IDENT [ EXPR ] NEWLINE ;
               (* declares a named variable exposed in the TamaEmitter inspector.
                  num maps to float; str maps to String (used for qualifiers like aim/abs/rel/seq).
                  the optional EXPR is the default value used when the field has not been set.
@@ -128,7 +130,8 @@ bullet_call = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
    ACTION BLOCK STATEMENTS
    ------------------------------------------------------------ *)
 
-action_stmt = var_stmt
+action_stmt = if_stmt
+             | var_stmt
              | assign_stmt
              | dir_stmt
              | speed_stmt
@@ -143,6 +146,14 @@ action_stmt = var_stmt
              | fire_call
              | act_call
              | async_act ;
+
+if_stmt     = "if" EXPR NEWLINE action_block
+              { "elif" EXPR NEWLINE action_block }
+              [ "else" NEWLINE action_block ] ;
+              (* EXPR is evaluated as a float; non-zero is truthy.
+                 "true" and "false" are first-class literals (1.0 and 0.0).
+                 variables declared with var inside a branch are scoped to that branch;
+                 reassignment of outer-scope variables propagates outward.           *)
 
 var_stmt    = "var" IDENT EXPR ;
               (* declares a variable in the current scope and evaluates EXPR as its initial value.
