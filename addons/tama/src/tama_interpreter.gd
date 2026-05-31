@@ -45,6 +45,14 @@ class BulletFireData:
 	var bullet_params:         Array[String] = [] # param names from the bullet def
 	var bullet_args:           Array        = [] # evaluated args matching bullet_params (float or String)
 
+	# mvmt — per-axis position expressions evaluated every physics frame on the bullet
+	var mvmt_x_set:  bool = false
+	var mvmt_x_type: _Ast.ValueType = _Ast.ValueType.ABS
+	var mvmt_x_expr: String = ""
+	var mvmt_y_set:  bool = false
+	var mvmt_y_type: _Ast.ValueType = _Ast.ValueType.ABS
+	var mvmt_y_expr: String = ""
+
 	# The program that fired this bullet — needed so the bullet's act can resolve
 	# named fires/acts/bullets from the same script even without a spawner file.
 	var source_program: _Ast.ProgramNode
@@ -87,6 +95,7 @@ signal changed_direction(data: ChdirData)
 signal changed_speed(data: ChspdData)
 signal changed_position(data: ChposData)
 signal accelerated(data: AccelData)
+signal frame_loop_registered(owner: Object, fn: Callable)
 signal _all_async_done
 
 # ---------------------------------------------------------------------------
@@ -215,8 +224,89 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 					_accel_buf.y      = _eval_f(cn.y.expr, ks)
 				_accel_buf.over = _eval_f(cn.over.expr, ks)
 				accelerated.emit(_accel_buf)
+		elif node is _Ast.RepeatFrameNode:
+			var rfn := node as _Ast.RepeatFrameNode
+			var captured_scope := scope
+			var owner := get_parent()
+			frame_loop_registered.emit(owner, func():
+				if not is_instance_valid(owner):
+					TamaManager._unregister_frame_loop(owner)
+					return
+				_running = true  # re-arm so _exec_body_sync checks work
+				_exec_body_sync(rfn.body, captured_scope)
+			)
+			_running = false  # terminal — nothing after repeatf executes
 		else:
 			await _exec_action_stmt(node, scope)
+
+func _exec_body_sync(body: Array, scope: Dictionary) -> void:
+	for node: _Ast.ASTNode in body:
+		if not _running: return
+		if node is _Ast.FireCallNode:
+			_exec_fire_call(node as _Ast.FireCallNode, scope)
+		elif node is _Ast.InlineFireNode:
+			_exec_fire_node(node, scope)
+		elif node is _Ast.VanishNode:
+			_running = false; vanished.emit()
+		elif node is _Ast.ChdirNode:
+			var cn := node as _Ast.ChdirNode
+			if cn.dir and cn.over:
+				var ks := _prep_scope(scope)
+				_chdir_buf.dir_type  = _get_dir_type(cn.dir, scope)
+				_chdir_buf.dir_value = _eval_f(cn.dir.expr, ks)
+				_chdir_buf.over      = _eval_f(cn.over.expr, ks)
+				changed_direction.emit(_chdir_buf)
+		elif node is _Ast.ChspdNode:
+			var cn := node as _Ast.ChspdNode
+			if cn.speed and cn.over:
+				var ks := _prep_scope(scope)
+				_chspd_buf.speed_type  = _get_speed_type(cn.speed, scope)
+				_chspd_buf.speed_value = _eval_f(cn.speed.expr, ks)
+				_chspd_buf.over        = _eval_f(cn.over.expr, ks)
+				changed_speed.emit(_chspd_buf)
+		elif node is _Ast.ChposNode:
+			var cn := node as _Ast.ChposNode
+			var ks := _prep_scope(scope)
+			_chpos_buf.has_x = false; _chpos_buf.has_y = false; _chpos_buf.over = 0.0
+			if cn.x:
+				_chpos_buf.has_x  = true
+				_chpos_buf.x_type = _get_axis_type(cn.x, scope)
+				_chpos_buf.x      = _eval_f(cn.x.expr, ks)
+			if cn.y:
+				_chpos_buf.has_y  = true
+				_chpos_buf.y_type = _get_axis_type(cn.y, scope)
+				_chpos_buf.y      = _eval_f(cn.y.expr, ks)
+			if cn.over: _chpos_buf.over = _eval_f(cn.over.expr, ks)
+			changed_position.emit(_chpos_buf)
+		elif node is _Ast.AccelNode:
+			var cn := node as _Ast.AccelNode
+			if cn.over and (cn.x or cn.y):
+				var ks := _prep_scope(scope)
+				_accel_buf.has_x = false; _accel_buf.has_y = false
+				if cn.x:
+					_accel_buf.has_x  = true
+					_accel_buf.x_type = _get_axis_type(cn.x, scope)
+					_accel_buf.x      = _eval_f(cn.x.expr, ks)
+				if cn.y:
+					_accel_buf.has_y  = true
+					_accel_buf.y_type = _get_axis_type(cn.y, scope)
+					_accel_buf.y      = _eval_f(cn.y.expr, ks)
+				_accel_buf.over = _eval_f(cn.over.expr, ks)
+				accelerated.emit(_accel_buf)
+		elif node is _Ast.RepeatNode:
+			var rn := node as _Ast.RepeatNode
+			var count := -1
+			if not rn.count.strip_edges().is_empty():
+				count = roundi(_eval(rn.count, scope))
+			var i := 0
+			while _running and (count < 0 or i < count):
+				var iter_scope := scope
+				if not rn.index_var.is_empty():
+					iter_scope = scope.duplicate()
+					iter_scope[rn.index_var] = float(i + 1)
+				_exec_body_sync(rn.body, iter_scope)
+				i += 1
+		# WaitNode, WaitFramesNode, ActCallNode, InlineActNode: no-op in sync context
 
 func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 	if node is _Ast.WaitNode:
@@ -411,6 +501,8 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 		data.bullet_type        = scope.get(ib.bullet_type, ib.bullet_type)
 		data.bullet_emitter_act = ib.emitter_act
 		data.bullet_act         = ib.act
+		if ib.mvmt:
+			_populate_mvmt(data, ib.mvmt, scope)
 	elif node.bullet != null:
 		var bcn      := node.bullet as _Ast.BulletCallNode
 		var bul_name := bcn.name
@@ -420,6 +512,8 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 			data.bullet_type        = scope.get(ib.bullet_type, ib.bullet_type)
 			data.bullet_emitter_act = ib.emitter_act
 			data.bullet_act         = ib.act
+			if ib.mvmt:
+				_populate_mvmt(data, ib.mvmt, scope)
 		else:
 			if scope.has(bul_name) and scope[bul_name] is TamaRef:
 				var r: TamaRef = scope[bul_name]
@@ -439,9 +533,21 @@ func _exec_fire_node(node, scope: Dictionary) -> void:
 			data.bullet_params      = bullet_def.params.duplicate()
 			for val in all_bullet_args:
 				data.bullet_args.append(val)
+			if bullet_def.mvmt:
+				_populate_mvmt(data, bullet_def.mvmt, scope)
 
 	data.source_program = _program
 	bullet_fired.emit(data)
+
+func _populate_mvmt(data: BulletFireData, mvmt: _Ast.MvmtNode, scope: Dictionary) -> void:
+	if mvmt.x:
+		data.mvmt_x_set  = true
+		data.mvmt_x_type = _get_axis_type(mvmt.x, scope)
+		data.mvmt_x_expr = mvmt.x.expr
+	if mvmt.y:
+		data.mvmt_y_set  = true
+		data.mvmt_y_type = _get_axis_type(mvmt.y, scope)
+		data.mvmt_y_expr = mvmt.y.expr
 
 # ---------------------------------------------------------------------------
 # Definition lookups

@@ -559,6 +559,49 @@ func _parse_chpos() -> _Ast.ChposNode:
 		_error_at(tok, "chpos requires at least one of x/y")
 	return node
 
+func _parse_repeatf() -> _Ast.RepeatFrameNode:
+	var tok := _consume(_Token.KW_REPEATF)
+	var node := _Ast.RepeatFrameNode.new(tok.line, tok.col)
+	_consume(_Token.NEWLINE)
+	_parse_block(func():
+		var stmt = _parse_action_statement()
+		if stmt:
+			node.body.append(stmt)
+		_try_consume(_Token.NEWLINE)
+	)
+	return node
+
+func _parse_mvmt() -> _Ast.MvmtNode:
+	var tok := _consume(_Token.KW_MVMT)
+	var node := _Ast.MvmtNode.new(tok.line, tok.col)
+	_consume(_Token.NEWLINE)
+	_parse_block(func():
+		var t := _peek()
+		if t.type == _Token.KW_X or t.type == _Token.KW_Y:
+			var axis := t.value
+			_pos += 1
+			var qualifier := _Ast.ValueType.ABS
+			var qualifier_var := ""
+			if _peek_type() == _Token.WORD and _peek_type_at(1) != _Token.NEWLINE:
+				qualifier_var = _peek().value; _pos += 1
+			else:
+				qualifier = _peek_value_qualifier(_Ast.ValueType.ABS)
+			var expr := _collect_to_eol()
+			_consume(_Token.NEWLINE)
+			var axis_node := _Ast.OffsetAxisNode.new(axis, qualifier, expr, t.line, t.col)
+			axis_node.axis_type_var = qualifier_var
+			if axis == "x":
+				node.x = axis_node
+			else:
+				node.y = axis_node
+		else:
+			_error_at(t, "Expected 'x' or 'y' in mvmt block, got '%s'" % _tok_display(t))
+			_pos += 1
+			_try_consume(_Token.NEWLINE)
+			return null
+	)
+	return node
+
 func _parse_accel() -> _Ast.AccelNode:
 	var tok := _consume(_Token.KW_ACCEL)
 	var node := _Ast.AccelNode.new(tok.line, tok.col)
@@ -733,6 +776,8 @@ func _parse_inline_bullet() -> _Ast.InlineBulletNode:
 					node.act = _parse_inline_act()
 				else:
 					node.act = _parse_act_call()
+			_Token.KW_MVMT:
+				node.mvmt = _parse_mvmt()
 			_:
 				_error_at(t, "Unexpected token in bullet block: '%s'" % _tok_display(t))
 				_pos += 1
@@ -757,7 +802,8 @@ func _parse_action_statement():   # -> _Ast.ASTNode
 		_Token.KW_CHSPD:  return _parse_chspd()
 		_Token.KW_CHPOS:  return _parse_chpos()
 		_Token.KW_ACCEL:  return _parse_accel()
-		_Token.KW_REPEAT: return _parse_repeat()
+		_Token.KW_REPEAT:  return _parse_repeat()
+		_Token.KW_REPEATF: return _parse_repeatf()
 		_Token.KW_ACT:
 			# act NEWLINE ... = inline act;  act IDENT ... = act call
 			if _peek_type_at(1) == _Token.NEWLINE:
@@ -926,6 +972,8 @@ func _parse_bullet_def() -> _Ast.BulletDefNode:
 					node.act = _parse_inline_act()
 				else:
 					node.act = _parse_act_call()
+			_Token.KW_MVMT:
+				node.mvmt = _parse_mvmt()
 			_:
 				_error_at(tok, "Unexpected token in bullet block: '%s'" % _tok_display(tok))
 				_pos += 1

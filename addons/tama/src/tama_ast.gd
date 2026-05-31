@@ -89,6 +89,7 @@ class BulletDefNode extends ASTNode:
 	var bullet_type:  String
 	var emitter_act:  ASTNode   # ActCallNode or InlineActNode, null if absent
 	var act:          ASTNode   # InlineActNode or ActCallNode
+	var mvmt:         MvmtNode  # optional
 
 	func _init(p_name: String, p_params: Array, p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
@@ -185,6 +186,7 @@ class InlineBulletNode extends ASTNode:
 	var bullet_type: String = ""
 	var emitter_act: ASTNode  # ActCallNode or InlineActNode, null if absent
 	var act:         ASTNode  # InlineActNode or ActCallNode, may be null
+	var mvmt:        MvmtNode # optional
 
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
@@ -266,6 +268,22 @@ class AccelNode extends ASTNode:
 	var x:    OffsetAxisNode
 	var y:    OffsetAxisNode
 	var over: OverNode
+
+	func _init(p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+
+# repeatf  — infinite repeat running from TamaManager._physics_process; no coroutine per frame
+class RepeatFrameNode extends ASTNode:
+	var body: Array
+
+	func _init(p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+		body = []
+
+# mvmt NEWLINE mvmt_block  — per-axis position expression evaluated each physics frame
+class MvmtNode extends ASTNode:
+	var x: OffsetAxisNode  # optional
+	var y: OffsetAxisNode  # optional
 
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)

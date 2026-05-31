@@ -8,14 +8,11 @@ fire f(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
     dir abs 0
     spd 0
     pos
-        x rel 0 #radius * cos(ofs)
-        y rel 0 #radius * sin(ofs)
+        x rel radius * cos(ofs)
+        y rel radius * sin(ofs)
     bullet orbiter(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
 
 bullet orbiter(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
-    act
-        repeat
-            chpos
-                x abs spiral_x(spawn_x, radius, ofs, exp_spd, rot_spd, rot_dir, t0)
-                y abs spiral_y(spawn_y, radius, ofs, exp_spd, rot_spd, rot_dir, t0)
-            waitf 1
+    mvmt
+        x abs spiral_x(spawn_x, radius, ofs, exp_spd, rot_spd, rot_dir, t0)
+        y abs spiral_y(spawn_y, radius, ofs, exp_spd, rot_spd, rot_dir, t0)

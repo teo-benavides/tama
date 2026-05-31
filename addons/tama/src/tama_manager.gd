@@ -24,6 +24,9 @@ var _spawn_manager: Node
 var _repository:    Node
 var _scripts_path:  String = ""
 
+var _frame_loop_fns:   Array[Callable] = []
+var _frame_loop_owners: Array[Object]  = []
+
 func _init() -> void:
 	_repository    = _RepositoryScript.new()
 	_spawn_manager = _SpawnManagerScript.new()
@@ -33,6 +36,15 @@ func _ready() -> void:
 	add_child(_repository)
 	add_child(_spawn_manager)
 	_load_scripts()
+
+func _physics_process(_delta: float) -> void:
+	var i := 0
+	while i < _frame_loop_fns.size():
+		var sz := _frame_loop_fns.size()
+		_frame_loop_fns[i].call()
+		# If the callback removed itself, the next entry slid into index i — don't advance.
+		if _frame_loop_fns.size() >= sz:
+			i += 1
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -93,6 +105,18 @@ func register_bullet(type: String, scene: PackedScene) -> void:
 func set_default_bullet(scene: PackedScene) -> void:
 	_ensure_registry()
 	_spawn_manager.registry.default_bullet = scene
+
+func _register_frame_loop(owner: Object, fn: Callable) -> void:
+	_frame_loop_owners.append(owner)
+	_frame_loop_fns.append(fn)
+
+func _unregister_frame_loop(owner: Object) -> void:
+	var i := _frame_loop_owners.size() - 1
+	while i >= 0:
+		if _frame_loop_owners[i] == owner:
+			_frame_loop_owners.remove_at(i)
+			_frame_loop_fns.remove_at(i)
+		i -= 1
 
 func _ensure_registry() -> void:
 	if not _spawn_manager.registry:

@@ -15,8 +15,10 @@ func end_y() -> float:
 
 func spiral_x(sx: float, radius: float, ofs: float, exp_spd: float, rot_spd: float, rot_dir: float, t0: float) -> float:
 	var dt := time() - t0
-	return sx + (radius + exp_spd * dt) * cos(ofs + rot_dir * rot_spd * dt)
+	var cx := sx - radius * cos(ofs)
+	return cx + (radius + exp_spd * dt) * cos(ofs + rot_dir * rot_spd * dt)
 
 func spiral_y(sy: float, radius: float, ofs: float, exp_spd: float, rot_spd: float, rot_dir: float, t0: float) -> float:
 	var dt := time() - t0
-	return sy + (radius + exp_spd * dt) * sin(ofs + rot_dir * rot_spd * dt)
+	var cy := sy - radius * sin(ofs)
+	return cy + (radius + exp_spd * dt) * sin(ofs + rot_dir * rot_spd * dt)

@@ -25,6 +25,7 @@ var player_position: Vector2 = Vector2.ZERO
 ## spawner is the Node2D that owns the interpreter (TamaEmitter or TamaBullet).
 func connect_interpreter(interpreter, spawner: Node2D) -> void:
 	interpreter.bullet_fired.connect(func(data): _on_bullet_fired(data, spawner))
+	interpreter.frame_loop_registered.connect(TamaManager._register_frame_loop)
 
 ## Retrieve a program from the repository by filename.
 func get_tama_script(filename: String):
@@ -74,6 +75,20 @@ func _on_bullet_fired(data: _Interpreter.BulletFireData, spawner: Node2D) -> voi
 	bullet._angle = angle
 	bullet._speed = speed
 	bullet._initial_position = _resolve_position(data, spawner, angle)
+
+	if data.mvmt_x_set or data.mvmt_y_set:
+		var mvmt_scope: Dictionary = {}
+		for i in mini(data.bullet_params.size(), data.bullet_args.size()):
+			mvmt_scope[data.bullet_params[i]] = data.bullet_args[i]
+		mvmt_scope["spawn_x"] = bullet._initial_position.x
+		mvmt_scope["spawn_y"] = bullet._initial_position.y
+		bullet._mvmt_x_set  = data.mvmt_x_set
+		bullet._mvmt_x_type = data.mvmt_x_type
+		bullet._mvmt_x_expr = data.mvmt_x_expr
+		bullet._mvmt_y_set  = data.mvmt_y_set
+		bullet._mvmt_y_type = data.mvmt_y_type
+		bullet._mvmt_y_expr = data.mvmt_y_expr
+		bullet._mvmt_scope  = mvmt_scope
 
 	_get_spawn_parent().call_deferred("add_child", bullet)
 

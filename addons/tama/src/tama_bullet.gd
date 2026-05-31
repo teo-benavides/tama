@@ -27,6 +27,14 @@ var _speed_tween:     Tween
 var _pos_tween:       Tween
 var _accel_tween:     Tween
 
+var _mvmt_x_set:  bool = false
+var _mvmt_x_type: int  = 0   # _Ast.ValueType.ABS
+var _mvmt_x_expr: String = ""
+var _mvmt_y_set:  bool = false
+var _mvmt_y_type: int  = 0
+var _mvmt_y_expr: String = ""
+var _mvmt_scope:  Dictionary = {}
+
 ## When [code]true[/code], the bullet's sprite rotation follows its travel direction each frame.
 @export var rotates: bool = true
 
@@ -55,6 +63,17 @@ func _ready() -> void:
 	_runner.vanished.connect(_on_vanished)
 
 func _physics_process(_delta: float) -> void:
+	if _mvmt_x_set or _mvmt_y_set:
+		var pos := global_position
+		if _mvmt_x_set:
+			var vx: float = _runner._eval(_mvmt_x_expr, _mvmt_scope)
+			pos.x = vx if _mvmt_x_type == _Ast.ValueType.ABS else _initial_position.x + vx
+		if _mvmt_y_set:
+			var vy: float = _runner._eval(_mvmt_y_expr, _mvmt_scope)
+			pos.y = vy if _mvmt_y_type == _Ast.ValueType.ABS else _initial_position.y + vy
+		global_position = pos
+		if rotates: rotation = _angle
+		return
 	velocity = Vector2.ZERO
 	velocity.x += cos(_angle) * _speed
 	velocity.y += sin(_angle) * _speed
@@ -72,6 +91,7 @@ func _physics_process(_delta: float) -> void:
 ##     queue_free()
 ## [/codeblock]
 func destroy() -> void:
+	TamaManager._unregister_frame_loop(self)
 	queue_free()
 
 # ---------------------------------------------------------------------------
