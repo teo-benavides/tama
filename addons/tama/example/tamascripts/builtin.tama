@@ -20,7 +20,7 @@ act spiral(steps, interval, spd_, offset_)
 act aimed_shots(amount, spread, spd_)
     repeat amount i
         fire
-            dir aim (2*i - 1 - amount) * spread / (2 * max(amount - 1, 1))
+            dir aim (2*i + 1 - amount) * spread / (2 * max(amount - 1, 1))
             spd spd_
 
 act act_every(seconds, act_)

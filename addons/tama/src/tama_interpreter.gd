@@ -306,7 +306,7 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 				var pre_keys: Dictionary = {}
 				for k in scope: pre_keys[k] = true
 				if not rn.index_var.is_empty():
-					scope[rn.index_var] = float(i + 1)
+					scope[rn.index_var] = float(i)
 				_exec_body_sync(rn.body, scope)
 				for key in scope.keys():
 					if not pre_keys.has(key):
@@ -464,7 +464,7 @@ func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 		var pre_keys: Dictionary = {}
 		for k in scope: pre_keys[k] = true
 		if not node.index_var.is_empty():
-			scope[node.index_var] = float(i + 1)
+			scope[node.index_var] = float(i)
 		await _exec_action_body(node.body, scope)
 		for key in scope.keys():
 			if not pre_keys.has(key):

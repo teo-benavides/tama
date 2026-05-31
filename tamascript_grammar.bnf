@@ -179,7 +179,7 @@ wait_stmt  = "wait"  EXPR ;
 waitf_stmt = "waitf" EXPR ;
              (* waits for EXPR physics frames *)
 repeat_stmt = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block ;
-              (* IDENT names the loop index, 1-based; may be nested arbitrarily *)
+              (* IDENT names the loop index, 0-based; may be nested arbitrarily *)
               (* omitting EXPR means infinite repeat *)
 
 

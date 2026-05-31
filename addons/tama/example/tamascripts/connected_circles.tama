@@ -1,6 +1,6 @@
 main
     repeat 5 k
-        act circle(120, 120, 2.0 * PI * (k - 1) / 5.0 - PI / 2.0)
+        act circle(120, 120, 2.0 * PI * k / 5.0 - PI / 2.0)
 
 act circle(pent_r, circ_r, pent_angle)
     repeat 60 i

@@ -1,7 +1,7 @@
 main
     repeat
         repeat 10 i
-            act fire_arrow((360/10)*(i-1))
+            act fire_arrow((360/10)*i)
         wait 1.0
 
 act fire_arrow(direction)
