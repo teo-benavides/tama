@@ -326,6 +326,17 @@ class FireCallNode extends ASTNode:
 		name = p_name
 		args = p_args
 
+# var <name> <expr>  —  declares or reassigns a local variable in scope
+# also used for bare assignment (IDENT EXPR) without the var keyword
+class VarDeclNode extends ASTNode:
+	var var_name: String
+	var expr:     String
+
+	func _init(p_name: String, p_expr: String, p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+		var_name = p_name
+		expr     = p_expr
+
 # act <name>([args...])  — named act call inside an action block
 class ActCallNode extends ASTNode:
 	var name:     String

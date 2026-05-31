@@ -224,6 +224,9 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 					_accel_buf.y      = _eval_f(cn.y.expr, ks)
 				_accel_buf.over = _eval_f(cn.over.expr, ks)
 				accelerated.emit(_accel_buf)
+		elif node is _Ast.VarDeclNode:
+			var vn := node as _Ast.VarDeclNode
+			scope[vn.var_name] = _eval_arg(vn.expr, scope)
 		elif node is _Ast.RepeatFrameNode:
 			var rfn := node as _Ast.RepeatFrameNode
 			var captured_scope := scope
@@ -300,12 +303,18 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 				count = roundi(_eval(rn.count, scope))
 			var i := 0
 			while _running and (count < 0 or i < count):
-				var iter_scope := scope
+				var pre_keys: Dictionary = {}
+				for k in scope: pre_keys[k] = true
 				if not rn.index_var.is_empty():
-					iter_scope = scope.duplicate()
-					iter_scope[rn.index_var] = float(i + 1)
-				_exec_body_sync(rn.body, iter_scope)
+					scope[rn.index_var] = float(i + 1)
+				_exec_body_sync(rn.body, scope)
+				for key in scope.keys():
+					if not pre_keys.has(key):
+						scope.erase(key)
 				i += 1
+		elif node is _Ast.VarDeclNode:
+			var vn := node as _Ast.VarDeclNode
+			scope[vn.var_name] = _eval_arg(vn.expr, scope)
 		# WaitNode, WaitFramesNode, ActCallNode, InlineActNode: no-op in sync context
 
 func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
@@ -342,9 +351,15 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 	elif node is _Ast.InlineActNode:
 		var ian := node as _Ast.InlineActNode
 		if ian.is_async:
-			_run_async(func(): await _exec_action_body(ian.body, scope))
+			# async: snapshot scope so the closure doesn't race with the parent
+			_run_async(func(): await _exec_action_body(ian.body, scope.duplicate()))
 		else:
+			var pre_keys: Dictionary = {}
+			for k in scope: pre_keys[k] = true
 			await _exec_action_body(ian.body, scope)
+			for key in scope.keys():
+				if not pre_keys.has(key):
+					scope.erase(key)
 
 	elif node is _Ast.ChdirNode:
 		var cn := node as _Ast.ChdirNode
@@ -399,17 +414,24 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 		d.over = _eval(cn.over.expr, scope) if cn.over else 0.0
 		changed_position.emit(d)
 
+	elif node is _Ast.VarDeclNode:
+		var vn := node as _Ast.VarDeclNode
+		scope[vn.var_name] = _eval_arg(vn.expr, scope)
+
 func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 	var count := -1
 	if not node.count.strip_edges().is_empty():
 		count = roundi(_eval(node.count, scope))
 	var i := 0
 	while _running and (count < 0 or i < count):
-		var iter_scope := scope
+		var pre_keys: Dictionary = {}
+		for k in scope: pre_keys[k] = true
 		if not node.index_var.is_empty():
-			iter_scope = scope.duplicate()
-			iter_scope[node.index_var] = float(i + 1)
-		await _exec_action_body(node.body, iter_scope)
+			scope[node.index_var] = float(i + 1)
+		await _exec_action_body(node.body, scope)
+		for key in scope.keys():
+			if not pre_keys.has(key):
+				scope.erase(key)
 		i += 1
 
 func _exec_fire_call(node: _Ast.FireCallNode, scope: Dictionary) -> void:
@@ -431,7 +453,12 @@ func _exec_fire_call(node: _Ast.FireCallNode, scope: Dictionary) -> void:
 
 func _exec_act_call(node: _Ast.ActCallNode, scope: Dictionary) -> void:
 	if scope.has(node.name) and scope[node.name] is _Ast.InlineActNode:
+		var pre_keys: Dictionary = {}
+		for k in scope: pre_keys[k] = true
 		await _exec_action_body((scope[node.name] as _Ast.InlineActNode).body, scope)
+		for key in scope.keys():
+			if not pre_keys.has(key):
+				scope.erase(key)
 		return
 	var ref_name := node.name
 	var pre_bound: Array = []

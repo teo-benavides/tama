@@ -42,6 +42,7 @@ const KW_POS     = "KW_POS"
 const KW_CHPOS   = "KW_CHPOS"
 const KW_REPEATF = "KW_REPEATF"
 const KW_MVMT    = "KW_MVMT"
+const KW_VAR     = "KW_VAR"
 
 const KEYWORDS: Dictionary = {
 	"main":    KW_MAIN,
@@ -77,6 +78,7 @@ const KEYWORDS: Dictionary = {
 	"chpos":   KW_CHPOS,
 	"repeatf": KW_REPEATF,
 	"mvmt":    KW_MVMT,
+	"var":     KW_VAR,
 }
 
 # --- Instance fields ---

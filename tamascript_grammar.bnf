@@ -39,7 +39,7 @@ COMMENT = "#" { any character except newline } ;
 (* reserved keywords — cannot be used as IDENT *)
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "wait" | "chdir" | "chspd" | "accel"
-   | "wait" | "vanish"
+   | "wait" | "vanish" | "var"
    | "dir" | "speed" | "spd" | "offset" | "pos" | "emitter" | "emt"
    | "abs" | "rel" | "seq"
    | "over" | "x" | "y" | "type" | "async" ;
@@ -128,7 +128,9 @@ bullet_call = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
    ACTION BLOCK STATEMENTS
    ------------------------------------------------------------ *)
 
-action_stmt = dir_stmt
+action_stmt = var_stmt
+             | assign_stmt
+             | dir_stmt
              | speed_stmt
              | wait_stmt
              | waitf_stmt
@@ -141,6 +143,19 @@ action_stmt = dir_stmt
              | fire_call
              | act_call
              | async_act ;
+
+var_stmt    = "var" IDENT EXPR ;
+              (* declares a variable in the current scope and evaluates EXPR as its initial value.
+                 EXPR may reference any in-scope variable, repeat index, or context function.
+                 EXPR may also be a bare qualifier keyword (aim/abs/rel/seq) to store a dir/value type.
+                 the variable is accessible in all nested blocks (repeat, inline acts, fire calls, etc.)
+                 but not in the parent block that surrounds the var_stmt's block.              *)
+
+assign_stmt = IDENT EXPR ;
+              (* reassigns a variable that is already in scope; IDENT must not be a keyword.
+                 the assignment updates the shared scope dict, so it propagates to parent
+                 blocks (repeat, inline acts).  named act calls keep their own scope
+                 (function-call semantics), so assignments inside them do not propagate. *)
 
 fire_call  = "fire" IDENT [ arg_list ] ;
 act_call   = "act" IDENT [ arg_list ] ;

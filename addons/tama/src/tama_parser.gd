@@ -640,6 +640,27 @@ func _parse_accel() -> _Ast.AccelNode:
 		_error_at(tok, "accel requires at least one of x or y")
 	return node
 
+func _parse_var_decl() -> _Ast.VarDeclNode:
+	var tok := _consume(_Token.KW_VAR)
+	var name_tok := _peek()
+	var name := _parse_identifier()
+	if name.is_empty():
+		_try_consume(_Token.NEWLINE)
+		return null
+	var expr := _collect_to_eol()
+	if expr.strip_edges().is_empty():
+		_error_at(_peek(), "Expected expression after var name")
+	_consume(_Token.NEWLINE)
+	return _Ast.VarDeclNode.new(name, expr, tok.line, tok.col)
+
+func _parse_var_assign() -> _Ast.VarDeclNode:
+	var name_tok := _consume(_Token.WORD)
+	var expr := _collect_to_eol()
+	if expr.strip_edges().is_empty():
+		_error_at(_peek(), "Expected expression after variable name")
+	_consume(_Token.NEWLINE)
+	return _Ast.VarDeclNode.new(name_tok.value, expr, name_tok.line, name_tok.col)
+
 func _parse_repeat() -> _Ast.RepeatNode:
 	var tok := _consume(_Token.KW_REPEAT)
 	var count := ""
@@ -818,6 +839,10 @@ func _parse_action_statement():   # -> _Ast.ASTNode
 				return _parse_inline_fire()
 			else:
 				return _parse_fire_call()
+		_Token.KW_VAR:
+			return _parse_var_decl()
+		_Token.WORD:
+			return _parse_var_assign()
 		_:
 			_error_at(tok, "Unexpected token in action block: '%s'" % _tok_display(tok))
 			_pos += 1
