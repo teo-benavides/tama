@@ -40,7 +40,7 @@ COMMENT = "#" { any character except newline } ;
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "wait" | "chdir" | "chspd" | "accel"
    | "wait" | "vanish" | "var"
-   | "if" | "elif" | "else"
+   | "if" | "elif" | "else" | "while"
    | "dir" | "speed" | "spd" | "offset" | "pos" | "emitter" | "emt"
    | "abs" | "rel" | "seq"
    | "over" | "x" | "y" | "type" | "async"
@@ -130,7 +130,8 @@ bullet_call = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
    ACTION BLOCK STATEMENTS
    ------------------------------------------------------------ *)
 
-action_stmt = if_stmt
+action_stmt = while_stmt
+             | if_stmt
              | var_stmt
              | assign_stmt
              | dir_stmt
@@ -146,6 +147,11 @@ action_stmt = if_stmt
              | fire_call
              | act_call
              | async_act ;
+
+while_stmt  = "while" EXPR NEWLINE action_block ;
+              (* EXPR is evaluated before each iteration; non-zero is truthy.
+                 variables declared with var inside the body are scoped per iteration;
+                 reassignment of outer-scope variables propagates outward.           *)
 
 if_stmt     = "if" EXPR NEWLINE action_block
               { "elif" EXPR NEWLINE action_block }

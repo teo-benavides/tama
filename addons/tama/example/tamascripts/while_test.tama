@@ -1,0 +1,11 @@
+include builtin
+
+main
+    var spd_ 10
+    while spd_ < 200
+        fire
+            dir aim 0
+            spd spd_
+        spd_ spd_ + 10
+        wait 0.2
+    act spiral(60, 0.1, 200, 0.0)

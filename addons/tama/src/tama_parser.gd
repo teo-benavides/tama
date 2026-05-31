@@ -640,6 +640,16 @@ func _parse_accel() -> _Ast.AccelNode:
 		_error_at(tok, "accel requires at least one of x or y")
 	return node
 
+func _parse_while() -> _Ast.WhileNode:
+	var tok := _consume(_Token.KW_WHILE)
+	var cond := _collect_to_eol()
+	if cond.strip_edges().is_empty():
+		_error_at(_peek(), "Expected condition after 'while'")
+	_consume(_Token.NEWLINE)
+	var node := _Ast.WhileNode.new(cond, tok.line, tok.col)
+	node.body = _parse_block(_parse_action_statement)
+	return node
+
 func _parse_if() -> _Ast.IfNode:
 	var tok := _consume(_Token.KW_IF)
 	var node := _Ast.IfNode.new(tok.line, tok.col)
@@ -864,6 +874,8 @@ func _parse_action_statement():   # -> _Ast.ASTNode
 				return _parse_inline_fire()
 			else:
 				return _parse_fire_call()
+		_Token.KW_WHILE:
+			return _parse_while()
 		_Token.KW_IF:
 			return _parse_if()
 		_Token.KW_VAR:

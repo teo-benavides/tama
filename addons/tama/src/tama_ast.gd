@@ -326,6 +326,16 @@ class FireCallNode extends ASTNode:
 		name = p_name
 		args = p_args
 
+# while <cond>  —  loop while condition is non-zero; variables declared inside are scoped per iteration
+class WhileNode extends ASTNode:
+	var condition: String
+	var body:      Array
+
+	func _init(p_cond: String, p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+		condition = p_cond
+		body      = []
+
 # if <cond> / elif <cond> / else  —  conditional branching inside an action block
 # conditions are evaluated as floats; non-zero is truthy.
 # conditions[i] corresponds to bodies[i]; else_body is used when no branch matches.

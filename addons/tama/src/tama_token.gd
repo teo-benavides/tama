@@ -48,6 +48,7 @@ const KW_ELIF    = "KW_ELIF"
 const KW_ELSE    = "KW_ELSE"
 const KW_TRUE    = "KW_TRUE"
 const KW_FALSE   = "KW_FALSE"
+const KW_WHILE   = "KW_WHILE"
 
 const KEYWORDS: Dictionary = {
 	"main":    KW_MAIN,
@@ -89,6 +90,7 @@ const KEYWORDS: Dictionary = {
 	"else":    KW_ELSE,
 	"true":    KW_TRUE,
 	"false":   KW_FALSE,
+	"while":   KW_WHILE,
 }
 
 # --- Instance fields ---

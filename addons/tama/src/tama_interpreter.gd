@@ -312,6 +312,15 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 					if not pre_keys.has(key):
 						scope.erase(key)
 				i += 1
+		elif node is _Ast.WhileNode:
+			var wn := node as _Ast.WhileNode
+			while _running and _eval(wn.condition, scope) != 0.0:
+				var pre_keys: Dictionary = {}
+				for k in scope: pre_keys[k] = true
+				_exec_body_sync(wn.body, scope)
+				for key in scope.keys():
+					if not pre_keys.has(key):
+						scope.erase(key)
 		elif node is _Ast.VarDeclNode:
 			var vn := node as _Ast.VarDeclNode
 			scope[vn.var_name] = _eval_arg(vn.expr, scope)
@@ -349,6 +358,9 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 	elif node is _Ast.VanishNode:
 		_running = false
 		vanished.emit()
+
+	elif node is _Ast.WhileNode:
+		await _exec_while(node as _Ast.WhileNode, scope)
 
 	elif node is _Ast.RepeatNode:
 		await _exec_repeat(node as _Ast.RepeatNode, scope)
@@ -454,6 +466,15 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 			await _exec_action_body(ifn.else_body, scope)
 			for key in scope.keys():
 				if not pre_keys.has(key): scope.erase(key)
+
+func _exec_while(node: _Ast.WhileNode, scope: Dictionary) -> void:
+	while _running and _eval(node.condition, scope) != 0.0:
+		var pre_keys: Dictionary = {}
+		for k in scope: pre_keys[k] = true
+		await _exec_action_body(node.body, scope)
+		for key in scope.keys():
+			if not pre_keys.has(key):
+				scope.erase(key)
 
 func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 	var count := -1
