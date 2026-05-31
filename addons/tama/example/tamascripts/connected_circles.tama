@@ -1,0 +1,22 @@
+main
+    repeat 5 k
+        act circle(120, 120, 2.0 * PI * (k - 1) / 5.0 - PI / 2.0)
+
+act circle(pent_r, circ_r, pent_angle)
+    repeat 60 i
+        fire f(pent_r, circ_r, pent_angle, 2.0 * PI * i / 60.0)
+
+fire f(pent_r, circ_r, pent_angle, ofs)
+    dir abs 0
+    spd abs 0
+    pos
+        x abs mid_x() + pent_r * cos(pent_angle) + circ_r * cos(ofs)
+        y abs mid_y() + pent_r * sin(pent_angle) + circ_r * sin(ofs)
+    bullet orbiter(pent_r, circ_r, pent_angle, ofs)
+
+bullet orbiter(pent_r, circ_r, pent_angle, ofs)
+    act
+        repeatf
+            chpos
+                x abs spawn_x - circ_r * cos(ofs) + circ_r * cos(ofs + time())
+                y abs spawn_y - circ_r * sin(ofs) + circ_r * sin(ofs + time())

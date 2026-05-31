@@ -22,3 +22,12 @@ func spiral_y(sy: float, radius: float, ofs: float, exp_spd: float, rot_spd: flo
 	var dt := time() - t0
 	var cy := sy - radius * sin(ofs)
 	return cy + (radius + exp_spd * dt) * sin(ofs + rot_dir * rot_spd * dt)
+
+func group_target_dir(ofs: float, pent_angle: float, circ_r: float, inner_r: float) -> float:
+	var step     := PI / 60.0
+	var gc_ofs   = floor(ofs / (step * 4.0)) * (step * 4.0) + step * 1.5
+	var gc_angle = gc_ofs + pent_angle - PI / 2.0
+	var b_angle  := ofs   + pent_angle - PI / 2.0
+	var dx := inner_r * cos(gc_angle) - circ_r * cos(b_angle)
+	var dy := inner_r * sin(gc_angle) - circ_r * sin(b_angle)
+	return rad_to_deg(atan2(dy, dx))

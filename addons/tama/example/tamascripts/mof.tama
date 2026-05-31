@@ -1,0 +1,23 @@
+main
+    repeat 5 k
+        async act circle(160, 120, 2.0 * PI * (k - 1) / 5.0 - PI / 2.0)
+
+act circle(pent_r, circ_r, pent_angle)
+    repeat 60 i
+        fire f(pent_r, circ_r, pent_angle, 2.0 * PI * i / 120.0, 120 - i - 1)
+        waitf 1
+
+fire f(pent_r, circ_r, pent_angle, ofs, wait_time)
+    dir abs group_target_dir(ofs, pent_angle, circ_r, -50)
+    spd abs 0
+    pos
+        x abs mid_x() + pent_r * cos(pent_angle) + circ_r * cos(ofs + pent_angle - PI / 2.0)
+        y abs mid_y() + pent_r * sin(pent_angle) + circ_r * sin(ofs + pent_angle - PI / 2.0)
+    bul b(wait_time)
+
+bul b(wait_time)
+    act
+        waitf wait_time
+        chspd
+            speed 200
+            over 3.0

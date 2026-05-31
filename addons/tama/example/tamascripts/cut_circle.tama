@@ -1,0 +1,11 @@
+main
+    repeat 100 i
+        fire f(140, (2.0 * PI * i / (100.0 * 4/3)))
+        waitf 1.0
+
+fire f(radius, ofs)
+    dir abs 0
+    spd abs 0
+    pos
+        x rel radius * cos(ofs)
+        y rel radius * sin(ofs)
