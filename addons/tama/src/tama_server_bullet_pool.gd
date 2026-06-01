@@ -54,8 +54,6 @@ func register_type(key: String, config: TamaServerBulletConfig) -> void:
 		push_warning("TamaServerBulletPool: type '%s' already registered, skipping." % key)
 		return
 
-	print("[TamaPool] register_type '%s' | pool_size=%d | in_tree=%s" % [key, config.pool_size, str(is_inside_tree())])
-
 	var td    := _TypeData.new()
 	td.config  = config
 	_types[key] = td
@@ -70,18 +68,10 @@ func register_type(key: String, config: TamaServerBulletConfig) -> void:
 	td.multimesh_res.mesh             = quad
 	td.multimesh_res.instance_count   = n
 	td.multimesh                      = td.multimesh_res.get_rid()
-	print("[TamaPool]   multimesh RID valid=%s | instance_count=%d | visible_instance_count=%d" % [
-		str(td.multimesh.is_valid()), td.multimesh_res.instance_count, td.multimesh_res.visible_instance_count])
-
 	# Initialise all slots off-screen so unspawned instances are invisible.
 	var offscreen := Transform2D(0.0, Vector2(-100000.0, -100000.0))
 	for i in n:
 		RenderingServer.multimesh_instance_set_transform_2d(td.multimesh, i, offscreen)
-
-	if config.texture:
-		print("[TamaPool]   texture=%s RID valid=%s" % [str(config.texture), str(config.texture.get_rid().is_valid())])
-	else:
-		print("[TamaPool]   texture=null (no texture set)")
 
 	# Area with N shapes — shape index == slot index.
 	var space := get_world_2d().space
@@ -140,11 +130,6 @@ func spawn(
 		push_warning("TamaServerBulletPool: pool full for type '%s'" % data.bullet_type)
 		return null
 
-	# Log only the first spawn per type so we don't spam the console.
-	var _is_first_spawn = td.all_bullets.size() == td.free_list.size() + 1
-	if _is_first_spawn:
-		print("[TamaPool] first spawn for type '%s' | pos=%s angle=%.2f speed=%.2f" % [data.bullet_type, str(position), angle, speed])
-
 	var slot: int         = td.free_list.pop_back()
 	var b: TamaServerBullet = td.all_bullets[slot]
 
@@ -158,7 +143,8 @@ func spawn(
 	b.speed_x          = 0.0
 	b.speed_y          = 0.0
 	b.rotates          = config.rotates
-	b._texture_scale   = config.texture_scale
+	# Negate Y to compensate for QuadMesh UV inversion in 2D canvas (+Y up in 3D, down in 2D).
+	b._texture_scale   = Vector2(config.texture_scale.x, -config.texture_scale.y)
 	b.initial_position = position
 	b._last_angle      = angle
 	b._last_speed      = speed
@@ -179,17 +165,12 @@ func spawn(
 	var spawn_rot := b.angle if b.rotates else 0.0
 	RenderingServer.multimesh_instance_set_transform_2d(
 		td.multimesh, slot,
-		Transform2D(spawn_rot, config.texture_scale, 0.0, position)
+		Transform2D(spawn_rot, b._texture_scale, 0.0, position)
 	)
 
 	# Enable physics shape at spawn position.
 	PhysicsServer2D.area_set_shape_transform(td.area, slot, Transform2D(0.0, position))
 	PhysicsServer2D.area_set_shape_disabled(td.area, slot, false)
-
-	if _is_first_spawn:
-		var readback = td.multimesh_res.get_instance_transform_2d(slot)
-		print("[TamaPool]   slot=%d transform_readback=%s | visible_instance_count=%d" % [
-			slot, str(readback), td.multimesh_res.visible_instance_count])
 
 	if data.bullet_emitter_act != null:
 		push_warning("TamaServerBulletPool: bullet_emitter_act is not supported for server bullets. The sub-emitter act will be skipped.")
@@ -274,12 +255,7 @@ func _draw() -> void:
 		var td: _TypeData = _types[key]
 		draw_multimesh(td.multimesh_res, td.config.texture)
 
-var _debug_ticked := false
 func _physics_process(delta: float) -> void:
-	if not _debug_ticked and not _active.is_empty():
-		_debug_ticked = true
-		print("[TamaPool] _physics_process ticking | active=%d | bounds=%s" % [_active.size(), str(_world_bounds())])
-
 	var bounds     := _world_bounds().grow(bounds_margin)
 	var to_recycle: Array[TamaServerBullet] = []
 
