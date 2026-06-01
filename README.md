@@ -104,7 +104,7 @@ fire
 | `wait EXPR` | Pause N seconds. |
 | `waitf EXPR` | Pause N physics frames. |
 | `repeat [N] [i]` | Loop N times (omit N for infinite). `i` = 0-based index. |
-| `repeatf` | Run the block once per physics frame (synchronous; terminal). |
+| `repeatf [N] [i]` | Run the block once per physics frame (synchronous). Without `N`: infinite and terminal. With `N`: runs N times then continues; `i` = 0-based index. |
 | `while COND` | Loop while `COND` is non-zero. |
 | `if COND` / `elif COND` / `else` | Conditional branching. |
 | `var NAME EXPR` | Declare a local variable. |

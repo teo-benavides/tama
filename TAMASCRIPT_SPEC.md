@@ -304,18 +304,25 @@ repeat 8 i
 ### 6.5 `repeatf`
 
 ```
-repeatf_stmt = "repeatf" NEWLINE action_block
+repeatf_stmt = "repeatf" [ EXPR [ IDENT ] ] NEWLINE action_block
 ```
 
-Registers the body to run once per physics frame via `TamaManager`. Unlike `repeat`, this does **not** spawn a coroutine per frame — the body is executed synchronously. `wait`/`waitf` inside a `repeatf` body are silently ignored.
+The body is executed synchronously (unlike `repeat`, no coroutine is spawned per frame). `wait`/`waitf` inside a `repeatf` body are silently ignored.
 
-`repeatf` is **terminal**: nothing after it in the same block executes.
+**Without N (infinite form):** Registers the body in `TamaManager` to run once per physics frame forever. This form is **terminal** — nothing after it in the same block executes.
+
+**With N (finite form):** Runs the body N times, once per physics frame, then execution continues to the next statement. `IDENT` names the 0-based loop index, matching `repeat` semantics.
 
 ```
-repeatf
+repeatf                              ← infinite, terminal
     chpos
         x abs spawn_x + radius * cos(time())
         y abs spawn_y + radius * sin(time())
+
+repeatf 60 i                         ← finite: 60 frames, then continues
+    chspd
+        spd abs 100 + i * 5
+wait 1.0                             ← runs after the 60 frames complete
 ```
 
 ### 6.6 `while`
@@ -1024,7 +1031,9 @@ These are **fire-and-forget** signals to the bullet. The interpreter emits the s
 
 ### 15.8 `repeatf`
 
-The body is registered with `TamaManager` as a per-frame callback. On each physics frame, `TamaManager` calls the body synchronously. `repeatf` is terminal — the interpreter stops after registering the callback and does not resume.
+**Infinite form (no N):** The body is registered with `TamaManager` as a per-frame callback. On each physics frame, `TamaManager` calls the body synchronously. The interpreter sets `_running = false` after registering and does not resume.
+
+**Finite form (with N):** The interpreter loops N times, calling `_exec_body_sync` each iteration and then awaiting `get_tree().physics_frame` between iterations (not after the last). After N iterations, execution continues normally.
 
 ### 15.9 Expression evaluation
 
@@ -1222,8 +1231,9 @@ repeat_stmt   = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block ;
                    var declarations inside are scoped per iteration;
                    reassignments propagate outward.                          *)
 
-repeatf_stmt  = "repeatf" NEWLINE action_block ;
-                (* body runs once per physics frame synchronously; terminal.  *)
+repeatf_stmt  = "repeatf" [ EXPR [ IDENT ] ] NEWLINE action_block ;
+                (* no N: infinite, terminal; with N: runs N frames then continues.
+                   IDENT is the 0-based loop index.                           *)
 
 wait_stmt     = "wait"  EXPR ;
 waitf_stmt    = "waitf" EXPR ;

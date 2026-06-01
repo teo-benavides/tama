@@ -229,16 +229,33 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 			scope[vn.var_name] = _eval_arg(vn.expr, scope)
 		elif node is _Ast.RepeatFrameNode:
 			var rfn := node as _Ast.RepeatFrameNode
-			var captured_scope := scope
-			var owner := get_parent()
-			frame_loop_registered.emit(owner, func():
-				if not is_instance_valid(owner):
-					TamaManager._unregister_frame_loop(owner)
-					return
-				_running = true  # re-arm so _exec_body_sync checks work
-				_exec_body_sync(rfn.body, captured_scope)
-			)
-			_running = false  # terminal — nothing after repeatf executes
+			if rfn.count.strip_edges().is_empty():
+				# infinite — register frame loop and stop coroutine (terminal)
+				var captured_scope := scope
+				var owner := get_parent()
+				frame_loop_registered.emit(owner, func():
+					if not is_instance_valid(owner):
+						TamaManager._unregister_frame_loop(owner)
+						return
+					_running = true  # re-arm so _exec_body_sync checks work
+					_exec_body_sync(rfn.body, captured_scope)
+				)
+				_running = false  # terminal — nothing after repeatf executes
+			else:
+				# finite — run N times (once per frame), then continue
+				var count_val := roundi(_eval(rfn.count, scope))
+				var i := 0
+				while _running and i < count_val:
+					var pre_keys: Dictionary = {}
+					for k in scope: pre_keys[k] = true
+					if not rfn.index_var.is_empty():
+						scope[rfn.index_var] = float(i)
+					_exec_body_sync(rfn.body, scope)
+					for key in scope.keys():
+						if not pre_keys.has(key): scope.erase(key)
+					i += 1
+					if _running and i < count_val:
+						await get_tree().physics_frame
 		else:
 			await _exec_action_stmt(node, scope)
 
@@ -342,6 +359,21 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 				_exec_body_sync(ifn.else_body, scope)
 				for key in scope.keys():
 					if not pre_keys.has(key): scope.erase(key)
+		elif node is _Ast.RepeatFrameNode:
+			var rfn := node as _Ast.RepeatFrameNode
+			if not rfn.count.strip_edges().is_empty():
+				var count_val := roundi(_eval(rfn.count, scope))
+				var i := 0
+				while _running and i < count_val:
+					var pre_keys: Dictionary = {}
+					for k in scope: pre_keys[k] = true
+					if not rfn.index_var.is_empty():
+						scope[rfn.index_var] = float(i)
+					_exec_body_sync(rfn.body, scope)
+					for key in scope.keys():
+						if not pre_keys.has(key): scope.erase(key)
+					i += 1
+			# infinite repeatf in sync context: no-op (can't run per-frame without a frame loop)
 		# WaitNode, WaitFramesNode, ActCallNode, InlineActNode: no-op in sync context
 
 func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
@@ -364,6 +396,34 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 
 	elif node is _Ast.RepeatNode:
 		await _exec_repeat(node as _Ast.RepeatNode, scope)
+
+	elif node is _Ast.RepeatFrameNode:
+		var rfn := node as _Ast.RepeatFrameNode
+		if rfn.count.strip_edges().is_empty():
+			var captured_scope := scope
+			var owner := get_parent()
+			frame_loop_registered.emit(owner, func():
+				if not is_instance_valid(owner):
+					TamaManager._unregister_frame_loop(owner)
+					return
+				_running = true
+				_exec_body_sync(rfn.body, captured_scope)
+			)
+			_running = false
+		else:
+			var count_val := roundi(_eval(rfn.count, scope))
+			var i := 0
+			while _running and i < count_val:
+				var pre_keys: Dictionary = {}
+				for k in scope: pre_keys[k] = true
+				if not rfn.index_var.is_empty():
+					scope[rfn.index_var] = float(i)
+				_exec_body_sync(rfn.body, scope)
+				for key in scope.keys():
+					if not pre_keys.has(key): scope.erase(key)
+				i += 1
+				if _running and i < count_val:
+					await get_tree().physics_frame
 
 	elif node is _Ast.FireCallNode:
 		_exec_fire_call(node as _Ast.FireCallNode, scope)

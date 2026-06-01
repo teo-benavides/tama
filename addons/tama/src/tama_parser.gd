@@ -558,6 +558,22 @@ func _parse_chpos() -> _Ast.ChposNode:
 func _parse_repeatf() -> _Ast.RepeatFrameNode:
 	var tok := _consume(_Token.KW_REPEATF)
 	var node := _Ast.RepeatFrameNode.new(tok.line, tok.col)
+	if _peek_type() != _Token.NEWLINE:
+		var end := _pos
+		while end < _tokens.size() \
+		  and _tokens[end].type != _Token.NEWLINE \
+		  and _tokens[end].type != _Token.EOF:
+			end += 1
+		if end - 1 > _pos and _tokens[end - 1].type == _Token.WORD:
+			node.index_var = _tokens[end - 1].value
+			var parts: Array[String] = []
+			while _pos < end - 1:
+				parts.append(_tokens[_pos].value)
+				_pos += 1
+			node.count = " ".join(parts)
+			_pos += 1  # consume the index WORD
+		else:
+			node.count = _collect_to_eol()
 	_consume(_Token.NEWLINE)
 	_parse_block(func():
 		var stmt = _parse_action_statement()

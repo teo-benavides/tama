@@ -184,10 +184,11 @@ repeat_stmt  = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block ;
                   reassignment of outer-scope variables propagates outward.
                   may be nested arbitrarily.                                          *)
 
-repeatf_stmt = "repeatf" NEWLINE action_block ;
-               (* registers body to run once per physics frame via TamaManager.
-                  body is synchronous — wait/waitf are ignored inside it.
-                  terminal: nothing after repeatf in the same block executes.         *)
+repeatf_stmt = "repeatf" [ EXPR [ IDENT ] ] NEWLINE action_block ;
+               (* body is synchronous — wait/waitf are ignored inside it.
+                  no N: infinite; registers body in TamaManager; terminal (nothing after executes).
+                  with N: runs body N times, once per physics frame, then execution continues.
+                  IDENT names the loop index — 0-based integer, same as repeat.      *)
 
 wait_stmt    = "wait"  EXPR ;
                (* suspends execution for EXPR seconds                                 *)

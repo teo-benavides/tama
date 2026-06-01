@@ -272,13 +272,17 @@ class AccelNode extends ASTNode:
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 
-# repeatf  — infinite repeat running from TamaManager._physics_process; no coroutine per frame
+# repeatf [N] [i]  — runs body once per physics frame; infinite if count is empty
 class RepeatFrameNode extends ASTNode:
-	var body: Array
+	var body:      Array
+	var count:     String  # expression string; empty = infinite
+	var index_var: String  # loop index variable name; empty = none
 
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
-		body = []
+		body      = []
+		count     = ""
+		index_var = ""
 
 # mvmt NEWLINE mvmt_block  — per-axis position expression evaluated each physics frame
 class MvmtNode extends ASTNode:

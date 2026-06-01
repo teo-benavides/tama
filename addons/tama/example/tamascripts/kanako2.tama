@@ -1,0 +1,42 @@
+main
+    repeat
+        async act fire_10_times(270, 45, -1, 400)
+        async act fire_10_times(270, 45, 1, 400)
+        wait 0.8
+        async act fire_10_times(270, 25, -1, 400)
+        async act fire_10_times(270, 25, 1, 400)
+        wait 0.8
+
+act fire_10_times(ref_axis, angle, direction, spd_)
+    repeat 10
+        act fire_4(ref_axis, angle, direction, spd_)
+        waitf 3
+
+act fire_4(ref_axis, angle, direction, spd_)
+    fire
+        dir abs ref_axis + angle * direction
+        spd spd_
+        bullet b(spd_)
+    fire
+        dir abs ref_axis + angle * direction + 10 * direction
+        spd spd_
+        bullet b(spd_)
+    fire
+        dir abs ref_axis + angle * direction + 20 * direction
+        spd spd_
+        bullet b(spd_)
+    fire
+        dir abs ref_axis + angle * direction + 30 * direction
+        spd spd_
+        bullet b(spd_)
+    
+bul b(spd_)
+    act
+        chspd
+            spd 5
+            over 1.0
+        wait 1.0
+        chdir
+            dir aim 0
+        chspd
+            spd spd_
