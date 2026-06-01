@@ -1,0 +1,27 @@
+main
+    async act mess
+    wait 1.0
+    act sun
+
+act mess
+    repeatf
+        var ofs randf_range(0.0, 360.0)
+        repeat 4 i
+            fire
+                dir abs (360.0/4.0) * i + ofs
+                spd 200
+
+act sun
+    repeat
+        repeat 20 i
+            act circle(50, 200, i * 10, randf_range(0.0, 5.0))
+            waitf 1
+        wait 1.0
+    
+act circle(amt, spd_, posx, ofs)
+    repeat amt i
+        fire
+            dir abs (360.0/amt) * i + ofs
+            spd spd_
+            pos
+                x rel posx

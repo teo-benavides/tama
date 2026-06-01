@@ -1,13 +1,19 @@
 ## Manages server-based bullet pools, one per registered bullet type.
 ##
-## Each type gets a single [MultiMesh] (one draw call regardless of instance count)
-## and a single [PhysicsServer2D] area with one shape per slot.
-## The [code]local_shape[/code] index in the area monitor callback equals the slot
-## index, so hit detection requires no per-bullet callbacks or lookups.
+## Each type gets one [PhysicsServer2D] area (N shapes for N pool slots) for collision,
+## and a dynamic set of [MultiMesh] batch nodes for rendering. One batch node is created
+## per physics frame that fires bullets of a given type, so bullets spawned later always
+## render above bullets spawned earlier (scene-draw-order z-layering via call order in
+## [method _draw]).
 ##
-## Register types by calling [method TamaManager.register_server_bullet] before
-## any bullets are fired. All active bullets across all types are updated in a
-## single [method _physics_process] loop.
+## When the total active bullet count exceeds the project setting
+## [code]tama/server_bullet_composite_threshold[/code] (default 1000), all active batches
+## for a type are merged into a single [MultiMesh] draw call per frame via a composite
+## buffer built from each batch's transform data.
+##
+## Register types by calling [method TamaManager.register_server_bullet] before any
+## bullets are fired. All active bullets across all types are updated in a single
+## [method _physics_process] loop.
 ##
 ## Limitations:
 ##   - [code]bullet_emitter_act[/code] (a bullet that fires sub-bullets) is not
@@ -17,6 +23,11 @@ class_name TamaServerBulletPool
 
 const _Ast         = preload("res://addons/tama/src/tama_ast.gd")
 const _Interpreter = preload("res://addons/tama/src/tama_interpreter.gd")
+
+## Fixed slot capacity of each batch [MultiMesh]. If more bullets than this are fired in
+## a single physics frame, additional batches are created for the overflow (same
+## [code]birth_frame[/code], still drawn consecutively).
+const _BATCH_CHUNK := 256
 
 ## Emitted when a physics body overlaps a bullet's area.
 ## [param bullet] is the server bullet that was hit.
@@ -32,15 +43,35 @@ var _active: Array[TamaServerBullet] = []
 ## Per-type resources and state. Populated by register_type().
 var _types: Dictionary = {}  # String → _TypeData
 
+## Rendering data for one frame-batch of bullets of a single type.
+## All bullets in a batch share one [MultiMesh] and were spawned in the same physics frame.
+class _BatchData:
+	var multimesh_res: MultiMesh
+	var multimesh:     RID
+	var used:          int = 0   # local slots assigned so far this frame
+	var active_count:  int = 0   # bullets still alive in this batch
+	var birth_frame:   int = -1
+
 ## Holds all GPU and physics resources for one registered bullet type.
 class _TypeData:
-	var multimesh_res: MultiMesh  # resource kept alive; get_rid() stored in multimesh
-	var multimesh:     RID
-	var area:          RID
-	var shapes:        Array[RID] = []
-	var all_bullets:   Array      = []  # Array[TamaServerBullet], indexed by slot
-	var free_list:     Array[int] = []
-	var config:        TamaServerBulletConfig
+	var quad:        QuadMesh       # shared by all batch multimeshes for this type
+	var area:        RID
+	var shapes:      Array[RID] = []
+	var all_bullets: Array      = []  # Array[TamaServerBullet], indexed by global physics slot
+	var config:      TamaServerBulletConfig
+	# Circular FIFO queue for global physics slot allocation.
+	var _ring:       PackedInt32Array
+	var _ring_r:     int = 0
+	var _ring_w:     int = 0
+	var _ring_count: int = 0
+	# Render batch state.
+	var active_batches: Array = []  # Array[_BatchData], oldest first (draw order = z order)
+	var free_batches:   Array = []  # Array[_BatchData], available for reuse
+	var _cur_batch:     _BatchData = null  # batch currently being filled this frame
+	var _cur_frame:     int = -1           # Engine.get_physics_frames() of _cur_batch
+	# Composite multimesh — rebuilt each draw when above threshold; one draw call per type.
+	var composite_res: MultiMesh
+	var composite:     RID
 
 # ---------------------------------------------------------------------------
 # Type registration
@@ -60,20 +91,17 @@ func register_type(key: String, config: TamaServerBulletConfig) -> void:
 
 	var n := config.pool_size
 
-	# MultiMesh resource — instance data stays alive with the resource.
-	var quad      := QuadMesh.new()
-	quad.size      = config.rect.size
-	td.multimesh_res                  = MultiMesh.new()
-	td.multimesh_res.transform_format = MultiMesh.TRANSFORM_2D
-	td.multimesh_res.mesh             = quad
-	td.multimesh_res.instance_count   = n
-	td.multimesh                      = td.multimesh_res.get_rid()
-	# Initialise all slots off-screen so unspawned instances are invisible.
-	var offscreen := Transform2D(0.0, Vector2(-100000.0, -100000.0))
-	for i in n:
-		RenderingServer.multimesh_instance_set_transform_2d(td.multimesh, i, offscreen)
+	# QuadMesh shared by all batch multimeshes and the composite for this type.
+	td.quad      = QuadMesh.new()
+	td.quad.size = config.rect.size
 
-	# Area with N shapes — shape index == slot index.
+	# Composite multimesh — instance_count is set dynamically at draw time.
+	td.composite_res                  = MultiMesh.new()
+	td.composite_res.transform_format = MultiMesh.TRANSFORM_2D
+	td.composite_res.mesh             = td.quad
+	td.composite                      = td.composite_res.get_rid()
+
+	# Area with N shapes — shape index == global physics slot.
 	var space := get_world_2d().space
 	td.area = PhysicsServer2D.area_create()
 	PhysicsServer2D.area_set_space(td.area, space)
@@ -87,7 +115,7 @@ func register_type(key: String, config: TamaServerBulletConfig) -> void:
 		PhysicsServer2D.area_set_shape_disabled(td.area, i, true)
 		td.shapes.append(shape)
 
-	# Monitor callback — local_shape is the slot index, no per-bullet closure needed.
+	# Monitor callback — local_shape is the global slot index.
 	var td_ref := td
 	PhysicsServer2D.area_set_monitor_callback(td.area,
 		func(status: int, _body_rid: RID, body_iid: int, _body_shape: int, local_shape: int) -> void:
@@ -97,16 +125,50 @@ func register_type(key: String, config: TamaServerBulletConfig) -> void:
 					bullet_hit.emit(b, body_iid)
 	)
 
-	# Pre-allocate bullet state objects — one per slot, reused for the lifetime of the pool.
+	# Pre-allocate bullet state objects, one per global slot.
 	td.all_bullets.resize(n)
 	for i in n:
-		var b           := TamaServerBullet.new()
-		b._mm_index      = i
-		b._multimesh     = td.multimesh
-		b._area          = td.area
-		b._type_data     = td
+		var b        := TamaServerBullet.new()
+		b._mm_index   = i
+		b._area       = td.area
+		b._type_data  = td
 		td.all_bullets[i] = b
-		td.free_list.append(i)
+
+	# Fill the ring with slots in ascending order.
+	td._ring       = PackedInt32Array(range(n))
+	td._ring_r     = 0
+	td._ring_w     = 0
+	td._ring_count = n
+
+# ---------------------------------------------------------------------------
+# Batch management helpers
+# ---------------------------------------------------------------------------
+
+func _get_batch(td: _TypeData) -> _BatchData:
+	if not td.free_batches.is_empty():
+		return td.free_batches.pop_back()
+	var b        := _BatchData.new()
+	b.multimesh_res                  = MultiMesh.new()
+	b.multimesh_res.transform_format = MultiMesh.TRANSFORM_2D
+	b.multimesh_res.mesh             = td.quad
+	b.multimesh_res.instance_count   = _BATCH_CHUNK
+	b.multimesh                      = b.multimesh_res.get_rid()
+	var offscreen := Transform2D(0.0, Vector2(-100000.0, -100000.0))
+	for i in _BATCH_CHUNK:
+		RenderingServer.multimesh_instance_set_transform_2d(b.multimesh, i, offscreen)
+	return b
+
+func _recycle_batch(td: _TypeData, batch: _BatchData) -> void:
+	if td._cur_batch == batch:
+		td._cur_batch = null
+	var offscreen := Transform2D(0.0, Vector2(-100000.0, -100000.0))
+	for i in batch.used:
+		RenderingServer.multimesh_instance_set_transform_2d(batch.multimesh, i, offscreen)
+	batch.used         = 0
+	batch.active_count = 0
+	batch.birth_frame  = -1
+	td.active_batches.erase(batch)
+	td.free_batches.append(batch)
 
 # ---------------------------------------------------------------------------
 # Spawn
@@ -126,16 +188,36 @@ func spawn(
 	if td == null:
 		push_warning("TamaServerBulletPool: type '%s' not registered." % data.bullet_type)
 		return null
-	if td.free_list.is_empty():
+	if td._ring_count == 0:
 		push_warning("TamaServerBulletPool: pool full for type '%s'" % data.bullet_type)
 		return null
 
-	var slot: int         = td.free_list.pop_back()
-	var b: TamaServerBullet = td.all_bullets[slot]
+	# Physics: allocate a global slot from the FIFO ring.
+	var n           = td.all_bullets.size()
+	var global_slot = td._ring[td._ring_r]
+	td._ring_r      = (td._ring_r + 1) % n
+	td._ring_count -= 1
 
+	# Rendering: get or start this frame's batch.
+	var frame := Engine.get_physics_frames()
+	if td._cur_batch == null or td._cur_frame != frame or td._cur_batch.used >= _BATCH_CHUNK:
+		td._cur_batch             = _get_batch(td)
+		td._cur_batch.birth_frame = frame
+		td._cur_frame             = frame
+		td.active_batches.append(td._cur_batch)
+	var batch      = td._cur_batch
+	var local_slot = batch.used
+	batch.used         += 1
+	batch.active_count += 1
+
+	var b: TamaServerBullet = td.all_bullets[global_slot]
 	b.active        = true
 	b._active_index = _active.size()
 	_active.append(b)
+
+	b._multimesh   = batch.multimesh
+	b._local_slot  = local_slot
+	b._batch       = batch
 
 	b.position         = position
 	b.angle            = angle
@@ -161,16 +243,14 @@ func spawn(
 	b.mvmt_y_type = data.mvmt_y_type
 	b.mvmt_y_expr = data.mvmt_y_expr
 
-	# Set render transform first so the bullet appears at the correct position from frame 0.
 	var spawn_rot := b.angle if b.rotates else 0.0
 	RenderingServer.multimesh_instance_set_transform_2d(
-		td.multimesh, slot,
+		batch.multimesh, local_slot,
 		Transform2D(spawn_rot, b._texture_scale, 0.0, position)
 	)
 
-	# Enable physics shape at spawn position.
-	PhysicsServer2D.area_set_shape_transform(td.area, slot, Transform2D(0.0, position))
-	PhysicsServer2D.area_set_shape_disabled(td.area, slot, false)
+	PhysicsServer2D.area_set_shape_transform(td.area, global_slot, Transform2D(0.0, position))
+	PhysicsServer2D.area_set_shape_disabled(td.area, global_slot, false)
 
 	if data.bullet_emitter_act != null:
 		push_warning("TamaServerBulletPool: bullet_emitter_act is not supported for server bullets. The sub-emitter act will be skipped.")
@@ -178,10 +258,10 @@ func spawn(
 	var needs_runner := data.bullet_act != null or data.mvmt_x_set or data.mvmt_y_set
 	if needs_runner:
 		var runner = _Interpreter.new()
-		runner.context          = context
-		runner._tree            = get_tree()
+		runner.context           = context
+		runner._tree             = get_tree()
 		runner._frame_loop_owner = runner
-		b._runner               = runner
+		b._runner                = runner
 
 		var act_scope: Dictionary = {}
 		for i in mini(data.bullet_params.size(), data.bullet_args.size()):
@@ -217,20 +297,32 @@ func recycle_all() -> void:
 	for b in _active.duplicate():
 		recycle(b)
 
-## Returns [param b] to the free list. Safe to call from signal callbacks.
+## Returns [param b] to the pool. Safe to call from signal callbacks.
 func recycle(b: TamaServerBullet) -> void:
 	if not b.active:
 		return
 	b.active = false
 
-	# Move off-screen and disable physics shape.
+	# Hide in the batch's multimesh.
 	RenderingServer.multimesh_instance_set_transform_2d(
-		b._multimesh, b._mm_index,
+		b._multimesh, b._local_slot,
 		Transform2D(0.0, Vector2(-100000.0, -100000.0))
 	)
-	PhysicsServer2D.area_set_shape_disabled(b._area, b._mm_index, true)
 
-	b._type_data.free_list.append(b._mm_index)
+	# Decrement batch counter; recycle the batch node when it empties.
+	var batch = b._batch
+	batch.active_count -= 1
+	if batch.active_count == 0:
+		_recycle_batch(b._type_data, batch)
+
+	# Return global physics slot to the FIFO ring.
+	var td_r   = b._type_data
+	var ring_n = td_r.all_bullets.size()
+	td_r._ring[td_r._ring_w] = b._mm_index
+	td_r._ring_w     = (td_r._ring_w + 1) % ring_n
+	td_r._ring_count += 1
+
+	PhysicsServer2D.area_set_shape_disabled(b._area, b._mm_index, true)
 
 	if b._runner:
 		TamaManager._unregister_frame_loop(b._runner)
@@ -238,7 +330,7 @@ func recycle(b: TamaServerBullet) -> void:
 		b._runner.call_deferred(&"free")
 		b._runner = null
 
-	# O(1) unordered removal: swap with the last active entry.
+	# O(1) unordered removal from _active.
 	var idx  := b._active_index
 	var last := _active.back()
 	_active[idx]       = last
@@ -251,9 +343,36 @@ func recycle(b: TamaServerBullet) -> void:
 # ---------------------------------------------------------------------------
 
 func _draw() -> void:
+	var threshold := ProjectSettings.get_setting(
+		"tama/server_bullet_composite_threshold", 1000) as int
+
 	for key in _types:
 		var td: _TypeData = _types[key]
-		draw_multimesh(td.multimesh_res, td.config.texture)
+		if td.active_batches.is_empty():
+			continue
+		if _active.size() <= threshold:
+			# Below threshold: one draw call per batch, in birth order.
+			# Later draw calls render on top — newest batch = highest z. ✓
+			for batch in td.active_batches:
+				draw_multimesh(batch.multimesh_res, td.config.texture)
+		else:
+			# Above threshold: collapse all batches into one draw call.
+			_draw_composite(td)
+
+func _draw_composite(td: _TypeData) -> void:
+	# Concatenate each batch's transform buffer in birth order.
+	# Older batches occupy lower composite slots (drawn behind newer ones). ✓
+	var composite_buf := PackedFloat32Array()
+	for batch in td.active_batches:
+		if batch.used > 0:
+			composite_buf.append_array(
+				RenderingServer.multimesh_get_buffer(batch.multimesh).slice(0, batch.used * 8)
+			)
+	if composite_buf.is_empty():
+		return
+	td.composite_res.instance_count = composite_buf.size() / 8
+	RenderingServer.multimesh_set_buffer(td.composite, composite_buf)
+	draw_multimesh(td.composite_res, td.config.texture)
 
 func _physics_process(delta: float) -> void:
 	var bounds     := _world_bounds().grow(bounds_margin)
@@ -280,7 +399,7 @@ func _physics_process(delta: float) -> void:
 
 		var rot := b.angle if b.rotates else 0.0
 		RenderingServer.multimesh_instance_set_transform_2d(
-			b._multimesh, b._mm_index,
+			b._multimesh, b._local_slot,
 			Transform2D(rot, b._texture_scale, 0.0, b.position)
 		)
 		PhysicsServer2D.area_set_shape_transform(b._area, b._mm_index, Transform2D(0.0, b.position))
@@ -464,8 +583,8 @@ func _world_bounds() -> Rect2:
 
 func _exit_tree() -> void:
 	for td in _types.values():
-		# td.mmi is a child node — freed automatically when the pool exits the tree.
-		# td.multimesh_res is a RefCounted resource — freed when _types is cleared.
 		for shape in td.shapes:
 			PhysicsServer2D.free_rid(shape)
 		PhysicsServer2D.free_rid(td.area)
+		td.active_batches.clear()
+		td.free_batches.clear()

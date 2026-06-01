@@ -3,10 +3,12 @@
 extends RefCounted
 class_name TamaServerBullet
 
-var _mm_index:     int     = -1        # slot in this type's multimesh / area shape list
-var _multimesh:    RID                  # cached multimesh RID for per-frame update
+var _mm_index:     int     = -1        # global physics slot: area shape index + ring buffer key
+var _local_slot:   int     = -1        # render slot within this bullet's batch multimesh
+var _multimesh:    RID                  # batch's multimesh RID (changes each spawn)
 var _area:         RID                  # cached area RID for per-frame physics update
-var _type_data                          # ref to pool's _TypeData, for free_list push on recycle
+var _type_data                          # ref to pool's _TypeData, for ring buffer on recycle
+var _batch                              # ref to pool's _BatchData, to decrement active_count on recycle
 var _texture_scale: Vector2 = Vector2.ONE  # cached from config at spawn time
 
 var active: bool = false
