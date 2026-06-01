@@ -102,11 +102,16 @@ fire
 |---|---|
 | `wait EXPR` | N秒間停止。 |
 | `waitf EXPR` | N物理フレーム停止。 |
-| `repeat [N] [i]` | N回ループ（Nを省略すると無限ループ）。`i` = 1始まりのインデックス。 |
+| `repeat [N] [i]` | N回ループ（Nを省略すると無限ループ）。`i` = 0始まりのインデックス。 |
+| `repeatf` | 毎物理フレーム1回ブロックを実行する（同期処理；以降の文は実行されない）。 |
+| `while COND` | `COND` が0以外の間ループする。 |
+| `if COND` / `elif COND` / `else` | 条件分岐。 |
+| `var NAME EXPR` | ローカル変数を宣言する。 |
+| `NAME EXPR` | 既存の変数を再代入する（変更は親スコープに伝播する）。 |
 | `fire NAME` / `fire` *(インライン)* | 弾をスポーンする。 |
 | `act NAME` / `act` *(インライン)* | アクトを実行する（ブロッキング）。 |
 | `async act …` | アクトをブロッキングなしで実行する。 |
-| `chdir` / `chspd` / `accel` | この弾にトランジションコマンドを送る。 |
+| `chdir` / `chspd` / `chpos` / `accel` | この弾にトランジションコマンドを送る。 |
 | `vanish` | この弾のアクトを停止し、弾を消去する。 |
 
 ### `bullet` ブロックの文
@@ -115,7 +120,29 @@ fire
 |---|---|
 | `type NAME` | 弾のシーンタイプ — `TamaBulletRegistry` で `NAME` を検索する。省略するとレジストリのデフォルトを使用。 |
 | `emt NAME` / `emt` *(インライン)* | 弾の `act` と並列で動作する発射エミッターを付与する。 |
+| `mvmt` *(ブロック)* | 毎物理フレーム再評価される位置式。`abs` = ワールド座標；`rel` = スポーン位置からのオフセット。 |
 | `act NAME` / `act` *(インライン)* | 弾がスポーンした後に実行する動作。 |
+
+### 変数と制御フロー
+
+`var NAME EXPR` は現在のブロックにスコープされた変数を宣言します。`var` なしの `NAME EXPR` は既存の変数を再代入し、変更は親スコープに伝播します。`true` と `false` は有効な値です（それぞれ `1.0` と `0.0` に相当）。
+
+```
+main
+    var count 8
+    var speed 200
+    while count > 0
+        if count > 4
+            fire
+                dir aim 0
+                spd speed
+        else
+            fire
+                dir aim 45
+                spd speed * 0.5
+        count count - 1    ← 再代入（var キーワード不要）
+        wait 0.1
+```
 
 ### 定義を引数として渡す
 
@@ -132,7 +159,7 @@ main
     act x_way(8, spread(45), 200)    ← 45をspreadの第1引数としてあらかじめバインド
 ```
 
-### 弾の方向・速度のトランジション（bulletの `act` 内）
+### 弾の方向・速度・位置のトランジション（bulletの `act` 内）
 
 ```
 chdir               ← 方向を変更
@@ -143,6 +170,11 @@ chspd
     spd abs 400
     over 2.0
 
+chpos               ← 位置を変更
+    x abs 500
+    y abs 300
+    over 1.5        ← 省略すると即時
+
 accel               ← ワールド軸加速度
     x 0
     y 50
@@ -152,18 +184,17 @@ accel               ← ワールド軸加速度
 ### `export` と `include`
 
 ```
-export num speed 200    ← インスペクターにfloat型フィールドを公開する
-export str dir_mode aim ← string型フィールドを公開する（aim/abs/rel/seqなどに使用）
+export num speed 200     ← インスペクターにfloat型フィールドを公開する
+export str dir_mode aim  ← string型フィールドを公開する（aim/abs/rel/seqなどに使用）
+export bool enabled true ← bool型フィールドを公開する（インスペクターにチェックボックスとして表示）
 
-include builtin         ← 別の.tamaファイルからfire/act/bulletの定義をマージする
+include builtin          ← 別の.tamaファイルからfire/act/bulletの定義をマージする
 ```
 
 ## 予定している機能
 - RenderingServerおよびPhysicsServer2Dを用いた最適化（弾にNodeを使わない方式）
 - 詳細なドキュメント
 ### TamaScript
-- 制御フロー（`if/elif/else`、`while/for` など）
-- 変数
 - 文字列（`"` で囲む）
 - 小さなサンプルゲーム
 - ドキュメントコメント

@@ -103,11 +103,16 @@ fire
 |---|---|
 | `wait EXPR` | Pause N seconds. |
 | `waitf EXPR` | Pause N physics frames. |
-| `repeat [N] [i]` | Loop N times (omit N for infinite). `i` = 1-based index. |
+| `repeat [N] [i]` | Loop N times (omit N for infinite). `i` = 0-based index. |
+| `repeatf` | Run the block once per physics frame (synchronous; terminal). |
+| `while COND` | Loop while `COND` is non-zero. |
+| `if COND` / `elif COND` / `else` | Conditional branching. |
+| `var NAME EXPR` | Declare a local variable. |
+| `NAME EXPR` | Reassign an existing variable (change propagates to parent scope). |
 | `fire NAME` / `fire` *(inline)* | Spawn a bullet. |
 | `act NAME` / `act` *(inline)* | Run an act (blocking). |
 | `async act …` | Run an act without blocking. |
-| `chdir` / `chspd` / `accel` | Send a transition command to this bullet. |
+| `chdir` / `chspd` / `chpos` / `accel` | Send a transition command to this bullet. |
 | `vanish` | Stop this bullet's act and destroy it. |
 
 ### `bullet` block statements
@@ -116,7 +121,29 @@ fire
 |---|---|
 | `type NAME` | Bullet scene type — looks up `NAME` in `TamaBulletRegistry`. Omit to use the registry default. |
 | `emt NAME` / `emt` *(inline)* | Attach a firing emitter that runs in parallel with the bullet's `act`. |
+| `mvmt` *(block)* | Per-frame position expression re-evaluated every physics frame. `abs` = world coordinate; `rel` = offset from spawn position. |
 | `act NAME` / `act` *(inline)* | Behaviour the bullet runs after spawning. |
+
+### Variables and control flow
+
+`var NAME EXPR` declares a variable scoped to the current block. A bare `NAME EXPR` reassigns an existing variable and the change propagates back to parent blocks. `true` and `false` are valid values (equal to `1.0` and `0.0`).
+
+```
+main
+    var count 8
+    var speed 200
+    while count > 0
+        if count > 4
+            fire
+                dir aim 0
+                spd speed
+        else
+            fire
+                dir aim 45
+                spd speed * 0.5
+        count count - 1    ← reassign (no var keyword)
+        wait 0.1
+```
 
 ### Passing definitions as arguments
 
@@ -133,7 +160,7 @@ main
     act x_way(8, spread(45), 200)    ← pre-bind 45 as spread's first arg
 ```
 
-### Bullet direction/speed transitions (inside bullet `act`)
+### Bullet direction/speed/position transitions (inside bullet `act`)
 
 ```
 chdir               ← change direction
@@ -144,6 +171,11 @@ chspd
     spd abs 400
     over 2.0
 
+chpos               ← move to position
+    x abs 500
+    y abs 300
+    over 1.5        ← omit over for instant
+
 accel               ← world-axis acceleration
     x 0
     y 50
@@ -153,18 +185,17 @@ accel               ← world-axis acceleration
 ### `export` and `include`
 
 ```
-export num speed 200    ← exposes a float field in the inspector
-export str dir_mode aim ← exposes a string field (use for aim/abs/rel/seq)
+export num speed 200     ← exposes a float field in the inspector
+export str dir_mode aim  ← exposes a string field (use for aim/abs/rel/seq)
+export bool enabled true ← exposes a bool field (checkbox in the inspector)
 
-include builtin         ← merges fire/act/bullet defs from another .tama file
+include builtin          ← merges fire/act/bullet defs from another .tama file
 ```
 
 ## Planned features
 - Optimization via RenderingServer and PhysicsServer2D, forgoing Nodes for bullets
 - In-depth documentation
 ### TamaScript
-- Control flow (`if/elif/else`, `while/for`, etc.)
-- Variables
 - Strings, delimited by `"`
 - Small example game
 - Documentation comments
