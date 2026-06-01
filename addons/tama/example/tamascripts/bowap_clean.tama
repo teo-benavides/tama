@@ -15,5 +15,4 @@ bullet shooter
                 fire bwp((360/8) * i)
             chdir
                 dir rel time()*4
-                over 0
             wait 0.07

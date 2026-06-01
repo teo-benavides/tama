@@ -497,8 +497,6 @@ func _parse_chdir() -> _Ast.ChdirNode:
 	)
 	if not node.dir:
 		_error_at(tok, "chdir requires a dir statement")
-	if not node.over:
-		_error_at(tok, "chdir requires an over statement")
 	return node
 
 func _parse_chspd() -> _Ast.ChspdNode:
@@ -519,8 +517,6 @@ func _parse_chspd() -> _Ast.ChspdNode:
 	)
 	if not node.speed:
 		_error_at(tok, "chspd requires a speed statement")
-	if not node.over:
-		_error_at(tok, "chspd requires an over statement")
 	return node
 
 func _parse_chpos() -> _Ast.ChposNode:
@@ -634,8 +630,6 @@ func _parse_accel() -> _Ast.AccelNode:
 				_try_consume(_Token.NEWLINE)
 				return null
 	)
-	if not node.over:
-		_error_at(tok, "accel requires an over statement")
 	if not node.x and not node.y:
 		_error_at(tok, "accel requires at least one of x or y")
 	return node

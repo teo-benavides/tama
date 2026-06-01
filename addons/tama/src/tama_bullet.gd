@@ -103,31 +103,47 @@ func _on_changed_direction(data) -> void:
 	_last_angle = _angle
 	if _direction_tween:
 		_direction_tween.kill()
-	_direction_tween = create_tween()
-	_direction_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	_direction_tween.tween_property(self, "_angle", target, data.over).set_trans(Tween.TRANS_LINEAR)
+	if data.over <= 0.0:
+		_angle = target
+	else:
+		_direction_tween = create_tween()
+		_direction_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+		_direction_tween.tween_property(self, "_angle", target, data.over).set_trans(Tween.TRANS_LINEAR)
 
 func _on_changed_speed(data) -> void:
 	var target := _spd_to_value(data.speed_type, data.speed_value)
 	_last_speed = _speed
 	if _speed_tween:
 		_speed_tween.kill()
-	_speed_tween = create_tween()
-	_speed_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	_speed_tween.tween_property(self, "_speed", target, data.over).set_trans(Tween.TRANS_LINEAR)
+	if data.over <= 0.0:
+		_speed = target
+	else:
+		_speed_tween = create_tween()
+		_speed_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+		_speed_tween.tween_property(self, "_speed", target, data.over).set_trans(Tween.TRANS_LINEAR)
 
 func _on_accelerated(data) -> void:
 	if _accel_tween:
 		_accel_tween.kill()
-	_accel_tween = create_tween()
-	_accel_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	_accel_tween.set_parallel(true)
-	if data.has_x:
-		var end_x := _accel_axis_end(data.x_type, data.x, _speed_x, data.over)
-		_accel_tween.tween_property(self, "_speed_x", end_x, data.over).set_trans(Tween.TRANS_LINEAR)
-	if data.has_y:
-		var end_y := _accel_axis_end(data.y_type, data.y, _speed_y, data.over)
-		_accel_tween.tween_property(self, "_speed_y", end_y, data.over).set_trans(Tween.TRANS_LINEAR)
+	if data.over <= 0.0:
+		if data.has_x:
+			match data.x_type:
+				_Ast.ValueType.REL: _speed_x += data.x
+				_:                  _speed_x  = data.x
+		if data.has_y:
+			match data.y_type:
+				_Ast.ValueType.REL: _speed_y += data.y
+				_:                  _speed_y  = data.y
+	else:
+		_accel_tween = create_tween()
+		_accel_tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+		_accel_tween.set_parallel(true)
+		if data.has_x:
+			var end_x := _accel_axis_end(data.x_type, data.x, _speed_x, data.over)
+			_accel_tween.tween_property(self, "_speed_x", end_x, data.over).set_trans(Tween.TRANS_LINEAR)
+		if data.has_y:
+			var end_y := _accel_axis_end(data.y_type, data.y, _speed_y, data.over)
+			_accel_tween.tween_property(self, "_speed_y", end_y, data.over).set_trans(Tween.TRANS_LINEAR)
 
 func _on_changed_position(data) -> void:
 	var target := global_position

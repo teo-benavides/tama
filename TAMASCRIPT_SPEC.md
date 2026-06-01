@@ -410,12 +410,15 @@ chdir_stmt = "chdir" NEWLINE chdir_block
 chdir_block = INDENT { ( dir_stmt | over_stmt ) NEWLINE } DEDENT
 ```
 
-Emits a direction-change command to the bullet. Both `dir` and `over` are required.
+Emits a direction-change command to the bullet. `dir` is required; `over` is optional and defaults to `0`. When `over` is `0` the direction is set instantly without tweening.
 
 ```
-chdir
+chdir           ← instant
     dir aim 0
-    over 1.0
+
+chdir           ← tweened
+    dir abs 90
+    over 1.0    ← transition time in seconds
 ```
 
 At runtime this emits a `changed_direction` signal with the target direction and transition duration.
@@ -427,10 +430,13 @@ chspd_stmt = "chspd" NEWLINE chspd_block
 chspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT
 ```
 
-Emits a speed-change command. Both `speed`/`spd` and `over` are required.
+Emits a speed-change command. `speed`/`spd` is required; `over` is optional and defaults to `0`. When `over` is `0` the speed is set instantly without tweening.
 
 ```
-chspd
+chspd           ← instant
+    spd abs 400
+
+chspd           ← tweened
     spd abs 400
     over 2.0
 ```
@@ -443,7 +449,7 @@ chpos_block = INDENT { ( axis_stmt | over_stmt ) NEWLINE } DEDENT
 axis_stmt   = ( "x" | "y" ) [ VALUE_QUALIFIER ] EXPR
 ```
 
-Emits a position-change command to the bullet. At least one of `x`/`y` is required. `over` is optional and defaults to `0` (instant).
+Emits a position-change command to the bullet. At least one of `x`/`y` is required. `over` is optional and defaults to `0`. When `over` is `0` the bullet is moved instantly without tweening.
 
 | Qualifier | Meaning |
 |---|---|
@@ -467,7 +473,7 @@ accel_block = INDENT { ( axis_stmt | over_stmt ) NEWLINE } DEDENT
 axis_stmt   = ( "x" | "y" ) [ VALUE_QUALIFIER ] EXPR
 ```
 
-Emits an acceleration command on world axes. At least one of `x`/`y` and `over` are required. Default qualifier for each axis is `abs`.
+Emits an acceleration command on world axes. At least one of `x`/`y` is required; `over` is optional and defaults to `0`. When `over` is `0` the axis velocity is set instantly without tweening. Default qualifier for each axis is `abs`.
 
 ```
 accel
@@ -775,7 +781,7 @@ fire
 over_stmt = "over" EXPR NEWLINE
 ```
 
-Transition duration in seconds. Used inside `chdir`, `chspd`, `chpos`, and `accel` blocks. Evaluated as a float.
+Transition duration in seconds. Used inside `chdir`, `chspd`, `chpos`, and `accel` blocks. Optional in all four — omitting it is equivalent to `over 0`. When the resolved value is `0`, the change is applied instantly (no tween created). Evaluated as a float.
 
 ---
 
@@ -1014,7 +1020,7 @@ Sets `_running = false` on the interpreter and emits `vanished`. The game-side b
 
 ### 15.7 `chdir` / `chspd` / `chpos` / `accel`
 
-These are **fire-and-forget** signals to the bullet. The interpreter emits the signal and immediately continues — it does not wait for the transition to complete. The bullet node is responsible for implementing the transition (e.g. tweening direction/speed/position over `over` seconds).
+These are **fire-and-forget** signals to the bullet. The interpreter emits the signal and immediately continues — it does not wait for the transition to complete. The bullet node is responsible for implementing the transition. When `over` is `0` (or omitted), the value is applied immediately without creating a tween; when `over` > `0`, a linear tween runs for that many seconds.
 
 ### 15.8 `repeatf`
 
@@ -1272,25 +1278,27 @@ pos_block   = INDENT
 
 chdir_stmt  = "chdir" NEWLINE chdir_block ;
 chdir_block = INDENT { ( dir_stmt | over_stmt ) NEWLINE } DEDENT ;
-              (* both dir and over required                                  *)
+              (* dir required; over optional — defaults to 0 (instant)      *)
 
 chspd_stmt  = "chspd" NEWLINE chspd_block ;
 chspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT ;
-              (* both speed and over required                                *)
+              (* speed required; over optional — defaults to 0 (instant)    *)
 
 chpos_stmt  = "chpos" NEWLINE chpos_block ;
 chpos_block = INDENT { ( axis_stmt | over_stmt ) NEWLINE } DEDENT ;
-              (* at least one axis required; over defaults to 0 (instant)
+              (* at least one axis required; over optional — defaults to 0 (instant)
                  abs: world coordinate; rel: offset from current position    *)
 
 accel_stmt  = "accel" NEWLINE accel_block ;
 accel_block = INDENT { ( axis_stmt | over_stmt ) NEWLINE } DEDENT ;
-              (* both over and at least one axis required                    *)
+              (* at least one axis required; over optional — defaults to 0 (instant) *)
 
 axis_stmt   = ( "x" | "y" ) [ VALUE_QUALIFIER | IDENT ] EXPR ;
 
 over_stmt   = "over" EXPR ;
-              (* transition duration in seconds; used in chdir/chspd/chpos/accel *)
+              (* transition duration in seconds; used in chdir/chspd/chpos/accel.
+                 optional in all four — omitting is equivalent to over 0.
+                 when 0: value applied instantly; when > 0: linear tween.   *)
 ```
 
 ---

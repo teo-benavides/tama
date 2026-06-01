@@ -181,19 +181,19 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 			_running = false; vanished.emit()
 		elif node is _Ast.ChdirNode:
 			var cn := node as _Ast.ChdirNode
-			if cn.dir and cn.over:
+			if cn.dir:
 				var ks := _prep_scope(scope)
 				_chdir_buf.dir_type  = _get_dir_type(cn.dir, scope)
 				_chdir_buf.dir_value = _eval_f(cn.dir.expr, ks)
-				_chdir_buf.over      = _eval_f(cn.over.expr, ks)
+				_chdir_buf.over      = _eval_f(cn.over.expr, ks) if cn.over else 0.0
 				changed_direction.emit(_chdir_buf)
 		elif node is _Ast.ChspdNode:
 			var cn := node as _Ast.ChspdNode
-			if cn.speed and cn.over:
+			if cn.speed:
 				var ks := _prep_scope(scope)
 				_chspd_buf.speed_type  = _get_speed_type(cn.speed, scope)
 				_chspd_buf.speed_value = _eval_f(cn.speed.expr, ks)
-				_chspd_buf.over        = _eval_f(cn.over.expr, ks)
+				_chspd_buf.over        = _eval_f(cn.over.expr, ks) if cn.over else 0.0
 				changed_speed.emit(_chspd_buf)
 		elif node is _Ast.ChposNode:
 			var cn := node as _Ast.ChposNode
@@ -211,7 +211,7 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 			changed_position.emit(_chpos_buf)
 		elif node is _Ast.AccelNode:
 			var cn := node as _Ast.AccelNode
-			if cn.over and (cn.x or cn.y):
+			if cn.x or cn.y:
 				var ks := _prep_scope(scope)
 				_accel_buf.has_x = false; _accel_buf.has_y = false
 				if cn.x:
@@ -222,7 +222,7 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 					_accel_buf.has_y  = true
 					_accel_buf.y_type = _get_axis_type(cn.y, scope)
 					_accel_buf.y      = _eval_f(cn.y.expr, ks)
-				_accel_buf.over = _eval_f(cn.over.expr, ks)
+				_accel_buf.over = _eval_f(cn.over.expr, ks) if cn.over else 0.0
 				accelerated.emit(_accel_buf)
 		elif node is _Ast.VarDeclNode:
 			var vn := node as _Ast.VarDeclNode
@@ -253,19 +253,19 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 			_running = false; vanished.emit()
 		elif node is _Ast.ChdirNode:
 			var cn := node as _Ast.ChdirNode
-			if cn.dir and cn.over:
+			if cn.dir:
 				var ks := _prep_scope(scope)
 				_chdir_buf.dir_type  = _get_dir_type(cn.dir, scope)
 				_chdir_buf.dir_value = _eval_f(cn.dir.expr, ks)
-				_chdir_buf.over      = _eval_f(cn.over.expr, ks)
+				_chdir_buf.over      = _eval_f(cn.over.expr, ks) if cn.over else 0.0
 				changed_direction.emit(_chdir_buf)
 		elif node is _Ast.ChspdNode:
 			var cn := node as _Ast.ChspdNode
-			if cn.speed and cn.over:
+			if cn.speed:
 				var ks := _prep_scope(scope)
 				_chspd_buf.speed_type  = _get_speed_type(cn.speed, scope)
 				_chspd_buf.speed_value = _eval_f(cn.speed.expr, ks)
-				_chspd_buf.over        = _eval_f(cn.over.expr, ks)
+				_chspd_buf.over        = _eval_f(cn.over.expr, ks) if cn.over else 0.0
 				changed_speed.emit(_chspd_buf)
 		elif node is _Ast.ChposNode:
 			var cn := node as _Ast.ChposNode
@@ -283,7 +283,7 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 			changed_position.emit(_chpos_buf)
 		elif node is _Ast.AccelNode:
 			var cn := node as _Ast.AccelNode
-			if cn.over and (cn.x or cn.y):
+			if cn.x or cn.y:
 				var ks := _prep_scope(scope)
 				_accel_buf.has_x = false; _accel_buf.has_y = false
 				if cn.x:
@@ -294,7 +294,7 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 					_accel_buf.has_y  = true
 					_accel_buf.y_type = _get_axis_type(cn.y, scope)
 					_accel_buf.y      = _eval_f(cn.y.expr, ks)
-				_accel_buf.over = _eval_f(cn.over.expr, ks)
+				_accel_buf.over = _eval_f(cn.over.expr, ks) if cn.over else 0.0
 				accelerated.emit(_accel_buf)
 		elif node is _Ast.RepeatNode:
 			var rn := node as _Ast.RepeatNode
@@ -393,30 +393,30 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 
 	elif node is _Ast.ChdirNode:
 		var cn := node as _Ast.ChdirNode
-		if not cn.dir or not cn.over:
-			push_error("TamaInterpreter: chdir requires both dir and over (L%d)" % node.line)
+		if not cn.dir:
+			push_error("TamaInterpreter: chdir requires a dir statement (L%d)" % node.line)
 		else:
 			var d := ChdirData.new()
 			d.dir_type  = _get_dir_type(cn.dir, scope)
 			d.dir_value = _eval(cn.dir.expr, scope)
-			d.over      = _eval(cn.over.expr, scope)
+			d.over      = _eval(cn.over.expr, scope) if cn.over else 0.0
 			changed_direction.emit(d)
 
 	elif node is _Ast.ChspdNode:
 		var cn := node as _Ast.ChspdNode
-		if not cn.speed or not cn.over:
-			push_error("TamaInterpreter: chspd requires both speed and over (L%d)" % node.line)
+		if not cn.speed:
+			push_error("TamaInterpreter: chspd requires a speed statement (L%d)" % node.line)
 		else:
 			var d := ChspdData.new()
 			d.speed_type  = _get_speed_type(cn.speed, scope)
 			d.speed_value = _eval(cn.speed.expr, scope)
-			d.over        = _eval(cn.over.expr, scope)
+			d.over        = _eval(cn.over.expr, scope) if cn.over else 0.0
 			changed_speed.emit(d)
 
 	elif node is _Ast.AccelNode:
 		var cn := node as _Ast.AccelNode
-		if not cn.over or (not cn.x and not cn.y):
-			push_error("TamaInterpreter: accel requires over and at least one of x/y (L%d)" % node.line)
+		if not cn.x and not cn.y:
+			push_error("TamaInterpreter: accel requires at least one of x/y (L%d)" % node.line)
 		else:
 			var d := AccelData.new()
 			if cn.x:
@@ -427,7 +427,7 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 				d.has_y  = true
 				d.y_type = _get_axis_type(cn.y, scope)
 				d.y      = _eval(cn.y.expr, scope)
-			d.over = _eval(cn.over.expr, scope)
+			d.over = _eval(cn.over.expr, scope) if cn.over else 0.0
 			accelerated.emit(d)
 
 	elif node is _Ast.ChposNode:

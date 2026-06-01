@@ -112,7 +112,7 @@ fire
 | `fire NAME` / `fire` *(inline)* | Spawn a bullet. |
 | `act NAME` / `act` *(inline)* | Run an act (blocking). |
 | `async act …` | Run an act without blocking. |
-| `chdir` / `chspd` / `chpos` / `accel` | Send a transition command to this bullet. |
+| `chdir` / `chspd` / `chpos` / `accel` | Send a transition command to this bullet. Omit `over` (or set it to `0`) to apply instantly. |
 | `vanish` | Stop this bullet's act and destroy it. |
 
 ### `bullet` block statements
@@ -162,9 +162,14 @@ main
 
 ### Bullet direction/speed/position transitions (inside bullet `act`)
 
+`over` is optional on all four statements and defaults to `0`. When `over` is `0` the value is applied instantly without tweening.
+
 ```
-chdir               ← change direction
+chdir               ← change direction (instant — no over)
     dir aim 0
+
+chdir               ← change direction (tweened)
+    dir abs 90
     over 1.0        ← transition time in seconds
 
 chspd
@@ -174,7 +179,7 @@ chspd
 chpos               ← move to position
     x abs 500
     y abs 300
-    over 1.5        ← omit over for instant
+    over 1.5
 
 accel               ← world-axis acceleration
     x 0
