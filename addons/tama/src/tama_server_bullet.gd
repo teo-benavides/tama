@@ -3,9 +3,11 @@
 extends RefCounted
 class_name TamaServerBullet
 
-var canvas_item: RID
-var area:        RID
-var shape:       RID
+var _mm_index:     int     = -1        # slot in this type's multimesh / area shape list
+var _multimesh:    RID                  # cached multimesh RID for per-frame update
+var _area:         RID                  # cached area RID for per-frame physics update
+var _type_data                          # ref to pool's _TypeData, for free_list push on recycle
+var _texture_scale: Vector2 = Vector2.ONE  # cached from config at spawn time
 
 var active: bool = false
 var _active_index: int = -1  # index in pool's _active array, enables O(1) removal

@@ -12,6 +12,7 @@ func _ready() -> void:
 	config.shape_radius = 1.0
 	config.collision_layer = 2
 	config.collision_mask = 1  # player's layer
+	config.pool_size = 10000
 	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
 	TamaManager.register_server_bullet("fast", config)
 	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)

@@ -1,13 +1,17 @@
-## Manages a fixed pool of server-based bullets using [RenderingServer] for
-## rendering and [PhysicsServer2D] areas for overlap detection — no per-bullet
-## scene-tree nodes, no move_and_slide(), no Tween objects.
+## Manages server-based bullet pools, one per registered bullet type.
 ##
-## All active bullets are driven in a single [method _physics_process] loop.
-## Collision is handled via area monitor callbacks rather than polling.
+## Each type gets a single [MultiMesh] (one draw call regardless of instance count)
+## and a single [PhysicsServer2D] area with one shape per slot.
+## The [code]local_shape[/code] index in the area monitor callback equals the slot
+## index, so hit detection requires no per-bullet callbacks or lookups.
+##
+## Register types by calling [method TamaManager.register_server_bullet] before
+## any bullets are fired. All active bullets across all types are updated in a
+## single [method _physics_process] loop.
 ##
 ## Limitations:
-##   - [code]bullet_emitter_act[/code] (a bullet that also fires sub-bullets) is not
-##     supported. Bullets with that construct must use node-based spawning instead.
+##   - [code]bullet_emitter_act[/code] (a bullet that fires sub-bullets) is not
+##     supported. Bullets using that construct must use node-based spawning instead.
 extends Node2D
 class_name TamaServerBulletPool
 
@@ -15,65 +19,111 @@ const _Ast         = preload("res://addons/tama/src/tama_ast.gd")
 const _Interpreter = preload("res://addons/tama/src/tama_interpreter.gd")
 
 ## Emitted when a physics body overlaps a bullet's area.
-## Connect to this signal to implement hit detection (e.g. damage the player).
 ## [param bullet] is the server bullet that was hit.
-## [param body_instance_id] is the [method Object.get_instance_id] of the overlapping body.
+## [param body_instance_id] is [method Object.get_instance_id] of the overlapping body.
 signal bullet_hit(bullet: TamaServerBullet, body_instance_id: int)
-
-## Maximum simultaneous server bullets. Pre-allocated at startup.
-@export var pool_size: int = 10000
 
 ## Bullets this far outside the visible world rect are recycled automatically.
 @export var bounds_margin: float = 64.0
 
-var _all:       Array[TamaServerBullet] = []
-var _active:    Array[TamaServerBullet] = []
-var _free_list: Array[TamaServerBullet] = []
+## All active bullets across all registered types, driven each physics frame.
+var _active: Array[TamaServerBullet] = []
 
-var _z_counter: int = 0
+## Per-type resources and state. Populated by register_type().
+var _types: Dictionary = {}  # String → _TypeData
 
-func _ready() -> void:
-	_preallocate()
+## Holds all GPU and physics resources for one registered bullet type.
+class _TypeData:
+	var multimesh_res: MultiMesh  # resource kept alive; get_rid() stored in multimesh
+	var multimesh:     RID
+	var area:          RID
+	var shapes:        Array[RID] = []
+	var all_bullets:   Array      = []  # Array[TamaServerBullet], indexed by slot
+	var free_list:     Array[int] = []
+	var config:        TamaServerBulletConfig
 
-func _preallocate() -> void:
-	var parent_ci := get_canvas_item()
-	var space     := get_world_2d().space
-	for i in pool_size:
-		var b := TamaServerBullet.new()
+# ---------------------------------------------------------------------------
+# Type registration
+# ---------------------------------------------------------------------------
 
-		b.canvas_item = RenderingServer.canvas_item_create()
-		RenderingServer.canvas_item_set_parent(b.canvas_item, parent_ci)
-		RenderingServer.canvas_item_set_visible(b.canvas_item, false)
+## Creates GPU and physics resources for [param key]. Called automatically by
+## [method TamaManager.register_server_bullet]. Must be called while the pool
+## is in the scene tree so that [code]get_world_2d()[/code] is available.
+func register_type(key: String, config: TamaServerBulletConfig) -> void:
+	if _types.has(key):
+		push_warning("TamaServerBulletPool: type '%s' already registered, skipping." % key)
+		return
 
-		b.shape = PhysicsServer2D.circle_shape_create()
-		PhysicsServer2D.shape_set_data(b.shape, 6.0)
+	print("[TamaPool] register_type '%s' | pool_size=%d | in_tree=%s" % [key, config.pool_size, str(is_inside_tree())])
 
-		b.area = PhysicsServer2D.area_create()
-		PhysicsServer2D.area_set_space(b.area, space)
-		PhysicsServer2D.area_add_shape(b.area, b.shape)
-		PhysicsServer2D.area_set_transform(b.area, Transform2D(0.0, Vector2(-100000.0, -100000.0)))
-		PhysicsServer2D.area_set_monitorable(b.area, false)
-		# Collision layer/mask are 0 until the bullet is active
-		PhysicsServer2D.area_set_collision_layer(b.area, 0)
-		PhysicsServer2D.area_set_collision_mask(b.area, 0)
+	var td    := _TypeData.new()
+	td.config  = config
+	_types[key] = td
 
-		# Per-bullet monitor callback — captures b so we know which bullet was hit
-		var capture_b := b
-		PhysicsServer2D.area_set_monitor_callback(b.area,
-			func(status: int, _body_rid: RID, body_iid: int, _body_shape: int, _area_shape: int) -> void:
-				if status == PhysicsServer2D.AREA_BODY_ADDED and capture_b.active:
-					bullet_hit.emit(capture_b, body_iid)
-		)
+	var n := config.pool_size
 
-		_all.append(b)
-		_free_list.append(b)
+	# MultiMesh resource — instance data stays alive with the resource.
+	var quad      := QuadMesh.new()
+	quad.size      = config.rect.size
+	td.multimesh_res                  = MultiMesh.new()
+	td.multimesh_res.transform_format = MultiMesh.TRANSFORM_2D
+	td.multimesh_res.mesh             = quad
+	td.multimesh_res.instance_count   = n
+	td.multimesh                      = td.multimesh_res.get_rid()
+	print("[TamaPool]   multimesh RID valid=%s | instance_count=%d | visible_instance_count=%d" % [
+		str(td.multimesh.is_valid()), td.multimesh_res.instance_count, td.multimesh_res.visible_instance_count])
+
+	# Initialise all slots off-screen so unspawned instances are invisible.
+	var offscreen := Transform2D(0.0, Vector2(-100000.0, -100000.0))
+	for i in n:
+		RenderingServer.multimesh_instance_set_transform_2d(td.multimesh, i, offscreen)
+
+	if config.texture:
+		print("[TamaPool]   texture=%s RID valid=%s" % [str(config.texture), str(config.texture.get_rid().is_valid())])
+	else:
+		print("[TamaPool]   texture=null (no texture set)")
+
+	# Area with N shapes — shape index == slot index.
+	var space := get_world_2d().space
+	td.area = PhysicsServer2D.area_create()
+	PhysicsServer2D.area_set_space(td.area, space)
+	PhysicsServer2D.area_set_collision_layer(td.area, config.collision_layer)
+	PhysicsServer2D.area_set_collision_mask(td.area, config.collision_mask)
+	PhysicsServer2D.area_set_monitorable(td.area, false)
+	for i in n:
+		var shape := PhysicsServer2D.circle_shape_create()
+		PhysicsServer2D.shape_set_data(shape, config.shape_radius)
+		PhysicsServer2D.area_add_shape(td.area, shape)
+		PhysicsServer2D.area_set_shape_disabled(td.area, i, true)
+		td.shapes.append(shape)
+
+	# Monitor callback — local_shape is the slot index, no per-bullet closure needed.
+	var td_ref := td
+	PhysicsServer2D.area_set_monitor_callback(td.area,
+		func(status: int, _body_rid: RID, body_iid: int, _body_shape: int, local_shape: int) -> void:
+			if status == PhysicsServer2D.AREA_BODY_ADDED:
+				var b: TamaServerBullet = td_ref.all_bullets[local_shape]
+				if b != null and b.active:
+					bullet_hit.emit(b, body_iid)
+	)
+
+	# Pre-allocate bullet state objects — one per slot, reused for the lifetime of the pool.
+	td.all_bullets.resize(n)
+	for i in n:
+		var b           := TamaServerBullet.new()
+		b._mm_index      = i
+		b._multimesh     = td.multimesh
+		b._area          = td.area
+		b._type_data     = td
+		td.all_bullets[i] = b
+		td.free_list.append(i)
 
 # ---------------------------------------------------------------------------
 # Spawn
 # ---------------------------------------------------------------------------
 
 ## Spawns a server bullet. Called by [TamaSpawnManager] when a server-configured
-## bullet type is fired. Returns the bullet, or null if the pool is exhausted.
+## bullet type is fired. Returns the bullet, or null if the pool for this type is full.
 func spawn(
 		data:     _Interpreter.BulletFireData,
 		config:   TamaServerBulletConfig,
@@ -82,11 +132,23 @@ func spawn(
 		position: Vector2,
 		context:  TamaContext
 ) -> TamaServerBullet:
-	if _free_list.is_empty():
+	var td = _types.get(data.bullet_type)
+	if td == null:
+		push_warning("TamaServerBulletPool: type '%s' not registered." % data.bullet_type)
+		return null
+	if td.free_list.is_empty():
+		push_warning("TamaServerBulletPool: pool full for type '%s'" % data.bullet_type)
 		return null
 
-	var b: TamaServerBullet = _free_list.pop_back()
-	b.active       = true
+	# Log only the first spawn per type so we don't spam the console.
+	var _is_first_spawn = td.all_bullets.size() == td.free_list.size() + 1
+	if _is_first_spawn:
+		print("[TamaPool] first spawn for type '%s' | pos=%s angle=%.2f speed=%.2f" % [data.bullet_type, str(position), angle, speed])
+
+	var slot: int         = td.free_list.pop_back()
+	var b: TamaServerBullet = td.all_bullets[slot]
+
+	b.active        = true
 	b._active_index = _active.size()
 	_active.append(b)
 
@@ -96,6 +158,7 @@ func spawn(
 	b.speed_x          = 0.0
 	b.speed_y          = 0.0
 	b.rotates          = config.rotates
+	b._texture_scale   = config.texture_scale
 	b.initial_position = position
 	b._last_angle      = angle
 	b._last_speed      = speed
@@ -112,37 +175,32 @@ func spawn(
 	b.mvmt_y_type = data.mvmt_y_type
 	b.mvmt_y_expr = data.mvmt_y_expr
 
-	PhysicsServer2D.shape_set_data(b.shape, config.shape_radius)
-	PhysicsServer2D.area_set_collision_layer(b.area, config.collision_layer)
-	PhysicsServer2D.area_set_collision_mask(b.area, config.collision_mask)
-
-	RenderingServer.canvas_item_clear(b.canvas_item)
-	if config.texture:
-		var draw_rect := Rect2(
-			config.rect.position * config.texture_scale,
-			config.rect.size * config.texture_scale
-		)
-		RenderingServer.canvas_item_add_texture_rect(
-			b.canvas_item, draw_rect, config.texture.get_rid()
-		)
-	const Z_RANGE := RenderingServer.CANVAS_ITEM_Z_MAX  # range is [1, Z_MAX], stays above z=0 nodes
-	RenderingServer.canvas_item_set_z_index(b.canvas_item, 1 + _z_counter % Z_RANGE)
-	_z_counter = (_z_counter + 1) % Z_RANGE
+	# Set render transform first so the bullet appears at the correct position from frame 0.
 	var spawn_rot := b.angle if b.rotates else 0.0
-	RenderingServer.canvas_item_set_transform(b.canvas_item, Transform2D(spawn_rot, b.position))
-	RenderingServer.canvas_item_set_visible(b.canvas_item, true)
+	RenderingServer.multimesh_instance_set_transform_2d(
+		td.multimesh, slot,
+		Transform2D(spawn_rot, config.texture_scale, 0.0, position)
+	)
 
-	# Emit a warning for unsupported emitter_act; the bullet still spawns without it.
+	# Enable physics shape at spawn position.
+	PhysicsServer2D.area_set_shape_transform(td.area, slot, Transform2D(0.0, position))
+	PhysicsServer2D.area_set_shape_disabled(td.area, slot, false)
+
+	if _is_first_spawn:
+		var readback = td.multimesh_res.get_instance_transform_2d(slot)
+		print("[TamaPool]   slot=%d transform_readback=%s | visible_instance_count=%d" % [
+			slot, str(readback), td.multimesh_res.visible_instance_count])
+
 	if data.bullet_emitter_act != null:
 		push_warning("TamaServerBulletPool: bullet_emitter_act is not supported for server bullets. The sub-emitter act will be skipped.")
 
 	var needs_runner := data.bullet_act != null or data.mvmt_x_set or data.mvmt_y_set
 	if needs_runner:
 		var runner = _Interpreter.new()
-		runner.context = context
-		runner._tree = get_tree()
-		runner._frame_loop_owner = runner  # interpreter is its own frame-loop owner
-		b._runner = runner
+		runner.context          = context
+		runner._tree            = get_tree()
+		runner._frame_loop_owner = runner
+		b._runner               = runner
 
 		var act_scope: Dictionary = {}
 		for i in mini(data.bullet_params.size(), data.bullet_args.size()):
@@ -184,18 +242,22 @@ func recycle(b: TamaServerBullet) -> void:
 		return
 	b.active = false
 
-	RenderingServer.canvas_item_set_visible(b.canvas_item, false)
-	PhysicsServer2D.area_set_transform(b.area, Transform2D(0.0, Vector2(-100000.0, -100000.0)))
-	PhysicsServer2D.area_set_collision_layer(b.area, 0)
-	PhysicsServer2D.area_set_collision_mask(b.area, 0)
+	# Move off-screen and disable physics shape.
+	RenderingServer.multimesh_instance_set_transform_2d(
+		b._multimesh, b._mm_index,
+		Transform2D(0.0, Vector2(-100000.0, -100000.0))
+	)
+	PhysicsServer2D.area_set_shape_disabled(b._area, b._mm_index, true)
+
+	b._type_data.free_list.append(b._mm_index)
 
 	if b._runner:
 		TamaManager._unregister_frame_loop(b._runner)
-		b._runner.stop()  # prevent resumption after any pending await
-		b._runner.call_deferred(&"free")  # deferred so we're not mid-signal-emission
+		b._runner.stop()
+		b._runner.call_deferred(&"free")
 		b._runner = null
 
-	# O(1) unordered removal: swap with the last active entry
+	# O(1) unordered removal: swap with the last active entry.
 	var idx  := b._active_index
 	var last := _active.back()
 	_active[idx]       = last
@@ -203,14 +265,22 @@ func recycle(b: TamaServerBullet) -> void:
 	_active.pop_back()
 	b._active_index = -1
 
-	_free_list.append(b)
-
 # ---------------------------------------------------------------------------
 # Per-frame update
 # ---------------------------------------------------------------------------
 
+func _draw() -> void:
+	for key in _types:
+		var td: _TypeData = _types[key]
+		draw_multimesh(td.multimesh_res, td.config.texture)
+
+var _debug_ticked := false
 func _physics_process(delta: float) -> void:
-	var bounds    := _world_bounds().grow(bounds_margin)
+	if not _debug_ticked and not _active.is_empty():
+		_debug_ticked = true
+		print("[TamaPool] _physics_process ticking | active=%d | bounds=%s" % [_active.size(), str(_world_bounds())])
+
+	var bounds     := _world_bounds().grow(bounds_margin)
 	var to_recycle: Array[TamaServerBullet] = []
 
 	for b in _active:
@@ -233,14 +303,20 @@ func _physics_process(delta: float) -> void:
 			b.position += vel * delta
 
 		var rot := b.angle if b.rotates else 0.0
-		RenderingServer.canvas_item_set_transform(b.canvas_item, Transform2D(rot, b.position))
-		PhysicsServer2D.area_set_transform(b.area, Transform2D(0.0, b.position))
+		RenderingServer.multimesh_instance_set_transform_2d(
+			b._multimesh, b._mm_index,
+			Transform2D(rot, b._texture_scale, 0.0, b.position)
+		)
+		PhysicsServer2D.area_set_shape_transform(b._area, b._mm_index, Transform2D(0.0, b.position))
 
 		if not bounds.has_point(b.position):
 			to_recycle.append(b)
 
 	for b in to_recycle:
 		recycle(b)
+
+	if not _active.is_empty():
+		queue_redraw()
 
 # ---------------------------------------------------------------------------
 # Tween stepping
@@ -411,7 +487,9 @@ func _world_bounds() -> Rect2:
 	)
 
 func _exit_tree() -> void:
-	for b in _all:
-		RenderingServer.free_rid(b.canvas_item)
-		PhysicsServer2D.free_rid(b.area)
-		PhysicsServer2D.free_rid(b.shape)
+	for td in _types.values():
+		# td.mmi is a child node — freed automatically when the pool exits the tree.
+		# td.multimesh_res is a RefCounted resource — freed when _types is cleared.
+		for shape in td.shapes:
+			PhysicsServer2D.free_rid(shape)
+		PhysicsServer2D.free_rid(td.area)

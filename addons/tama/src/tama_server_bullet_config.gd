@@ -27,3 +27,7 @@ class_name TamaServerBulletConfig
 
 ## When true the canvas item rotates to follow the bullet's travel direction.
 @export var rotates: bool = true
+
+## Number of bullet slots pre-allocated for this type.
+## Set before the first bullet of this type is fired; cannot be changed at runtime.
+@export var pool_size: int = 1000

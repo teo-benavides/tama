@@ -112,12 +112,7 @@ func register_bullet(type: String, scene: PackedScene) -> void:
 func register_server_bullet(type: String, config: TamaServerBulletConfig) -> void:
 	_ensure_registry()
 	_spawn_manager.registry.server_configs[type] = config
-
-## Maximum simultaneous server bullets. Must be set before the scene tree is ready.
-## Defaults to 2000.
-var server_bullet_pool_size: int:
-	set(v): _server_pool.pool_size = v
-	get:    return _server_pool.pool_size
+	_server_pool.register_type(type, config)
 
 ## The [TamaServerBulletPool] node. Connect to its [code]bullet_hit[/code]
 ## signal to handle hit detection for server bullets.
