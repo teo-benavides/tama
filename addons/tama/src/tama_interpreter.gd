@@ -102,8 +102,9 @@ signal _all_async_done
 # State
 # ---------------------------------------------------------------------------
 
-var _program: _Ast.ProgramNode
-var _running: bool = false
+var _program:   _Ast.ProgramNode
+var _running:   bool = false
+var _breaking:  bool = false
 var _async_count: int = 0
 var context: TamaContext = TamaContext.new()
 
@@ -171,9 +172,12 @@ func stop() -> void:
 
 func _exec_action_body(body: Array, scope: Dictionary) -> void:
 	for node: _Ast.ASTNode in body:
-		if not _running: return
+		if not _running or _breaking: return
 		# R3: dispatch synchronous nodes directly — no coroutine overhead
-		if node is _Ast.FireCallNode:
+		if node is _Ast.BreakNode:
+			_breaking = true
+			return
+		elif node is _Ast.FireCallNode:
 			_exec_fire_call(node as _Ast.FireCallNode, scope)
 		elif node is _Ast.InlineFireNode:
 			_exec_fire_node(node, scope)
@@ -239,6 +243,9 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 						return
 					_running = true  # re-arm so _exec_body_sync checks work
 					_exec_body_sync(rfn.body, captured_scope)
+					if _breaking:
+						_breaking = false
+						TamaManager._unregister_frame_loop(owner)
 				)
 				_running = false  # terminal — nothing after repeatf executes
 			else:
@@ -253,6 +260,9 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 					_exec_body_sync(rfn.body, scope)
 					for key in scope.keys():
 						if not pre_keys.has(key): scope.erase(key)
+					if _breaking:
+						_breaking = false
+						break
 					i += 1
 					if _running and i < count_val:
 						await get_tree().physics_frame
@@ -261,8 +271,11 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 
 func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 	for node: _Ast.ASTNode in body:
-		if not _running: return
-		if node is _Ast.FireCallNode:
+		if not _running or _breaking: return
+		if node is _Ast.BreakNode:
+			_breaking = true
+			return
+		elif node is _Ast.FireCallNode:
 			_exec_fire_call(node as _Ast.FireCallNode, scope)
 		elif node is _Ast.InlineFireNode:
 			_exec_fire_node(node, scope)
@@ -328,6 +341,9 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 				for key in scope.keys():
 					if not pre_keys.has(key):
 						scope.erase(key)
+				if _breaking:
+					_breaking = false
+					break
 				i += 1
 		elif node is _Ast.WhileNode:
 			var wn := node as _Ast.WhileNode
@@ -338,6 +354,9 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 				for key in scope.keys():
 					if not pre_keys.has(key):
 						scope.erase(key)
+				if _breaking:
+					_breaking = false
+					break
 		elif node is _Ast.VarDeclNode:
 			var vn := node as _Ast.VarDeclNode
 			scope[vn.var_name] = _eval_arg(vn.expr, scope)
@@ -372,6 +391,9 @@ func _exec_body_sync(body: Array, scope: Dictionary) -> void:
 					_exec_body_sync(rfn.body, scope)
 					for key in scope.keys():
 						if not pre_keys.has(key): scope.erase(key)
+					if _breaking:
+						_breaking = false
+						break
 					i += 1
 			# infinite repeatf in sync context: no-op (can't run per-frame without a frame loop)
 		# WaitNode, WaitFramesNode, ActCallNode, InlineActNode: no-op in sync context
@@ -391,6 +413,9 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 		_running = false
 		vanished.emit()
 
+	elif node is _Ast.BreakNode:
+		_breaking = true
+
 	elif node is _Ast.WhileNode:
 		await _exec_while(node as _Ast.WhileNode, scope)
 
@@ -408,6 +433,9 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 					return
 				_running = true
 				_exec_body_sync(rfn.body, captured_scope)
+				if _breaking:
+					_breaking = false
+					TamaManager._unregister_frame_loop(owner)
 			)
 			_running = false
 		else:
@@ -421,6 +449,9 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 				_exec_body_sync(rfn.body, scope)
 				for key in scope.keys():
 					if not pre_keys.has(key): scope.erase(key)
+				if _breaking:
+					_breaking = false
+					break
 				i += 1
 				if _running and i < count_val:
 					await get_tree().physics_frame
@@ -535,6 +566,9 @@ func _exec_while(node: _Ast.WhileNode, scope: Dictionary) -> void:
 		for key in scope.keys():
 			if not pre_keys.has(key):
 				scope.erase(key)
+		if _breaking:
+			_breaking = false
+			break
 
 func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 	var count := -1
@@ -550,6 +584,9 @@ func _exec_repeat(node: _Ast.RepeatNode, scope: Dictionary) -> void:
 		for key in scope.keys():
 			if not pre_keys.has(key):
 				scope.erase(key)
+		if _breaking:
+			_breaking = false
+			break
 		i += 1
 
 func _exec_fire_call(node: _Ast.FireCallNode, scope: Dictionary) -> void:

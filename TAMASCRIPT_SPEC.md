@@ -81,7 +81,7 @@ The following identifiers are reserved and cannot be used as variable or definit
 
 ```
 main    fire    act     bullet  bul
-repeat  repeatf wait    waitf   vanish
+repeat  repeatf wait    waitf   vanish  break
 chdir   chspd   chpos   accel   over
 dir     speed   spd     offset  pos     mvmt
 aim     abs     rel     seq
@@ -262,7 +262,22 @@ vanish
 
 Stops execution of the current interpreter and emits a `vanished` signal to the bullet. Used inside bullet `act` blocks to make a bullet destroy itself.
 
-### 6.4 `repeat`
+### 6.4 `break`
+
+```
+break
+```
+
+Exits the innermost enclosing `repeat`, `repeatf`, or `while` loop. Only exits one level — `break` inside a nested loop only affects that loop, not any outer ones.
+
+```
+repeat
+    if some_flag
+        break       ← exits the repeat
+    wait 0.1
+```
+
+### 6.5 `repeat`
 
 ```
 repeat_stmt = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block
@@ -301,7 +316,7 @@ repeat 8 i
 - `repeat 5 i` → count `5`, index `i`
 - `repeat count + 1 i` → count `count + 1`, index `i`
 
-### 6.5 `repeatf`
+### 6.6 `repeatf`
 
 ```
 repeatf_stmt = "repeatf" [ EXPR [ IDENT ] ] NEWLINE action_block
@@ -325,7 +340,7 @@ repeatf 60 i                         ← finite: 60 frames, then continues
 wait 1.0                             ← runs after the 60 frames complete
 ```
 
-### 6.6 `while`
+### 6.7 `while`
 
 ```
 while_stmt = "while" EXPR NEWLINE action_block
@@ -345,7 +360,7 @@ while spd_ < 500
     wait 0.2
 ```
 
-### 6.7 `if` / `elif` / `else`
+### 6.8 `if` / `elif` / `else`
 
 ```
 if_stmt = "if" EXPR NEWLINE action_block
@@ -368,7 +383,7 @@ else
     wait 0.1
 ```
 
-### 6.8 `var` / assignment
+### 6.9 `var` / assignment
 
 ```
 var_stmt    = "var" IDENT EXPR
@@ -390,7 +405,7 @@ count count + 1          # reassignment
 dir_type abs             # store a qualifier string
 ```
 
-### 6.9 `dir`
+### 6.10 `dir`
 
 ```
 dir [ DIR_QUALIFIER ] EXPR
@@ -398,7 +413,7 @@ dir [ DIR_QUALIFIER ] EXPR
 
 Sets the direction for the **next** fire statement in this scope. See §9.1.
 
-### 6.10 `speed` / `spd`
+### 6.11 `speed` / `spd`
 
 ```
 ( "speed" | "spd" ) [ VALUE_QUALIFIER ] EXPR
@@ -406,11 +421,11 @@ Sets the direction for the **next** fire statement in this scope. See §9.1.
 
 Sets the speed for the next fire. See §9.2.
 
-### 6.11 `offset`
+### 6.12 `offset`
 
 Sets the spawn position offset. See §9.3.
 
-### 6.12 `chdir`
+### 6.13 `chdir`
 
 ```
 chdir_stmt = "chdir" NEWLINE chdir_block
@@ -430,7 +445,7 @@ chdir           ← tweened
 
 At runtime this emits a `changed_direction` signal with the target direction and transition duration.
 
-### 6.13 `chspd`
+### 6.14 `chspd`
 
 ```
 chspd_stmt = "chspd" NEWLINE chspd_block
@@ -448,7 +463,7 @@ chspd           ← tweened
     over 2.0
 ```
 
-### 6.14 `chpos`
+### 6.15 `chpos`
 
 ```
 chpos_stmt  = "chpos" NEWLINE chpos_block
@@ -472,7 +487,7 @@ chpos
 
 At runtime this emits a `changed_position` signal. The bullet node is responsible for implementing the movement.
 
-### 6.15 `accel`
+### 6.16 `accel`
 
 ```
 accel_stmt = "accel" NEWLINE accel_block
@@ -489,7 +504,7 @@ accel
     over 1.5
 ```
 
-### 6.16 `fire` (inline)
+### 6.17 `fire` (inline)
 
 ```
 inline_fire = "fire" NEWLINE fire_block
@@ -503,7 +518,7 @@ fire
     spd 200
 ```
 
-### 6.17 `fire <name>` (named call)
+### 6.18 `fire <name>` (named call)
 
 ```
 fire_call = "fire" IDENT [ arg_list ]
@@ -516,7 +531,7 @@ fire spread
 fire spread(45, 300)
 ```
 
-### 6.18 `act` (inline)
+### 6.19 `act` (inline)
 
 ```
 inline_act = "act" NEWLINE action_block
@@ -532,7 +547,7 @@ act
         spd 200
 ```
 
-### 6.19 `act <name>` (named call)
+### 6.20 `act <name>` (named call)
 
 ```
 act_call = "act" IDENT [ arg_list ]
@@ -545,7 +560,7 @@ act circle
 act circle(8, 200)
 ```
 
-### 6.20 `async`
+### 6.21 `async`
 
 ```
 async_stmt = "async" ( inline_act | act_call )
@@ -1111,6 +1126,7 @@ If `main` is absent (library file), `program.main` is null. The interpreter chec
 | `wait` | — | Action stmt |
 | `waitf` | — | Action stmt |
 | `vanish` | — | Action stmt |
+| `break` | — | Action stmt |
 | `while` | — | Action stmt |
 | `if` | — | Action stmt |
 | `elif` | — | Action stmt (if branch) |
@@ -1194,6 +1210,7 @@ action_stmt   = while_stmt
               | wait_stmt
               | waitf_stmt
               | vanish_stmt
+              | break_stmt
               | dir_stmt
               | speed_stmt
               | offset_stmt
@@ -1238,6 +1255,7 @@ repeatf_stmt  = "repeatf" [ EXPR [ IDENT ] ] NEWLINE action_block ;
 wait_stmt     = "wait"  EXPR ;
 waitf_stmt    = "waitf" EXPR ;
 vanish_stmt   = "vanish" ;
+break_stmt    = "break" ;
 async_stmt    = "async" ( inline_act | act_call ) ;
 fire_call     = "fire"  IDENT [ arg_list ] ;
 act_call      = "act"   IDENT [ arg_list ] ;

@@ -216,6 +216,11 @@ class VanishNode extends ASTNode:
 	func _init(p_line: int, p_col: int) -> void:
 		super(p_line, p_col)
 
+# break  — exits the innermost enclosing repeat, repeatf, or while
+class BreakNode extends ASTNode:
+	func _init(p_line: int, p_col: int) -> void:
+		super(p_line, p_col)
+
 # repeat [count_expr] [index_var]  — omitting count means infinite; index_var is 1-based
 class RepeatNode extends ASTNode:
 	var count:     String

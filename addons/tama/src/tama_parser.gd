@@ -400,6 +400,11 @@ func _parse_vanish() -> _Ast.VanishNode:
 	_consume(_Token.NEWLINE)
 	return _Ast.VanishNode.new(tok.line, tok.col)
 
+func _parse_break() -> _Ast.BreakNode:
+	var tok := _consume(_Token.KW_BREAK)
+	_consume(_Token.NEWLINE)
+	return _Ast.BreakNode.new(tok.line, tok.col)
+
 func _parse_over() -> _Ast.OverNode:
 	var tok := _consume(_Token.KW_OVER)
 	var expr := _collect_to_eol()
@@ -863,6 +868,7 @@ func _parse_action_statement():   # -> _Ast.ASTNode
 		_Token.KW_WAIT:   return _parse_wait()
 		_Token.KW_WAITF:  return _parse_waitf()
 		_Token.KW_VANISH: return _parse_vanish()
+		_Token.KW_BREAK:  return _parse_break()
 		_Token.KW_OFFSET: return _parse_offset()
 		_Token.KW_CHDIR:  return _parse_chdir()
 		_Token.KW_CHSPD:  return _parse_chspd()

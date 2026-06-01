@@ -114,6 +114,7 @@ fire
 | `async act …` | Run an act without blocking. |
 | `chdir` / `chspd` / `chpos` / `accel` | Send a transition command to this bullet. Omit `over` (or set it to `0`) to apply instantly. |
 | `vanish` | Stop this bullet's act and destroy it. |
+| `break` | Exit the innermost enclosing `repeat`, `repeatf`, or `while`. |
 
 ### `bullet` block statements
 

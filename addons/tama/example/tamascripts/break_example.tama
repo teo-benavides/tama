@@ -1,0 +1,9 @@
+main
+    var count 0
+    repeatf
+        fire
+            dir abs count
+            spd 200
+        if count > 180
+            break
+        count count + 1

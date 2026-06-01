@@ -41,7 +41,7 @@ COMMENT = "#" { any character except newline } ;
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "repeatf" | "wait" | "waitf"
    | "chdir" | "chspd" | "chpos" | "accel"
-   | "vanish" | "var"
+   | "vanish" | "var" | "break"
    | "if" | "elif" | "else" | "while"
    | "dir" | "speed" | "spd" | "offset" | "pos" | "mvmt"
    | "emitter" | "emt" | "type" | "async"
@@ -137,6 +137,7 @@ action_stmt = while_stmt
              | wait_stmt
              | waitf_stmt
              | vanish_stmt
+             | break_stmt
              | dir_stmt
              | speed_stmt
              | offset_stmt
@@ -198,6 +199,10 @@ waitf_stmt   = "waitf" EXPR ;
 
 vanish_stmt  = "vanish" ;
                (* immediately destroys the bullet and stops its act                   *)
+
+break_stmt   = "break" ;
+               (* exits the innermost enclosing repeat, repeatf, or while.
+                  only exits one level — nested break only exits the nearest loop.    *)
 
 fire_call    = "fire" IDENT [ arg_list ] ;
 act_call     = "act"  IDENT [ arg_list ] ;

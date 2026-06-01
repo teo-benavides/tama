@@ -113,6 +113,7 @@ fire
 | `async act …` | アクトをブロッキングなしで実行する。 |
 | `chdir` / `chspd` / `chpos` / `accel` | この弾にトランジションコマンドを送る。`over` を省略するか `0` にすると即時適用される。 |
 | `vanish` | この弾のアクトを停止し、弾を消去する。 |
+| `break` | 最も内側の `repeat`・`repeatf`・`while` ループを抜ける。 |
 
 ### `bullet` ブロックの文
 
