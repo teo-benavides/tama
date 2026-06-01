@@ -16,12 +16,14 @@ extends Node
 const _SpawnManagerScript  = preload("res://addons/tama/src/tama_spawn_manager.gd")
 const _RepositoryScript    = preload("res://addons/tama/src/tama_script_repository.gd")
 const _RegistryScript      = preload("res://addons/tama/src/tama_bullet_registry.gd")
+const _ServerPoolScript    = preload("res://addons/tama/src/tama_server_bullet_pool.gd")
 
 const _SETTING_SCRIPTS_PATH := "tama/scripts_path"
 const _DEFAULT_SCRIPTS_PATH := "res://tamascripts"
 
 var _spawn_manager: Node
 var _repository:    Node
+var _server_pool:   Node
 var _scripts_path:  String = ""
 
 var _frame_loop_fns:   Array[Callable] = []
@@ -30,11 +32,14 @@ var _frame_loop_owners: Array[Object]  = []
 func _init() -> void:
 	_repository    = _RepositoryScript.new()
 	_spawn_manager = _SpawnManagerScript.new()
-	_spawn_manager._repository = _repository
+	_server_pool   = _ServerPoolScript.new()
+	_spawn_manager._repository  = _repository
+	_spawn_manager._server_pool = _server_pool
 
 func _ready() -> void:
 	add_child(_repository)
 	add_child(_spawn_manager)
+	add_child(_server_pool)
 	_load_scripts()
 
 func _physics_process(_delta: float) -> void:
@@ -99,6 +104,25 @@ var registry: TamaBulletRegistry:
 func register_bullet(type: String, scene: PackedScene) -> void:
 	_ensure_registry()
 	_spawn_manager.registry.entries[type] = scene
+
+## Registers a [TamaServerBulletConfig] for [param type].
+## Bullets of this type will be rendered and simulated via [TamaServerBulletPool]
+## rather than instantiating a scene, for maximum performance at high counts.
+## Must be called before the first bullet of this type is fired.
+func register_server_bullet(type: String, config: TamaServerBulletConfig) -> void:
+	_ensure_registry()
+	_spawn_manager.registry.server_configs[type] = config
+
+## Maximum simultaneous server bullets. Must be set before the scene tree is ready.
+## Defaults to 2000.
+var server_bullet_pool_size: int:
+	set(v): _server_pool.pool_size = v
+	get:    return _server_pool.pool_size
+
+## The [TamaServerBulletPool] node. Connect to its [code]bullet_hit[/code]
+## signal to handle hit detection for server bullets.
+var server_bullet_pool:
+	get: return _server_pool
 
 ## Sets the fallback [PackedScene] used when a bullet has no [code]type[/code] statement
 ## or its type string is not registered.

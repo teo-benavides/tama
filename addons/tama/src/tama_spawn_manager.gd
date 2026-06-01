@@ -6,7 +6,8 @@ const _Ast         = preload("res://addons/tama/src/tama_ast.gd")
 ## Registry resource mapping bullet type strings to PackedScenes, with an optional default.
 var registry: TamaBulletRegistry
 
-var _repository: Node
+var _repository:   Node
+var _server_pool:  Node  # TamaServerBulletPool
 
 ## Node under which spawned bullets are added.
 var spawn_parent: NodePath
@@ -45,6 +46,19 @@ func _on_bullet_fired(data: _Interpreter.BulletFireData, spawner: Node2D) -> voi
 			if data.bullet_params[i] == data.bullet_type:
 				data.bullet_type = str(data.bullet_args[i])
 				break
+
+	# Fast path: server-based bullet (no node instantiation)
+	if registry and _server_pool:
+		var server_config := registry.get_server_config(data.bullet_type)
+		if server_config:
+			var angle    := _resolve_angle(data, spawner)
+			var spd      := _resolve_speed(data, spawner)
+			var position := _resolve_position(data, spawner, angle)
+			spawner.set("_last_angle", angle)
+			spawner.set("_last_speed", spd)
+			_server_pool.spawn(data, server_config, angle, spd, position, context)
+			return
+
 	var scene: PackedScene
 	if registry:
 		if data.bullet_type.is_empty():

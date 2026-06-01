@@ -6,7 +6,14 @@ var emitter: TamaEmitter
 var _loading_script := false
 
 func _ready() -> void:
+	var config = TamaServerBulletConfig.new()
+	config.texture = load("res://addons/tama/example/bullets/example_bullet.png")
+	config.rect = Rect2(-13.0, -13.0, 26.0, 26.0)
+	config.shape_radius = 1.0
+	config.collision_layer = 2
+	config.collision_mask = 1  # player's layer
 	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
+	TamaManager.register_server_bullet("fast", config)
 	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)
 	TamaManager.context = ExampleTamaContext.new()
 	_populate_script_list()
@@ -41,6 +48,7 @@ func _on_option_button_item_selected(index: int) -> void:
 func _restart_emitter(script_name: String) -> void:
 	get_tree().call_group(&"tama_emitters", &"queue_free")
 	get_tree().call_group(&"tama_bullets", &"destroy")
+	TamaManager.server_bullet_pool.recycle_all()
 	if emitter:
 		emitter.queue_free()
 	emitter = TamaEmitter.new()

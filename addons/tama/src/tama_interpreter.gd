@@ -112,6 +112,17 @@ var _fires_map:   Dictionary = {}
 var _acts_map:    Dictionary = {}
 var _bullets_map: Dictionary = {}
 
+# When set, used instead of get_tree() / get_parent() so the interpreter can run
+# without being added to the scene tree (e.g. inside TamaServerBulletPool).
+var _tree: SceneTree = null
+var _frame_loop_owner: Object = null
+
+func _get_tree() -> SceneTree:
+	return _tree if _tree else get_tree()
+
+func _get_frame_loop_owner() -> Object:
+	return _frame_loop_owner if _frame_loop_owner else get_parent()
+
 # Reusable arrays for scope filtering — avoids allocating new Arrays every _eval call.
 var _fk: Array[String] = []
 var _fv: Array         = []
@@ -127,8 +138,8 @@ static var _accel_buf := AccelData.new()
 # Entry points
 # ---------------------------------------------------------------------------
 
-# Run the program from main. The interpreter must be in the scene tree
-# (added as a child) so that get_tree() works for wait.
+# Run the program from main. The interpreter can be in the scene tree or freestanding;
+# if freestanding, set _tree and _frame_loop_owner before calling start().
 func _build_lookup_tables() -> void:
 	for f: _Ast.FireDefNode   in _program.fires:   _fires_map[f.name]   = f
 	for a: _Ast.ActDefNode    in _program.acts:    _acts_map[a.name]    = a
@@ -236,7 +247,7 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 			if rfn.count.strip_edges().is_empty():
 				# infinite — register frame loop and stop coroutine (terminal)
 				var captured_scope := scope
-				var owner := get_parent()
+				var owner := _get_frame_loop_owner()
 				frame_loop_registered.emit(owner, func():
 					if not is_instance_valid(owner):
 						TamaManager._unregister_frame_loop(owner)
@@ -265,7 +276,7 @@ func _exec_action_body(body: Array, scope: Dictionary) -> void:
 						break
 					i += 1
 					if _running and i < count_val:
-						await get_tree().physics_frame
+						await _get_tree().physics_frame
 		else:
 			await _exec_action_stmt(node, scope)
 
@@ -402,12 +413,12 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 	if node is _Ast.WaitNode:
 		var secs := _eval((node as _Ast.WaitNode).expr, scope)
 		if secs > 0.0:
-			await get_tree().create_timer(secs, false, true).timeout
+			await _get_tree().create_timer(secs, false, true).timeout
 
 	elif node is _Ast.WaitFramesNode:
 		var frames := int(_eval((node as _Ast.WaitFramesNode).expr, scope))
 		for _i in frames:
-			await get_tree().physics_frame
+			await _get_tree().physics_frame
 
 	elif node is _Ast.VanishNode:
 		_running = false
@@ -426,7 +437,7 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 		var rfn := node as _Ast.RepeatFrameNode
 		if rfn.count.strip_edges().is_empty():
 			var captured_scope := scope
-			var owner := get_parent()
+			var owner := _get_frame_loop_owner()
 			frame_loop_registered.emit(owner, func():
 				if not is_instance_valid(owner):
 					TamaManager._unregister_frame_loop(owner)
@@ -454,7 +465,7 @@ func _exec_action_stmt(node: _Ast.ASTNode, scope: Dictionary) -> void:
 					break
 				i += 1
 				if _running and i < count_val:
-					await get_tree().physics_frame
+					await _get_tree().physics_frame
 
 	elif node is _Ast.FireCallNode:
 		_exec_fire_call(node as _Ast.FireCallNode, scope)

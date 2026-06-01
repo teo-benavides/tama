@@ -1,10 +1,14 @@
 main
-    repeat
+    repeat 6
         repeat 500 i
             fire
                 dir abs (360.0/500.0) * i
                 spd 400
                 bul
                     type fast
+                    act
+                        chspd
+                            spd 10
+                            over 0.5
         wait 0.5
 

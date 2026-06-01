@@ -14,3 +14,12 @@ class_name TamaBulletRegistry
 ## Fallback scene used when a bullet omits the [code]type[/code] statement or its type
 ## string is not found in [member entries].
 @export var default_bullet: PackedScene
+
+## Maps bullet type strings to [TamaServerBulletConfig] resources.
+## Types registered here bypass node instantiation and use [RenderingServer] +
+## [PhysicsServer2D] directly via [TamaServerBulletPool] for maximum performance.
+@export var server_configs: Dictionary = {}
+
+## Returns the [TamaServerBulletConfig] for [param type], or null if not registered.
+func get_server_config(type: String) -> TamaServerBulletConfig:
+	return server_configs.get(type) as TamaServerBulletConfig
