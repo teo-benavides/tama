@@ -14,12 +14,14 @@
 #include "tama_spawn_manager.h"
 
 #include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
 using namespace godot;
 
-static TamaExprRuntime *s_expr_runtime = nullptr;
+static TamaExprRuntime *s_expr_runtime  = nullptr;
+static TamaManagerBase *s_tama_manager  = nullptr;
 
 void initialize_tama_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
@@ -47,11 +49,25 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
 
     s_expr_runtime = memnew(TamaExprRuntime);
     Engine::get_singleton()->register_singleton("TamaExprRuntime", s_expr_runtime);
+
+    // TamaManager is a pure C++ Engine singleton — no autoload, no GDScript wrapper.
+    // Sub-nodes (TamaSpawnManager, TamaServerBulletPool) are injected into the scene
+    // tree lazily on the first register_bullet / register_server_bullet call.
+    s_tama_manager = memnew(TamaManagerBase);
+    s_tama_manager->_repository = memnew(TamaScriptRepository);
+    Engine::get_singleton()->register_singleton("TamaManager", s_tama_manager);
+    TamaManagerBase::s_instance = s_tama_manager;
 }
 
 void uninitialize_tama_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
+    }
+    if (s_tama_manager) {
+        Engine::get_singleton()->unregister_singleton("TamaManager");
+        s_tama_manager->_shutdown();
+        memdelete(s_tama_manager);
+        s_tama_manager = nullptr;
     }
     if (s_expr_runtime) {
         Engine::get_singleton()->unregister_singleton("TamaExprRuntime");

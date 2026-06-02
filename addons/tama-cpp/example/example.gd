@@ -16,7 +16,9 @@ func _ready() -> void:
 	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
 	TamaManager.register_server_bullet("fast", config)
 	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)
-	TamaManager.context = ExampleTamaContext.new()
+	TamaManager.set_context(ExampleTamaContext.new())
+	TamaManager.load_scripts()
+	$TamaEmitter.start()
 	_populate_script_list()
 	_on_option_button_item_selected(0)
 
@@ -50,7 +52,7 @@ func _on_option_button_item_selected(index: int) -> void:
 func _restart_emitter(script_name: String) -> void:
 	get_tree().call_group(&"tama_emitters", &"queue_free")
 	get_tree().call_group(&"tama_bullets", &"destroy")
-	TamaManager.server_bullet_pool.recycle_all()
+	TamaManager.get_server_bullet_pool().recycle_all()
 	if emitter:
 		emitter.queue_free()
 	emitter = TamaEmitter.new()

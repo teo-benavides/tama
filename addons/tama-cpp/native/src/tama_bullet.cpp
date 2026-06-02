@@ -1,4 +1,5 @@
 #include "tama_bullet.h"
+#include "tama_manager.h"
 
 #include <cmath>
 #include <godot_cpp/classes/engine.hpp>
@@ -216,10 +217,9 @@ float TamaBullet::_dir_to_angle(int dir_type, float value) const {
     static const float DEG2RAD = 3.14159265f / 180.0f;
     switch (dir_type) {
         case 0: { // AIM
-            Engine *e = Engine::get_singleton();
-            Object *mgr = Object::cast_to<Object>(e->get_singleton("TamaManager"));
             Vector2 player_pos;
-            if (mgr) player_pos = (Vector2)mgr->get("player_position");
+            TamaManagerBase *mgr = TamaManagerBase::get_instance();
+            if (mgr) player_pos = mgr->get_player_position();
             return (player_pos - get_global_position()).angle() + value * DEG2RAD;
         }
         case 1: return value * DEG2RAD;       // ABS

@@ -1,4 +1,5 @@
 #include "tama_spawn_manager.h"
+#include "tama_manager.h"
 
 #include <cmath>
 #include <godot_cpp/classes/engine.hpp>
@@ -29,6 +30,11 @@ void TamaSpawnManager::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT,"context",    PROPERTY_HINT_NONE,"",PROPERTY_USAGE_NONE),"set_context","get_context");
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR2,"player_position",PROPERTY_HINT_NONE,"",PROPERTY_USAGE_NONE),"set_player_position","get_player_position");
     ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH,"spawn_parent",PROPERTY_HINT_NONE,"",PROPERTY_USAGE_NONE),"set_spawn_parent","get_spawn_parent");
+}
+
+void TamaSpawnManager::_exit_tree() {
+    TamaManagerBase *mgr = TamaManagerBase::get_instance();
+    if (mgr) mgr->_on_scene_nodes_freed();
 }
 
 void TamaSpawnManager::connect_interpreter(Object *interpreter, Node2D *spawner) {
@@ -63,7 +69,7 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
     }
 
     // Fast path: server bullet
-    if (registry && _server_pool) {
+    if (registry.is_valid() && _server_pool) {
         TamaServerBulletConfig *srv_cfg = registry->get_server_config(bullet_type);
         if (srv_cfg) {
             float angle    = _resolve_angle(data, spawner);
@@ -78,7 +84,7 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
 
     // Scene bullet path
     Ref<PackedScene> scene;
-    if (registry) {
+    if (registry.is_valid()) {
         if (!bullet_type or bullet_type.is_empty()) {
             scene = registry->default_bullet;
         } else {
@@ -91,6 +97,11 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
         UtilityFunctions::push_error("TamaSpawnManager: no scene for bullet type '" + bullet_type + "' (no default set)");
         return;
     }
+
+    // Bail out early if we're not in the scene tree yet (e.g. first physics tick
+    // fires before the deferred add_child for this node has executed).
+    Node *spawn_parent = _get_spawn_parent();
+    if (!spawn_parent) return;
 
     TamaBullet *bullet = Object::cast_to<TamaBullet>(scene->instantiate());
     if (!bullet) {
@@ -129,7 +140,7 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
         bullet->_mvmt_scope  = mvmt_scope;
     }
 
-    _get_spawn_parent()->call_deferred("add_child", Variant(bullet));
+    spawn_parent->call_deferred("add_child", Variant(bullet));
 
     Object *bullet_act         = Object::cast_to<Object>(data->get("bullet_act"));
     Object *bullet_emitter_act = Object::cast_to<Object>(data->get("bullet_emitter_act"));

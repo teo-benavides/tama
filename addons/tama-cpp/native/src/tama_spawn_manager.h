@@ -17,18 +17,20 @@ protected:
     static void _bind_methods();
 
 public:
-    TamaBulletRegistry  *registry     = nullptr;
+    godot::Ref<TamaBulletRegistry> registry;
     TamaScriptRepository*_repository  = nullptr;
     TamaServerBulletPool*_server_pool = nullptr;
     godot::Ref<TamaContext> context;
     godot::Vector2 player_position;
     godot::NodePath spawn_parent;
 
+    void _exit_tree();
+
     void connect_interpreter(godot::Object *interpreter, godot::Node2D *spawner);
     godot::Object *get_tama_script(const godot::String &filename) const;
 
-    TamaBulletRegistry *get_registry() const { return registry; }
-    void set_registry(TamaBulletRegistry *v)  { registry = v; }
+    TamaBulletRegistry *get_registry() const { return registry.ptr(); }
+    void set_registry(TamaBulletRegistry *v)  { registry = godot::Ref<TamaBulletRegistry>(v); }
     godot::Ref<TamaContext> get_context() const { return context; }
     void set_context(godot::Ref<TamaContext> v) { context = v; }
     godot::Vector2 get_player_position() const { return player_position; }

@@ -1,5 +1,6 @@
 #include "tama_emitter.h"
 #include "tama_manager.h"
+#include "tama_script_repository.h"
 
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/file_access.hpp>
@@ -124,28 +125,33 @@ void TamaEmitter::set_script_filename(const String &v) {
 // ---------------------------------------------------------------------------
 
 void TamaEmitter::start() {
+    UtilityFunctions::print("[TAMA] TamaEmitter::start script='", _script_filename, "'");
     if (_script_filename.is_empty()) {
         UtilityFunctions::push_error("TamaEmitter: script_filename is not set");
         return;
     }
-    Engine *engine = Engine::get_singleton();
-    Object *mgr = Object::cast_to<Object>(engine->get_singleton("TamaManager"));
-    if (!mgr) return;
-    Object *program = Object::cast_to<Object>(mgr->call("_get_tama_script", _script_filename));
+    TamaManagerBase *mgr = TamaManagerBase::get_instance();
+    if (!mgr) { UtilityFunctions::print("[TAMA] TamaEmitter::start: no mgr"); return; }
+    Object *program = mgr->_get_tama_script(_script_filename);
+    UtilityFunctions::print("[TAMA] TamaEmitter::start program=", (int64_t)(uintptr_t)program);
     if (!program) {
         UtilityFunctions::push_error(String("TamaEmitter: script '") + _script_filename + "' not found in repository (check tama/scripts_path project setting)");
         return;
     }
 
     _interpreter = memnew(TamaInterpreter);
-    Object *ctx = Object::cast_to<Object>(mgr->call("_get_context"));
-    _interpreter->set_context(ctx);
+    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter created");
+    _interpreter->set_context(mgr->_get_context());
+    UtilityFunctions::print("[TAMA] TamaEmitter::start: context set");
     _interpreter->connect("finished", callable_mp(this, &TamaEmitter::stop));
-    mgr->call("_connect_interpreter", Variant(_interpreter), Variant(this));
+    mgr->_connect_interpreter(_interpreter, this);
+    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter connected");
     add_child(_interpreter);
+    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter added as child");
     _running = true;
     Dictionary scope = _export_values.duplicate();
     _interpreter->start(program, scope);
+    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter started");
 }
 
 void TamaEmitter::stop() {
@@ -159,30 +165,7 @@ void TamaEmitter::stop() {
 // Editor helpers
 // ---------------------------------------------------------------------------
 
-void TamaEmitter::_refresh_exports() {
-    _cached_export_defs.clear();
-    if (_script_filename.is_empty()) return;
-
-    Object *program = nullptr;
-
-    if (Engine::get_singleton()->is_editor_hint()) {
-        // Parse the file directly using TamaScriptRepository
-        String path = _find_script_path();
-        if (path.is_empty()) return;
-        String source = FileAccess::get_file_as_string(path);
-        if (source.is_empty()) return;
-        String scripts_dir(String(ProjectSettings::get_singleton()->get_setting("tama/scripts_path", "res://tamascripts")));
-        TamaScriptRepository temp;
-        program = temp.parse_source_for_exports(source, scripts_dir);
-    } else {
-        Engine *engine = Engine::get_singleton();
-        Object *mgr = Object::cast_to<Object>(engine->get_singleton("TamaManager"));
-        if (mgr && (bool)mgr->call("_has_tama_script", _script_filename)) {
-            program = Object::cast_to<Object>(mgr->call("_get_script_from_repository", _script_filename));
-        }
-    }
-    if (!program) return;
-
+void TamaEmitter::_read_exports_from(Object *program) {
     Array exports = (Array)program->get("exports");
     for (int i = 0; i < exports.size(); ++i) {
         Object *exp = Object::cast_to<Object>(exports[i].operator Object *());
@@ -194,6 +177,31 @@ void TamaEmitter::_refresh_exports() {
         _cached_export_defs.push_back(def);
         if (def.default_value.get_type() != Variant::NIL && !_export_values.has(def.name))
             _export_values[def.name] = def.default_value;
+    }
+}
+
+void TamaEmitter::_refresh_exports() {
+    _cached_export_defs.clear();
+    if (_script_filename.is_empty()) return;
+
+    if (Engine::get_singleton()->is_editor_hint()) {
+        String path = _find_script_path();
+        if (path.is_empty()) return;
+        String source = FileAccess::get_file_as_string(path);
+        if (source.is_empty()) return;
+        String scripts_dir(String(ProjectSettings::get_singleton()->get_setting("tama/scripts_path", "res://tamascripts")));
+        // Must use memnew — Godot Objects cannot be stack-allocated.
+        // parse_source_for_exports stores the AST in the repo so the raw pointer stays valid.
+        TamaScriptRepository *temp = memnew(TamaScriptRepository);
+        Object *program = temp->parse_source_for_exports(source, scripts_dir);
+        if (program) _read_exports_from(program);
+        memdelete(temp);
+    } else {
+        TamaManagerBase *mgr = TamaManagerBase::get_instance();
+        if (mgr && mgr->_has_tama_script(_script_filename)) {
+            Object *program = mgr->_get_script_from_repository(_script_filename);
+            if (program) _read_exports_from(program);
+        }
     }
 }
 

@@ -15,10 +15,6 @@ run/main_scene="res://addons/tama-cpp/example/example.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="uid://2rof51lmjyrt"
 
-[autoload]
-
-TamaManager="*uid://diemlyqlnn5vp"
-
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/tama-cpp/plugin.cfg")

@@ -64,6 +64,7 @@ private:
     static constexpr float POLL_INTERVAL = 1.0f;
 
     void  _refresh_exports();
+    void  _read_exports_from(godot::Object *program);
     godot::String _exports_signature() const;
     godot::String _find_script_path() const;
     uint64_t      _get_script_mtime() const;

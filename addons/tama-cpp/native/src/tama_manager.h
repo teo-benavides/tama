@@ -5,21 +5,20 @@
 #include "tama_server_bullet_pool.h"
 #include "tama_spawn_manager.h"
 
-#include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/classes/object.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/variant/node_path.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
-class TamaManagerBase : public godot::Node {
-    GDCLASS(TamaManagerBase, godot::Node)
+class TamaManagerBase : public godot::Object {
+    GDCLASS(TamaManagerBase, godot::Object)
 protected:
     static void _bind_methods();
 
 public:
-    void _enter_tree() override;
-    void _exit_tree()  override;
-    void _ready()      override;
+    static TamaManagerBase *s_instance;
+    static TamaManagerBase *get_instance() { return s_instance; }
 
     // -----------------------------------------------------------------------
     // Public API
@@ -43,7 +42,7 @@ public:
     void set_registry(TamaBulletRegistry *v);
     godot::Object *get_server_bullet_pool() const;
 
-    // Internal — used by TamaEmitter / TamaBullet
+    // Internal — used by TamaEmitter / TamaBullet / TamaServerBulletPool
     godot::Object *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
     godot::Object *_get_script_from_repository(const godot::String &filename) const;
@@ -51,10 +50,19 @@ public:
     godot::Object *_get_context() const { return _spawn_manager ? _spawn_manager->get_context().ptr() : nullptr; }
     godot::String  _get_scripts_path() const;
 
+    // Called from register_types
+    void _shutdown();
+    // Called from TamaSpawnManager/TamaServerBulletPool when freed by the scene tree
+    void _on_scene_nodes_freed();
+
+    friend void initialize_tama_module(godot::ModuleInitializationLevel);
+
 private:
     TamaScriptRepository *_repository    = nullptr;
     TamaSpawnManager     *_spawn_manager = nullptr;
     TamaServerBulletPool *_server_pool   = nullptr;
+    bool                  _nodes_injected = false;
 
+    void _ensure_scene_nodes();
     void _ensure_registry();
 };

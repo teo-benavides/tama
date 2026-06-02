@@ -147,8 +147,10 @@ bool TamaScriptRepository::has_tama_script(const String &filename) const {
 }
 
 Object *TamaScriptRepository::parse_source_for_exports(const String &source,
-                                                         const String &scripts_dir) const {
+                                                         const String &scripts_dir) {
     Resolver res = _make_resolver(scripts_dir.utf8().get_data());
     Ref<TamaASTNode> prog = _parse_source(source.utf8().get_data(), "<editor>", res);
+    if (!prog.is_valid()) return nullptr;
+    _scripts["<editor>"] = prog;
     return prog.ptr();
 }

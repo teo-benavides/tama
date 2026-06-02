@@ -27,8 +27,9 @@ public:
 
     // Parse a raw source string and return a ProgramNode (may be null on failure).
     // `scripts_dir` is used to resolve 'include' directives.
+    // The returned pointer is valid until this repository is destroyed.
     godot::Object *parse_source_for_exports(const godot::String &source,
-                                            const godot::String &scripts_dir) const;
+                                            const godot::String &scripts_dir);
 
 private:
     std::unordered_map<std::string, godot::Ref<TamaASTNode>> _scripts;

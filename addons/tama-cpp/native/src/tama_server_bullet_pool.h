@@ -79,6 +79,10 @@ class TamaServerBulletPool : public godot::Node2D {
     // Flat list of all active bullets across all types (ptr into TypeData.bullets)
     std::vector<BulletState *> _active;
 
+    // Registrations queued before the node enters the scene tree
+    struct PendingReg { godot::String key; godot::Object *config; };
+    std::vector<PendingReg> _pending_regs;
+
     float _bounds_margin = 64.0f;
 
     // Cached threshold (read from ProjectSettings in _ready)

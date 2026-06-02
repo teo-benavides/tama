@@ -1,5 +1,6 @@
 #include "tama_server_bullet_pool.h"
 #include "tama_interpreter.h"
+#include "tama_manager.h"
 
 #include <algorithm>
 #include <cmath>
@@ -93,24 +94,26 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 // Helpers
 // ---------------------------------------------------------------------------
 
-// GDScript autoloads are scene-tree nodes, not Engine singletons.
-// Engine::get_singleton("TamaManager") prints an error and returns null for them.
-static Node *_get_tama_manager(SceneTree *tree) {
-    if (!tree || !tree->get_root()) return nullptr;
-    return tree->get_root()->get_node_or_null(NodePath("/root/TamaManager"));
-}
 
 // ---------------------------------------------------------------------------
 // Godot virtuals
 // ---------------------------------------------------------------------------
 
 void TamaServerBulletPool::_ready() {
+    UtilityFunctions::print("[TAMA] TamaServerBulletPool::_ready pending=", (int)_pending_regs.size());
     set_physics_process(true);
     _composite_threshold = (int)ProjectSettings::get_singleton()
         ->get_setting("tama/server_bullet_composite_threshold", 1000);
+    for (auto &pr : _pending_regs)
+        register_type(pr.key, pr.config);
+    _pending_regs.clear();
+    UtilityFunctions::print("[TAMA] TamaServerBulletPool::_ready done types=", (int)_types.size());
 }
 
 void TamaServerBulletPool::_exit_tree() {
+    TamaManagerBase *mgr = TamaManagerBase::get_instance();
+    if (mgr) mgr->_on_scene_nodes_freed();
+
     for (auto &[key, td] : _types) {
         for (auto rid : td->shapes)
             PhysicsServer2D::get_singleton()->free_rid(rid);
@@ -123,6 +126,10 @@ void TamaServerBulletPool::_exit_tree() {
 // ---------------------------------------------------------------------------
 
 void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) {
+    if (!is_inside_tree()) {
+        _pending_regs.push_back({p_key, p_config});
+        return;
+    }
     std::string key = p_key.utf8().get_data();
     if (_types.count(key)) {
         UtilityFunctions::push_warning("TamaServerBulletPool: type '" + p_key + "' already registered.");
@@ -508,8 +515,14 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
 // ---------------------------------------------------------------------------
 
 void TamaServerBulletPool::_physics_process(double p_delta) {
+    static int pool_frame = 0;
+    ++pool_frame;
+    UtilityFunctions::print("[TAMA] pool _physics_process frame=", pool_frame,
+        " active=", (int)_active.size(), " types=", (int)_types.size());
+
     float delta   = (float)p_delta;
     Rect2 bounds  = _world_bounds().grow(_bounds_margin);
+    UtilityFunctions::print("[TAMA] pool bounds computed frame=", pool_frame);
     TamaExprRuntime *er = TamaExprRuntime::get_singleton();
 
     // Step all bullet act runners before updating positions
@@ -519,6 +532,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             if (ti && ti->is_running()) ti->step(delta);
         }
     }
+    UtilityFunctions::print("[TAMA] pool runners stepped frame=", pool_frame);
 
     std::vector<BulletState *> to_recycle;
 
@@ -557,8 +571,13 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             to_recycle.push_back(b);
     }
 
+    UtilityFunctions::print("[TAMA] pool bullets updated frame=", pool_frame,
+        " to_recycle=", (int)to_recycle.size());
+
     for (BulletState *b : to_recycle)
         _recycle_internal(b);
+
+    UtilityFunctions::print("[TAMA] pool frame=", pool_frame, " DONE");
 
     if (!_active.empty())
         queue_redraw();
@@ -623,10 +642,9 @@ float TamaServerBulletPool::_dir_to_angle(const BulletState &b, int dir_type, fl
     // Note: value is already in radians (interpreter calls deg_to_rad)
     switch (dir_type) {
     case 0: { // AIM
-        Object *mgr = _get_tama_manager(get_tree());
+        TamaManagerBase *mgr = TamaManagerBase::get_instance();
         if (mgr) {
-            Vector2 pp = (Vector2)mgr->get("player_position");
-            return (pp - b.position).angle() + value;
+            return (mgr->get_player_position() - b.position).angle() + value;
         }
         return value;
     }
