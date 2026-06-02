@@ -1,0 +1,72 @@
+#pragma once
+#include "tama_interpreter.h"
+
+#include <godot_cpp/classes/character_body2d.hpp>
+#include <godot_cpp/classes/tween.hpp>
+#include <godot_cpp/variant/string.hpp>
+#include <godot_cpp/variant/vector2.hpp>
+
+class TamaBullet : public godot::CharacterBody2D {
+    GDCLASS(TamaBullet, godot::CharacterBody2D)
+protected:
+    static void _bind_methods();
+
+public:
+    // Set by TamaSpawnManager before add_child
+    godot::Object *_runner        = nullptr;
+    float          _angle         = 0.0f;
+    float          _speed         = 0.0f;
+    float          _speed_x       = 0.0f;
+    float          _speed_y       = 0.0f;
+    float          _last_angle    = 0.0f;
+    float          _last_speed    = 0.0f;
+    bool           _mvmt_x_set    = false;
+    int            _mvmt_x_type   = 0;
+    godot::String  _mvmt_x_expr;
+    bool           _mvmt_y_set    = false;
+    int            _mvmt_y_type   = 0;
+    godot::String  _mvmt_y_expr;
+    godot::Dictionary _mvmt_scope;
+    godot::Vector2 _initial_position;
+
+    bool rotates = true;
+
+    // Godot virtuals
+    void _ready()                       override;
+    void _physics_process(double delta) override;
+
+    // Public API
+    virtual void destroy();
+
+    // Tween-accessible property accessors (required for NodePath tweening)
+    float  get_angle()    const { return _angle; }
+    void   set_angle(float v)   { _angle = v; }
+    float  get_speed()    const { return _speed; }
+    void   set_speed(float v)   { _speed = v; }
+    float  get_speed_x()  const { return _speed_x; }
+    void   set_speed_x(float v) { _speed_x = v; }
+    float  get_speed_y()  const { return _speed_y; }
+    void   set_speed_y(float v) { _speed_y = v; }
+
+    bool  get_rotates()   const { return rotates; }
+    void  set_rotates(bool v)   { rotates = v; }
+
+    godot::Vector2 get_initial_position() const { return _initial_position; }
+    void set_initial_position(godot::Vector2 v) { _initial_position = v; }
+
+private:
+    godot::Ref<godot::Tween> _dir_tween;
+    godot::Ref<godot::Tween> _spd_tween;
+    godot::Ref<godot::Tween> _pos_tween;
+    godot::Ref<godot::Tween> _accel_tween;
+
+    void _on_changed_direction(godot::Variant data);
+    void _on_changed_speed(godot::Variant data);
+    void _on_changed_position(godot::Variant data);
+    void _on_accelerated(godot::Variant data);
+    void _on_vanished();
+
+    float _dir_to_angle(int dir_type, float value) const;
+    float _spd_to_value(int speed_type, float value) const;
+    float _accel_axis_end(int axis_type, float value, float current, float over) const;
+};

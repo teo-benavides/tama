@@ -1,0 +1,7 @@
+main
+    repeat 5000
+        fire
+            dir abs 0
+            spd 0
+            bul
+                type fast

@@ -1,0 +1,18 @@
+main
+    fire
+        dir abs 0
+        speed abs 0
+        bullet shooter(16)
+
+fire bwp(direction)
+    dir rel direction
+    speed abs 250
+
+bullet shooter(amt)
+    act
+        repeat
+            repeat amt i
+                fire bwp((360/amt) * i)
+            chdir
+                dir rel time()*4
+            waitf 3

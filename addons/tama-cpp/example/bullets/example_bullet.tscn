@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://cppbullet001"]
+
+[ext_resource type="Script" uid="uid://d3s2b5wwu1egu" path="res://addons/tama-cpp/example/bullets/example_bullet.gd" id="1_v5ve1"]
+[ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama-cpp/example/bullets/small_bullet.png" id="2_b2jda"]
+
+[node name="ExampleBullet" type="TamaBullet" unique_id=561976428]
+script = ExtResource("1_v5ve1")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=281565911]
+texture_filter = 1
+texture = ExtResource("2_b2jda")
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=1530201192]
+rect = Rect2(-7, -4, 14, 8)
+
+[connection signal="screen_exited" from="VisibleOnScreenNotifier2D" to="." method="_on_visible_on_screen_notifier_2d_screen_exited"]

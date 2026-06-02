@@ -1,0 +1,14 @@
+main
+    repeat
+        fire
+            dir abs -90 + randf_range(-10.0, 10.0)
+            spd 400
+            bullet falling
+        waitf 1
+
+bullet falling
+    type fast
+    act
+        repeatf 120
+            accel
+                y rel 10

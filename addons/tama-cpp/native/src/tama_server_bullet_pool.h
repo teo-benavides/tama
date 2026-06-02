@@ -1,0 +1,157 @@
+#pragma once
+#include "tama_server_bullet.h"
+
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include <godot_cpp/classes/multi_mesh.hpp>
+#include <godot_cpp/classes/node2d.hpp>
+#include <godot_cpp/classes/quad_mesh.hpp>
+#include <godot_cpp/variant/callable.hpp>
+#include <godot_cpp/variant/rid.hpp>
+#include <godot_cpp/variant/string.hpp>
+#include <godot_cpp/variant/vector2.hpp>
+
+// ---------------------------------------------------------------------------
+// TamaServerBulletPool — C++ port of tama_server_bullet_pool.gd
+// ---------------------------------------------------------------------------
+
+class TamaServerBulletPool : public godot::Node2D {
+    GDCLASS(TamaServerBulletPool, godot::Node2D)
+
+    // ------------------------------------------------------------------
+    // Internal structures (mirrors GDScript _BatchData / _TypeData)
+    // ------------------------------------------------------------------
+
+    static constexpr int BATCH_CHUNK = 256;
+
+    struct BatchData {
+        godot::Ref<godot::MultiMesh> multimesh_res;
+        godot::RID multimesh;
+        int used         = 0;
+        int active_count = 0;
+        int birth_frame  = -1;
+    };
+
+    struct TypeData {
+        // Config properties (read once at register_type from GDScript Resource)
+        godot::Ref<godot::Texture2D> texture;
+        godot::Rect2    rect         = {-8.0f, -8.0f, 16.0f, 16.0f};
+        godot::Vector2  texture_scale = {1.0f, 1.0f};
+        float  shape_radius   = 6.0f;
+        int    collision_layer = 1;
+        int    collision_mask  = 2;
+        bool   rotates         = true;
+        int    pool_size       = 1000;
+
+        // GPU resources
+        godot::Ref<godot::QuadMesh> quad;
+        godot::Ref<godot::MultiMesh> composite_res;
+        godot::RID composite;
+        godot::RID area;
+        std::vector<godot::RID> shapes;
+
+        // Bullet state flat array (indexed by global slot)
+        std::vector<BulletState>        bullets;
+        std::vector<TamaServerBullet *> wrappers;
+
+        // FIFO ring buffer for slot allocation
+        std::vector<int32_t> ring;
+        int ring_r     = 0;
+        int ring_w     = 0;
+        int ring_count = 0;
+
+        // Render batch management
+        std::vector<BatchData *> active_batches; // birth-order (oldest first)
+        std::vector<BatchData *> free_batches;
+        BatchData *cur_batch  = nullptr;
+        int64_t    cur_frame  = -1;
+    };
+
+    // ------------------------------------------------------------------
+    // State
+    // ------------------------------------------------------------------
+
+    std::unordered_map<std::string, TypeData *> _types;
+
+    // Flat list of all active bullets across all types (ptr into TypeData.bullets)
+    std::vector<BulletState *> _active;
+
+    float _bounds_margin = 64.0f;
+
+    // Cached threshold (read from ProjectSettings in _ready)
+    int _composite_threshold = 1000;
+
+
+    // ------------------------------------------------------------------
+    // Internal helpers
+    // ------------------------------------------------------------------
+
+    BatchData *_get_batch(TypeData &td);
+    void       _recycle_batch(TypeData &td, BatchData *batch);
+    void       _recycle_internal(BulletState *b);
+
+    void _step_tweens(BulletState &b, float delta);
+    // Signal handlers: (signal_data, wrapper_object) — wrapper is bound via Callable::bind()
+    // Using Object* as the bound arg because BulletState* is not Variant-compatible.
+    void _on_changed_direction(godot::Object *data, godot::Object *wrapper);
+    void _on_changed_speed(godot::Object *data, godot::Object *wrapper);
+    void _on_changed_position(godot::Object *data, godot::Object *wrapper);
+    void _on_accelerated(godot::Object *data, godot::Object *wrapper);
+
+    float _dir_to_angle(const BulletState &b, int dir_type, float value) const;
+    float _spd_to_value(const BulletState &b, int speed_type, float value) const;
+    float _accel_axis_end(int axis_type, float value, float current, float over) const;
+
+    godot::Rect2 _world_bounds() const;
+
+    static void _area_monitor_callback(
+            int status, godot::RID body_rid, int64_t body_iid,
+            int body_shape, int local_shape,
+            TamaServerBulletPool *self, godot::String type_key);
+
+protected:
+    static void _bind_methods();
+
+public:
+    TamaServerBulletPool()  = default;
+    ~TamaServerBulletPool() override;
+
+    // Godot virtuals
+    void _ready()                   override;
+    void _physics_process(double delta) override;
+    void _draw()                    override;
+    void _exit_tree()               override;
+
+    // ------------------------------------------------------------------
+    // Public GDScript API (same names as GDScript version)
+    // ------------------------------------------------------------------
+
+    // Register a bullet type. config is a GDScript TamaServerBulletConfig Resource.
+    void register_type(const godot::String &key, godot::Object *config);
+
+    // Spawn a server bullet.
+    // data:    BulletFireData Object from GDScript TamaInterpreter
+    // config:  TamaServerBulletConfig Object
+    // Returns the TamaServerBullet wrapper, or null if pool full.
+    godot::Object *spawn(godot::Object *data, godot::Object *config,
+                         float angle, float speed, godot::Vector2 position,
+                         godot::Object *context);
+
+    void recycle(godot::Object *bullet_wrapper);
+    void recycle_all();
+
+    // ------------------------------------------------------------------
+    // Properties
+    // ------------------------------------------------------------------
+
+    void  set_bounds_margin(float v) { _bounds_margin = v; }
+    float get_bounds_margin() const  { return _bounds_margin; }
+
+    // ------------------------------------------------------------------
+    // Signals
+    // ------------------------------------------------------------------
+    // bullet_hit(bullet: TamaServerBullet, body_instance_id: int)
+};

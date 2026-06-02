@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://cppexample001"]
+
+[ext_resource type="Script" uid="uid://cit8qf228utpc" path="res://addons/tama-cpp/example/example.gd" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://cppplayer001" path="res://addons/tama-cpp/example/player/example_player.tscn" id="3_h2yge"]
+
+[node name="TamaExample" type="Node2D" unique_id=1817544635]
+script = ExtResource("1_ig7tw")
+
+[node name="EmitterPosition" type="Marker2D" parent="." unique_id=1648329798]
+position = Vector2(565, 310)
+
+[node name="ExamplePlayer" parent="." unique_id=985488048 instance=ExtResource("3_h2yge")]
+position = Vector2(372, 446)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1693199720]
+
+[node name="Container" type="VBoxContainer" parent="CanvasLayer" unique_id=248366487]
+offset_left = 710.0
+offset_top = 1.0
+offset_right = 1147.0
+offset_bottom = 649.0
+
+[node name="OptionButton" type="OptionButton" parent="CanvasLayer/Container" unique_id=1406359509]
+layout_mode = 2
+
+[node name="TextEdit" type="TextEdit" parent="CanvasLayer/Container" unique_id=68398283]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 12
+
+[connection signal="item_selected" from="CanvasLayer/Container/OptionButton" to="." method="_on_option_button_item_selected"]
+[connection signal="text_changed" from="CanvasLayer/Container/TextEdit" to="." method="_on_text_edit_text_changed"]

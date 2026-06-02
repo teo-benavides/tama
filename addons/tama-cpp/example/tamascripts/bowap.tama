@@ -1,0 +1,43 @@
+# main is where we start the pattern.
+# BoWaP is basically a spawner that constantly shoots bullets in a circle.
+# (8 bullets here) while constantly spinning at an *accelerating* rate.
+# So its rotation speed is ever-greater creating a weird effect where
+# it alternates between the streams of 8 bullets being aligned, and being unaligned and chaotic
+main
+    # We fire a bullet that will fire other bullets.
+    # This is because we need a constantly rotating spawner.
+    fire
+        dir abs 0 # fire in an absolute direction of 0. doesn't matter because this spawner doesn't move through space
+        speed abs 0 # fire with a speed of 0 i.e. stays still
+        bullet shooter # use the "shooter" bullet defined below
+
+# What we use to fire a single bullet in the pattern
+fire bwp(direction)
+    dir rel direction # we set the firing direction, using the passed in direction argument. This direction is relative to the direction of the bullet that spawned it.
+    speed abs 250 # fire with speed of 250
+    # the bullet block or the type statement can be omitted if we want to spawn the default bullet
+    bullet # we define a bullet to fire...
+        type example # ...and set its type to "example", which loads the appropriate scene from the bullet registry.
+
+# We define a bullet.
+bullet shooter
+    act # This is an action. Essentially, a place where you *do stuff*, such as changing the bullet's angle or speed.
+        repeat # loop through the below code forever (there's no expression indicating how many times we want to repeat)
+            repeat 8 i # repeat the code below 8 times and save the current iteration count in i
+                fire bwp((360/8) * i) # divide a circle in 8 parts and shoot a bullet for the part we're currently in
+            chdir # chdir changes the direction, or angle, of the bullet
+                # This is where the magic happens.
+                # We set the direction to time(), which returns the amount of time passed since the start of the game.
+                # 'rel' means we add this angle to the previous angle.
+                # If it was 'abs' instead, it would linearly increase with time.
+                # But since it's 'rel', the angle increases faster and faster as time passes.
+                # Say it starts at angle 10 and 1 frame has passed. We add 1 and get 11.
+                # Next frame, We add 2 to 11 and get 13.
+                # 13 + 3 = 16
+                # 16 + 4 = 20
+                # 20 + 5 = 25
+                # This quickly spirals out of control.
+                # The *4 is just there to make the spinning faster.
+                dir rel time()*4 
+                over 0 # Change direction over 0 seconds, so instantly.
+            waitf 3 # wait 3 frames before shooting again

@@ -1,0 +1,14 @@
+[configuration]
+entry_symbol = "tama_library_init"
+compatibility_minimum = "4.4"
+
+[libraries]
+windows.editor.x86_64     = "res://addons/tama-cpp/bin/libtama.windows.template_debug.x86_64.dll"
+windows.template_debug.x86_64   = "res://addons/tama-cpp/bin/libtama.windows.template_debug.x86_64.dll"
+windows.template_release.x86_64 = "res://addons/tama-cpp/bin/libtama.windows.template_release.x86_64.dll"
+linux.editor.x86_64       = "res://addons/tama-cpp/bin/libtama.linux.editor.x86_64.so"
+linux.template_debug.x86_64     = "res://addons/tama-cpp/bin/libtama.linux.template_debug.x86_64.so"
+linux.template_release.x86_64   = "res://addons/tama-cpp/bin/libtama.linux.template_release.x86_64.so"
+macos.editor              = "res://addons/tama-cpp/bin/libtama.macos.editor.universal.dylib"
+macos.template_debug      = "res://addons/tama-cpp/bin/libtama.macos.template_debug.universal.dylib"
+macos.template_release    = "res://addons/tama-cpp/bin/libtama.macos.template_release.universal.dylib"

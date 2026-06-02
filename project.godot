@@ -11,17 +11,17 @@ config_version=5
 [application]
 
 config/name="Tama"
-run/main_scene="uid://ddi7qj5x80hqh"
+run/main_scene="res://addons/tama-cpp/example/example.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="uid://2rof51lmjyrt"
 
 [autoload]
 
-TamaManager="*uid://fvu4436xvglo"
+TamaManager="*uid://diemlyqlnn5vp"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/tama/plugin.cfg")
+enabled=PackedStringArray("res://addons/tama-cpp/plugin.cfg")
 
 [physics]
 
@@ -35,4 +35,4 @@ renderer/rendering_method.mobile="gl_compatibility"
 
 [tama]
 
-scripts_path="res://addons/tama/example/tamascripts"
+scripts_path="res://addons/tama-cpp/example/tamascripts"
