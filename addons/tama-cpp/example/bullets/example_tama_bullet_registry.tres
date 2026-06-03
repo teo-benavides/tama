@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://5xunk2d2cj4n" path="res://addons/tama-cpp/example/bullets/small_bullet_blue.png" id="3_gulsf"]
 [ext_resource type="Texture2D" uid="uid://da1dadyp1bofm" path="res://addons/tama-cpp/example/bullets/small_bullet_green.png" id="4_n53vu"]
 [ext_resource type="Texture2D" uid="uid://65p6f1ql1q4y" path="res://addons/tama-cpp/example/bullets/small_bullet_orange.png" id="5_d4i3m"]
+[ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama-cpp/example/bullets/example_bullet.png" id="6_gulsf"]
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_qlh80"]
 frames = Array[Texture2D]([ExtResource("3_gulsf")])
@@ -38,10 +39,19 @@ fps = 30.0
 pool_size = 10000
 rect = Rect2(-7, -4, 14, 8)
 
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_n53vu"]
+frames = Array[Texture2D]([ExtResource("6_gulsf")])
+texture_scale = Vector2(0.2, 0.2)
+shape_radius = 1.0
+rotates = false
+pool_size = 10000
+rect = Rect2(-64, -64, 128, 128)
+
 [resource]
 default_bullet = ExtResource("1_0v7u8")
 server_configs = {
 "blue": SubResource("TamaServerBulletConfig_qlh80"),
+"circle": SubResource("TamaServerBulletConfig_n53vu"),
 "fast": SubResource("TamaServerBulletConfig_4uqhx"),
 "green": SubResource("TamaServerBulletConfig_3xnr6"),
 "orange": SubResource("TamaServerBulletConfig_d4i3m"),

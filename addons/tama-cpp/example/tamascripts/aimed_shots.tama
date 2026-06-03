@@ -1,4 +1,4 @@
 include builtin
 
 main
-    act act_every(0.5, aimed_shots(5, 80, 200))
+    act act_every(0.5, aimed_shots(5, 80, 200, orange))

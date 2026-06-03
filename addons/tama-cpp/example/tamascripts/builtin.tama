@@ -17,11 +17,13 @@ act spiral(steps, interval, spd_, offset_)
             offset offset_
         wait interval
 
-act aimed_shots(amount, spread, spd_)
+act aimed_shots(amount, spread, spd_, bullet_type)
     repeat amount i
         fire
             dir aim (2*i + 1 - amount) * spread / (2 * maxf(amount - 1, 1))
             spd spd_
+            bul
+                type bullet_type
 
 act act_every(seconds, act_)
     repeat
@@ -42,3 +44,11 @@ act fire_everyf(frames, fire_)
     repeat
         fire fire_
         waitf frames
+
+act multishot(amount, spread, interval, angle, dirtype, speed_, iterations)
+    repeat iterations
+        repeat amount i
+            fire
+                dir dirtype (2*i + 1 - amount) * spread / (2 * maxi(amount - 1, 1)) + angle
+                spd speed_
+        wait interval
