@@ -15,4 +15,5 @@ func _physics_process(delta):
 
 func _on_server_bullet_hit(bullet, body_instance_id: int) -> void:
 	if body_instance_id == get_instance_id():
-		print("got hit by server bullet")
+		pass
+		#print("got hit by server bullet")

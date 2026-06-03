@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/physics_server2d.hpp>
@@ -333,6 +334,7 @@ Object *_TamaServerBulletPool::spawn(
     b.pos_tween.active   = false;
     b.sx_tween.active    = false;
     b.sy_tween.active    = false;
+    b.vel_dirty          = true;
 
     // mvmt
     b.mvmt_x_set  = (bool)p_data->get("mvmt_x_set");
@@ -529,18 +531,21 @@ void _TamaServerBulletPool::_physics_process(double p_delta) {
     godot::Object *ctx  = mgr ? mgr->_get_context() : nullptr;
     _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
 
-    // Step all bullet act runners before updating positions
+    _to_recycle.clear();
+
     for (BulletState *b : _active) {
+        // Step runner before this bullet's position update so script changes
+        // take effect in the same frame they are issued.
         if (b->runner) {
             _TamaInterpreter *ti = Object::cast_to<_TamaInterpreter>(b->runner);
             if (ti && ti->is_running()) ti->step(delta);
         }
-    }
 
-    std::vector<BulletState *> to_recycle;
-
-    for (BulletState *b : _active) {
+        // Mark velocity dirty when any relevant tween is active this frame.
+        bool tween_was_active = b->angle_tween.active || b->speed_tween.active
+                             || b->sx_tween.active    || b->sy_tween.active;
         _step_tweens(*b, delta);
+        if (tween_was_active) b->vel_dirty = true;
 
         Vector2 pos_before = b->position;
 
@@ -560,22 +565,26 @@ void _TamaServerBulletPool::_physics_process(double p_delta) {
                     : b->initial_position.y + (float)vy;
             }
         } else {
-            float cx = std::cos(b->angle), cy = std::sin(b->angle);
-            b->position.x += (cx * b->speed + b->speed_x) * delta;
-            b->position.y += (cy * b->speed + b->speed_y) * delta;
+            // Recompute cached velocity only when dirty (angle/speed/speed_x/speed_y changed).
+            if (b->vel_dirty) {
+                b->cached_vx = std::cos(b->angle) * b->speed + b->speed_x;
+                b->cached_vy = std::sin(b->angle) * b->speed + b->speed_y;
+                b->vel_dirty = false;
+            }
+            b->position.x += b->cached_vx * delta;
+            b->position.y += b->cached_vy * delta;
         }
 
         float rot = 0.0f;
         if (b->rotates) {
             if (b->face_velocity) {
                 if (b->mvmt_x_set || b->mvmt_y_set) {
-                    // Derive velocity from position delta this frame
                     Vector2 dp = b->position - pos_before;
                     rot = dp.length_squared() > 1e-8f ? std::atan2(dp.y, dp.x) : b->angle;
                 } else {
-                    float vx = std::cos(b->angle) * b->speed + b->speed_x;
-                    float vy = std::sin(b->angle) * b->speed + b->speed_y;
-                    rot = (vx != 0.0f || vy != 0.0f) ? std::atan2(vy, vx) : b->angle;
+                    // Reuse cached velocity — no extra trig needed.
+                    rot = (b->cached_vx != 0.0f || b->cached_vy != 0.0f)
+                        ? std::atan2(b->cached_vy, b->cached_vx) : b->angle;
                 }
             } else {
                 rot = b->angle;
@@ -592,10 +601,10 @@ void _TamaServerBulletPool::_physics_process(double p_delta) {
             b->position.y < world.position.y - m ||
             b->position.x > world.get_end().x   + m ||
             b->position.y > world.get_end().y   + m)
-            to_recycle.push_back(b);
+            _to_recycle.push_back(b);
     }
 
-    for (BulletState *b : to_recycle)
+    for (BulletState *b : _to_recycle)
         _recycle_internal(b);
 
     // Advance per-batch sprite animations (each batch has its own independent frame offset)
@@ -633,21 +642,29 @@ void _TamaServerBulletPool::_draw() {
         } else {
             // Composite: concatenate all batch transforms into one draw call.
             // Only reached for static (non-animated) types above the threshold.
-            PackedFloat32Array buf;
+            // _composite_buf is a persistent member — resize never reallocates downward,
+            // so it reaches steady-state capacity quickly and stays there.
+            int total_floats = 0;
+            for (BatchData *batch : td->active_batches)
+                total_floats += batch->used * 8;
+            if (total_floats == 0) continue;
+
+            _composite_buf.resize(total_floats);
+            float *dst = _composite_buf.ptrw();
+            int offset = 0;
             for (BatchData *batch : td->active_batches) {
                 if (batch->used <= 0) continue;
                 PackedFloat32Array src = RenderingServer::get_singleton()
                     ->multimesh_get_buffer(batch->multimesh);
-                // Each instance: 8 floats for TRANSFORM_2D
-                int byte_count = batch->used * 8;
-                if (src.size() >= byte_count) {
-                    for (int i = 0; i < byte_count; ++i)
-                        buf.push_back(src[i]);
+                int count = batch->used * 8;
+                if (src.size() >= count) {
+                    std::memcpy(dst + offset, src.ptr(), count * sizeof(float));
+                    offset += count;
                 }
             }
-            if (buf.is_empty()) continue;
-            td->composite_res->set_instance_count(buf.size() / 8);
-            RenderingServer::get_singleton()->multimesh_set_buffer(td->composite, buf);
+            if (offset == 0) continue;
+            td->composite_res->set_instance_count(offset / 8);
+            RenderingServer::get_singleton()->multimesh_set_buffer(td->composite, _composite_buf);
             draw_multimesh(td->composite_res, td->first_texture);
         }
     }
@@ -672,24 +689,22 @@ void _TamaServerBulletPool::_step_tweens(BulletState &b, float delta) {
 // DirType: AIM=0, ABS=1, REL=2, SEQ=3 — ValueType: ABS=0, REL=1, SEQ=2
 
 float _TamaServerBulletPool::_dir_to_angle(const BulletState &b, int dir_type, float value) const {
-    // AIM=0: player_pos - bullet_pos angle + offset
-    // ABS=1: value in radians (already converted by interpreter)
-    // REL=2: current angle + offset
-    // SEQ=3: last_angle + offset
-    // Note: value is already in radians (interpreter calls deg_to_rad)
+    // value is in degrees (interpreter emits raw expression results, no pre-conversion)
+    static const float DEG2RAD = 3.14159265f / 180.0f;
+    float rad = value * DEG2RAD;
     switch (dir_type) {
-    case 0: { // AIM
+    case 0: { // AIM — rad is an additive offset to the aim angle
         TamaManager *mgr = TamaManager::get_instance();
         if (mgr) {
-            return (mgr->get_player_position() - b.position).angle() + value;
+            return (mgr->get_player_position() - b.position).angle() + rad;
         }
-        return value;
+        return rad;
     }
-    case 1: return value;          // ABS
-    case 2: return b.angle + value; // REL
-    case 3: return b.last_angle + value; // SEQ
+    case 1: return rad;                    // ABS
+    case 2: return b.angle + rad;          // REL
+    case 3: return b.last_angle + rad;     // SEQ
     }
-    return value;
+    return rad;
 }
 
 float _TamaServerBulletPool::_spd_to_value(const BulletState &b, int speed_type, float value) const {
@@ -729,6 +744,7 @@ void _TamaServerBulletPool::_on_changed_direction(Object *p_data, Object *p_wrap
     if (over <= 0.0f) {
         b.angle = target;
         b.angle_tween.active = false;
+        b.vel_dirty = true;
     } else {
         b.angle_tween = { true, b.angle, target, 0.0f, over };
     }
@@ -744,6 +760,7 @@ void _TamaServerBulletPool::_on_changed_speed(Object *p_data, Object *p_wrapper)
     if (over <= 0.0f) {
         b.speed = target;
         b.speed_tween.active = false;
+        b.vel_dirty = true;
     } else {
         b.speed_tween = { true, b.speed, target, 0.0f, over };
     }
@@ -795,6 +812,7 @@ void _TamaServerBulletPool::_on_accelerated(Object *p_data, Object *p_wrapper) {
             float y      = (float)p_data->get("y");
             if (y_type == 1) b.speed_y += y; else b.speed_y = y;
         }
+        b.vel_dirty = true;
     } else {
         if (has_x) {
             float end_x = _accel_axis_end((int)p_data->get("x_type"), (float)p_data->get("x"), b.speed_x, over);

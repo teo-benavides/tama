@@ -12,6 +12,7 @@
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/variant/typed_array.hpp>
 #include <godot_cpp/variant/callable.hpp>
+#include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
@@ -85,6 +86,12 @@ class _TamaServerBulletPool : public godot::Node2D {
 
     // Flat list of all active bullets across all types (ptr into TypeData.bullets)
     std::vector<BulletState *> _active;
+
+    // Persistent recycle list — cleared at the top of each _physics_process to avoid per-frame allocation
+    std::vector<BulletState *> _to_recycle;
+
+    // Pre-allocated buffer for the composite draw path — reused across frames and types
+    godot::PackedFloat32Array _composite_buf;
 
     // Registrations queued before the node enters the scene tree
     struct PendingReg { godot::String key; godot::Object *config; };

@@ -1,4 +1,5 @@
 #include "tama_spawn_manager.h"
+#include "tama_emitter.h"
 #include "tama_manager.h"
 
 #include <cmath>
@@ -53,6 +54,33 @@ int _TamaSpawnManager::get_scene_bullet_count() const {
 }
 
 // ===========================================================================
+// Spawner accessors — direct C++ member access, no Godot property-system overhead
+// ===========================================================================
+
+static float spawner_get_last_angle(godot::Node2D *s) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  return e->_last_angle;
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))   return b->_last_angle;
+    return 0.0f;
+}
+static void spawner_set_last_angle(godot::Node2D *s, float v) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  { e->_last_angle = v; return; }
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))     b->_last_angle = v;
+}
+static float spawner_get_last_speed(godot::Node2D *s) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  return e->_last_speed;
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))   return b->_last_speed;
+    return 0.0f;
+}
+static void spawner_set_last_speed(godot::Node2D *s, float v) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  { e->_last_speed = v; return; }
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))     b->_last_speed = v;
+}
+static float spawner_get_angle(godot::Node2D *s) {
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))   return b->_angle;
+    return s->get_rotation(); // emitter: use node rotation as reference for dir rel
+}
+
+// ===========================================================================
 // Bullet firing
 // ===========================================================================
 
@@ -80,8 +108,8 @@ void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
             float angle    = _resolve_angle(data, spawner);
             float speed    = _resolve_speed(data, spawner);
             Vector2 pos    = _resolve_position(data, spawner, angle);
-            spawner->set("_last_angle", Variant(angle));
-            spawner->set("_last_speed", Variant(speed));
+            spawner_set_last_angle(spawner, angle);
+            spawner_set_last_speed(spawner, speed);
             _server_pool->spawn(data, srv_cfg, angle, speed, pos, context.ptr());
             return;
         }
@@ -121,8 +149,8 @@ void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
 
     float angle = _resolve_angle(data, spawner);
     float speed = _resolve_speed(data, spawner);
-    spawner->set("_last_angle", Variant(angle));
-    spawner->set("_last_speed", Variant(speed));
+    spawner_set_last_angle(spawner, angle);
+    spawner_set_last_speed(spawner, speed);
 
     bullet->_angle            = angle;
     bullet->_speed            = speed;
@@ -197,8 +225,8 @@ float _TamaSpawnManager::_resolve_angle(Object *data, Node2D *spawner) const {
     switch (dir_type) {
         case 0: return (player_position - spawner->get_global_position()).angle() + dir_value * DEG2RAD;
         case 1: return dir_value * DEG2RAD;
-        case 2: return (float)spawner->get("_angle") + dir_value * DEG2RAD;
-        case 3: return (float)spawner->get("_last_angle") + dir_value * DEG2RAD;
+        case 2: return spawner_get_angle(spawner) + dir_value * DEG2RAD;
+        case 3: return spawner_get_last_angle(spawner) + dir_value * DEG2RAD;
         default: break;
     }
     return spawner->get_angle_to(player_position) + dir_value * DEG2RAD;
@@ -209,7 +237,7 @@ float _TamaSpawnManager::_resolve_speed(Object *data, Node2D *spawner) const {
     float speed_value = (float)data->get("speed_value");
     switch (speed_type) {
         case 0: return speed_value;
-        case 1: case 2: return (float)spawner->get("_last_speed") + speed_value;
+        case 1: case 2: return spawner_get_last_speed(spawner) + speed_value;
         default: return speed_value;
     }
 }

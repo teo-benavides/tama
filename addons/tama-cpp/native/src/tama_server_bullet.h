@@ -57,6 +57,9 @@ struct BulletState {
     float out_of_bounds_margin = 50.0f;
     float last_angle = 0.0f;
     float last_speed = 0.0f;
+    float cached_vx  = 0.0f;  // cos(angle)*speed + speed_x — recomputed only when dirty
+    float cached_vy  = 0.0f;  // sin(angle)*speed + speed_y
+    bool  vel_dirty  = true;
     godot::Vector2 texture_scale = {1.0f, 1.0f};
 
     // Pool management
