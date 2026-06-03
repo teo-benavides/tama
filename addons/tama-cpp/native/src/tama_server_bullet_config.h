@@ -3,6 +3,7 @@
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/templates/list.hpp>
 #include <godot_cpp/variant/rect2.hpp>
+#include <godot_cpp/variant/typed_array.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector2i.hpp>
 
@@ -11,7 +12,8 @@ class TamaServerBulletConfig : public godot::Resource {
 protected:
     static void _bind_methods();
 public:
-    godot::Ref<godot::Texture2D> texture;
+    godot::TypedArray<godot::Texture2D> frames;
+    float  fps             = 0.0f;
     godot::Rect2   rect           = {-8.0f, -8.0f, 16.0f, 16.0f};
     godot::Vector2 texture_scale  = {1.0f, 1.0f};
     bool           auto_rect      = true;
@@ -26,8 +28,10 @@ public:
     bool _set(const godot::StringName &p_name, const godot::Variant &p_value);
     void _get_property_list(godot::List<godot::PropertyInfo> *p_list) const;
 
-    godot::Ref<godot::Texture2D> get_texture()        const { return texture; }
-    void set_texture(godot::Ref<godot::Texture2D> v);
+    godot::TypedArray<godot::Texture2D> get_frames()  const { return frames; }
+    void set_frames(godot::TypedArray<godot::Texture2D> v);
+    float get_fps()                      const { return fps; }
+    void  set_fps(float v)                     { fps = v; }
     godot::Rect2   get_rect()           const { return rect; }
     void set_rect(godot::Rect2 v)             { rect = v; }
     bool get_auto_rect()                const { return auto_rect; }

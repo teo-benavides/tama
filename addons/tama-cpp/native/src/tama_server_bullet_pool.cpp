@@ -136,7 +136,11 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
 
     TypeData *td = new TypeData();
 
-    td->texture        = Ref<Texture2D>(Object::cast_to<Texture2D>(p_config->get("texture")));
+    td->frames         = (TypedArray<Texture2D>)p_config->get("frames");
+    td->fps            = (float)p_config->get("fps");
+    td->first_texture  = td->frames.size() > 0
+        ? Ref<Texture2D>(Object::cast_to<Texture2D>(td->frames[0].operator Object *()))
+        : Ref<Texture2D>();
     td->rect           = (Rect2)p_config->get("rect");
     td->texture_scale  = (Vector2)p_config->get("texture_scale");
     td->shape_radius   = (float)p_config->get("shape_radius");
@@ -224,21 +228,25 @@ void TamaServerBulletPool::_area_monitor_callback(
 // ---------------------------------------------------------------------------
 
 TamaServerBulletPool::BatchData *TamaServerBulletPool::_get_batch(TypeData &td) {
+    BatchData *b;
     if (!td.free_batches.empty()) {
-        BatchData *b = td.free_batches.back();
+        b = td.free_batches.back();
         td.free_batches.pop_back();
-        return b;
+    } else {
+        b = new BatchData();
+        b->multimesh_res.instantiate();
+        b->multimesh_res->set_transform_format(MultiMesh::TRANSFORM_2D);
+        b->multimesh_res->set_mesh(td.quad);
+        b->multimesh_res->set_instance_count(BATCH_CHUNK);
+        b->multimesh = b->multimesh_res->get_rid();
+        Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
+        for (int i = 0; i < BATCH_CHUNK; ++i)
+            RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(b->multimesh, i, offscreen);
     }
-    BatchData *b = new BatchData();
-    b->multimesh_res.instantiate();
-    b->multimesh_res->set_transform_format(MultiMesh::TRANSFORM_2D);
-    b->multimesh_res->set_mesh(td.quad);
-    b->multimesh_res->set_instance_count(BATCH_CHUNK);
-    b->multimesh = b->multimesh_res->get_rid();
-    // Place all instances off-screen initially
-    Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
-    for (int i = 0; i < BATCH_CHUNK; ++i)
-        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(b->multimesh, i, offscreen);
+    // Each batch starts at frame 0 of the animation, independent of other batches
+    b->anim_time      = 0.0f;
+    b->anim_frame     = 0;
+    b->current_texture = td.first_texture;
     return b;
 }
 
@@ -566,6 +574,21 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
     for (BulletState *b : to_recycle)
         _recycle_internal(b);
 
+    // Advance per-batch sprite animations (each batch has its own independent frame offset)
+    for (auto &[key, td] : _types) {
+        if (td->frames.size() <= 1 || td->fps <= 0.0f) continue;
+        float frame_dur = 1.0f / td->fps;
+        for (BatchData *batch : td->active_batches) {
+            batch->anim_time += delta;
+            while (batch->anim_time >= frame_dur) {
+                batch->anim_time -= frame_dur;
+                batch->anim_frame = (batch->anim_frame + 1) % (int)td->frames.size();
+                batch->current_texture = Ref<Texture2D>(
+                    Object::cast_to<Texture2D>(td->frames[batch->anim_frame].operator Object *()));
+            }
+        }
+    }
+
     if (!_active.empty())
         queue_redraw();
 }
@@ -577,11 +600,15 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 void TamaServerBulletPool::_draw() {
     for (auto &[key, td] : _types) {
         if (td->active_batches.empty()) continue;
-        if ((int)_active.size() <= _composite_threshold) {
+        bool animated = td->fps > 0.0f && td->frames.size() > 1;
+        if (animated || (int)_active.size() <= _composite_threshold) {
+            // Animated types always draw per-batch (each batch has a different texture).
+            // Static types use per-batch draws when below the composite threshold.
             for (BatchData *batch : td->active_batches)
-                draw_multimesh(batch->multimesh_res, td->texture);
+                draw_multimesh(batch->multimesh_res, batch->current_texture);
         } else {
-            // Composite: concatenate all batch buffers
+            // Composite: concatenate all batch transforms into one draw call.
+            // Only reached for static (non-animated) types above the threshold.
             PackedFloat32Array buf;
             for (BatchData *batch : td->active_batches) {
                 if (batch->used <= 0) continue;
@@ -597,7 +624,7 @@ void TamaServerBulletPool::_draw() {
             if (buf.is_empty()) continue;
             td->composite_res->set_instance_count(buf.size() / 8);
             RenderingServer::get_singleton()->multimesh_set_buffer(td->composite, buf);
-            draw_multimesh(td->composite_res, td->texture);
+            draw_multimesh(td->composite_res, td->first_texture);
         }
     }
 }

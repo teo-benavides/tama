@@ -13,11 +13,14 @@
 	<tutorials>
 	</tutorials>
 	<members>
-		<member name="texture" type="Texture2D" setter="set_texture" getter="get_texture">
-			The texture drawn for each bullet in this type.
+		<member name="frames" type="Texture2D[]" setter="set_frames" getter="get_frames" default="[]">
+			Array of textures used as animation frames. A single-element array produces a static (non-animated) bullet. When more than one texture is provided, the pool cycles through them at [member fps] frames per second. All bullets of this type share the same current frame.
+		</member>
+		<member name="fps" type="float" setter="set_fps" getter="get_fps" default="0.0">
+			Animation playback speed in frames per second. Set to [code]0[/code] to disable animation (the first frame is always shown). Ignored when [member frames] contains only one texture.
 		</member>
 		<member name="auto_rect" type="bool" setter="set_auto_rect" getter="get_auto_rect" default="true">
-			When [code]true[/code] (default), [member rect] is automatically derived from the texture size whenever [member texture] is assigned. For a 14×8 texture this produces [code]Rect2(-7, -4, 14, 8)[/code]. Set to [code]false[/code] to specify [member rect] manually.
+			When [code]true[/code] (default), [member rect] is automatically derived from the size of the first texture in [member frames] whenever [member frames] is assigned. For a 14×8 texture this produces [code]Rect2(-7, -4, 14, 8)[/code]. Set to [code]false[/code] to specify [member rect] manually.
 		</member>
 		<member name="rect" type="Rect2" setter="set_rect" getter="get_rect" default="Rect2(-8, -8, 16, 16)">
 			The local-space rectangle that defines the rendered quad size and pivot offset. Only used when [member auto_rect] is [code]false[/code]; when [member auto_rect] is [code]true[/code] this value is overwritten automatically and shown read-only in the inspector.

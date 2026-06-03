@@ -11,7 +11,7 @@ func _ready() -> void:
 	TamaManager.load_scripts()
 	_populate_script_list()
 	_on_option_button_item_selected(0)
-
+	
 func _populate_script_list() -> void:
 	var btn: OptionButton = $CanvasLayer/Container/OptionButton
 	var scripts_path := ProjectSettings.get_setting("tama/scripts_path", "res://tamascripts") as String

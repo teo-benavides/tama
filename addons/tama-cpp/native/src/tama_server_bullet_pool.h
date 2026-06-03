@@ -9,6 +9,8 @@
 #include <godot_cpp/classes/multi_mesh.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/quad_mesh.hpp>
+#include <godot_cpp/classes/texture2d.hpp>
+#include <godot_cpp/variant/typed_array.hpp>
 #include <godot_cpp/variant/callable.hpp>
 #include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/string.hpp>
@@ -29,11 +31,18 @@ class TamaServerBulletPool : public godot::Node2D {
         int used         = 0;
         int active_count = 0;
         int birth_frame  = -1;
+        // Per-batch animation state (independent from other batches of same type)
+        float anim_time  = 0.0f;
+        int   anim_frame = 0;
+        godot::Ref<godot::Texture2D> current_texture;
     };
 
     struct TypeData {
         // Config properties (read once at register_type)
-        godot::Ref<godot::Texture2D> texture;
+        godot::TypedArray<godot::Texture2D> frames;
+        float  fps             = 0.0f;
+        godot::Ref<godot::Texture2D> first_texture; // frames[0], used for static/composite draws
+
         godot::Rect2    rect         = {-8.0f, -8.0f, 16.0f, 16.0f};
         godot::Vector2  texture_scale = {1.0f, 1.0f};
         float  shape_radius   = 6.0f;

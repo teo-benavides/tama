@@ -7,7 +7,7 @@ main
         waitf 1
 
 bullet falling
-    type fast
+    type rainbow
     act
         repeatf 120
             accel

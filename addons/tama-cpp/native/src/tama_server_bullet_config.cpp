@@ -4,20 +4,22 @@
 
 using namespace godot;
 
-void TamaServerBulletConfig::set_texture(Ref<Texture2D> v) {
-    texture = v;
-    if (auto_rect && texture.is_valid()) {
-        Vector2i sz = texture->get_size();
-        rect = Rect2(-sz.x * 0.5f, -sz.y * 0.5f, (float)sz.x, (float)sz.y);
-    }
+static void _auto_compute_rect(TamaServerBulletConfig *cfg) {
+    if (cfg->frames.size() == 0) return;
+    Ref<Texture2D> first = cfg->frames[0];
+    if (!first.is_valid()) return;
+    Vector2i sz = first->get_size();
+    cfg->rect = Rect2(-sz.x * 0.5f, -sz.y * 0.5f, (float)sz.x, (float)sz.y);
+}
+
+void TamaServerBulletConfig::set_frames(TypedArray<Texture2D> v) {
+    frames = v;
+    if (auto_rect) _auto_compute_rect(this);
 }
 
 void TamaServerBulletConfig::set_auto_rect(bool v) {
     auto_rect = v;
-    if (auto_rect && texture.is_valid()) {
-        Vector2i sz = texture->get_size();
-        rect = Rect2(-sz.x * 0.5f, -sz.y * 0.5f, (float)sz.x, (float)sz.y);
-    }
+    if (auto_rect) _auto_compute_rect(this);
     notify_property_list_changed();
 }
 
@@ -45,8 +47,10 @@ void TamaServerBulletConfig::_get_property_list(List<PropertyInfo> *p_list) cons
 }
 
 void TamaServerBulletConfig::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_texture"),            &TamaServerBulletConfig::get_texture);
-    ClassDB::bind_method(D_METHOD("set_texture", "v"),       &TamaServerBulletConfig::set_texture);
+    ClassDB::bind_method(D_METHOD("get_frames"),             &TamaServerBulletConfig::get_frames);
+    ClassDB::bind_method(D_METHOD("set_frames", "v"),        &TamaServerBulletConfig::set_frames);
+    ClassDB::bind_method(D_METHOD("get_fps"),                &TamaServerBulletConfig::get_fps);
+    ClassDB::bind_method(D_METHOD("set_fps", "v"),           &TamaServerBulletConfig::set_fps);
     ClassDB::bind_method(D_METHOD("get_auto_rect"),          &TamaServerBulletConfig::get_auto_rect);
     ClassDB::bind_method(D_METHOD("set_auto_rect", "v"),     &TamaServerBulletConfig::set_auto_rect);
     ClassDB::bind_method(D_METHOD("get_rect"),               &TamaServerBulletConfig::get_rect);
@@ -64,8 +68,10 @@ void TamaServerBulletConfig::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_pool_size"),        &TamaServerBulletConfig::get_pool_size);
     ClassDB::bind_method(D_METHOD("set_pool_size","v"),    &TamaServerBulletConfig::set_pool_size);
 
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"),
-                 "set_texture", "get_texture");
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "frames", PROPERTY_HINT_ARRAY_TYPE, "Texture2D"),
+                 "set_frames", "get_frames");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "fps", PROPERTY_HINT_RANGE, "0,120,1,or_greater"),
+                 "set_fps", "get_fps");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_rect"), "set_auto_rect", "get_auto_rect");
     // "rect" is added dynamically via _get_property_list so it can be read-only when auto_rect is true
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR2,"texture_scale"), "set_texture_scale", "get_texture_scale");
