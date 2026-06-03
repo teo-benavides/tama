@@ -448,9 +448,12 @@ void TamaServerBulletPool::recycle(Object *p_wrapper) {
 }
 
 void TamaServerBulletPool::recycle_all() {
-    // Copy to avoid modifying while iterating
     std::vector<BulletState *> copy = _active;
     for (auto *b : copy) _recycle_internal(b);
+    // Force one more _draw() so Godot clears the persistent canvas draw commands
+    // from the last frame. Without this, the multimesh draw calls linger on screen
+    // because _physics_process only calls queue_redraw() when _active is non-empty.
+    queue_redraw();
 }
 
 void TamaServerBulletPool::_recycle_internal(BulletState *b) {
