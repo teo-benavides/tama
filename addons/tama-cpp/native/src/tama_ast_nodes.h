@@ -7,7 +7,7 @@
 #include <godot_cpp/variant/variant.hpp>
 
 // ---------------------------------------------------------------------------
-// TamaASTNode — single registered C++ class for all AST nodes.
+// _TamaASTNode — single registered C++ class for all AST nodes.
 //
 // Each node stores its type-specific fields in `_data` (a Dictionary with
 // String keys). The `_get` override routes `object.get("field")` calls to
@@ -17,8 +17,8 @@
 // reads it on every node). Everything else goes through _get / _data.
 // ---------------------------------------------------------------------------
 
-class TamaASTNode : public godot::RefCounted {
-    GDCLASS(TamaASTNode, godot::RefCounted)
+class _TamaASTNode : public godot::RefCounted {
+    GDCLASS(_TamaASTNode, godot::RefCounted)
 
 protected:
     static void _bind_methods();
@@ -34,4 +34,4 @@ public:
 };
 
 // Convenience factory used by the parser.
-godot::Ref<TamaASTNode> tama_make_node(int type_id);
+godot::Ref<_TamaASTNode> tama_make_node(int type_id);

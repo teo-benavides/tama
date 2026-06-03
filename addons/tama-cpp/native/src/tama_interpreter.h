@@ -33,8 +33,8 @@ enum class TamaNodeType : int {
 // Signal payload classes
 // ---------------------------------------------------------------------------
 
-class TamaBulletFireData : public godot::RefCounted {
-    GDCLASS(TamaBulletFireData, godot::RefCounted)
+class _TamaBulletFireData : public godot::RefCounted {
+    GDCLASS(_TamaBulletFireData, godot::RefCounted)
 protected:
     static void _bind_methods();
 public:
@@ -59,7 +59,7 @@ public:
     godot::Object *bullet_emitter_act = nullptr;
     godot::Object *bullet_act         = nullptr;
     godot::Array   bullet_params;    // Array[String]
-    godot::Array   bullet_args;      // Array (float | String | TamaRef | ...)
+    godot::Array   bullet_args;      // Array (float | String | _TamaRef | ...)
     bool           mvmt_x_set  = false;
     int            mvmt_x_type = 0;
     godot::String  mvmt_x_expr;
@@ -100,8 +100,8 @@ public:
     godot::Object *get_source_program()     const;
 };
 
-class TamaChdirData : public godot::RefCounted {
-    GDCLASS(TamaChdirData, godot::RefCounted)
+class _TamaChdirData : public godot::RefCounted {
+    GDCLASS(_TamaChdirData, godot::RefCounted)
 protected:
     static void _bind_methods();
 public:
@@ -113,8 +113,8 @@ public:
     float get_over()      const;
 };
 
-class TamaChspdData : public godot::RefCounted {
-    GDCLASS(TamaChspdData, godot::RefCounted)
+class _TamaChspdData : public godot::RefCounted {
+    GDCLASS(_TamaChspdData, godot::RefCounted)
 protected:
     static void _bind_methods();
 public:
@@ -126,8 +126,8 @@ public:
     float get_over()        const;
 };
 
-class TamaChposData : public godot::RefCounted {
-    GDCLASS(TamaChposData, godot::RefCounted)
+class _TamaChposData : public godot::RefCounted {
+    GDCLASS(_TamaChposData, godot::RefCounted)
 protected:
     static void _bind_methods();
 public:
@@ -147,8 +147,8 @@ public:
     float get_over()   const;
 };
 
-class TamaAccelData : public godot::RefCounted {
-    GDCLASS(TamaAccelData, godot::RefCounted)
+class _TamaAccelData : public godot::RefCounted {
+    GDCLASS(_TamaAccelData, godot::RefCounted)
 protected:
     static void _bind_methods();
 public:
@@ -169,8 +169,8 @@ public:
 };
 
 // First-class value stored in scope — wraps a definition name + pre-bound args.
-class TamaRef : public godot::RefCounted {
-    GDCLASS(TamaRef, godot::RefCounted)
+class _TamaRef : public godot::RefCounted {
+    GDCLASS(_TamaRef, godot::RefCounted)
 protected:
     static void _bind_methods();
 public:
@@ -213,11 +213,11 @@ struct ExecFrame {
 };
 
 // ---------------------------------------------------------------------------
-// TamaInterpreter
+// _TamaInterpreter
 // ---------------------------------------------------------------------------
 
-class TamaInterpreter : public godot::Node {
-    GDCLASS(TamaInterpreter, godot::Node)
+class _TamaInterpreter : public godot::Node {
+    GDCLASS(_TamaInterpreter, godot::Node)
 
     // -----------------------------------------------------------------------
     // State
@@ -237,7 +237,7 @@ class TamaInterpreter : public godot::Node {
     std::vector<godot::Dictionary> _scope_saves;
 
     // Async children (act calls with is_async=true) — stepped in step()
-    std::vector<TamaInterpreter *> _async_children;
+    std::vector<_TamaInterpreter *> _async_children;
 
     // Definition lookup tables (built once from program)
     std::unordered_map<std::string, godot::Object *> _fires_map;
@@ -310,7 +310,7 @@ class TamaInterpreter : public godot::Node {
     void _fwd_accelerated(godot::Variant d)        { emit_signal("accelerated", d); }
 
     // Populate mvmt fields on a BulletFireData
-    void _populate_mvmt(TamaBulletFireData *data, godot::Object *mvmt_node);
+    void _populate_mvmt(_TamaBulletFireData *data, godot::Object *mvmt_node);
 
     // Sync body execution (for repeatf body — no suspension allowed)
     void _exec_body_sync(const godot::Array &body);
@@ -319,8 +319,8 @@ protected:
     static void _bind_methods();
 
 public:
-    TamaInterpreter() = default;
-    ~TamaInterpreter() override = default;
+    _TamaInterpreter() = default;
+    ~_TamaInterpreter() override = default;
 
     // Godot virtuals
     void _ready()                        override;

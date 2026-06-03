@@ -13,6 +13,7 @@ fire f(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
     bullet orbiter(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
 
 bullet orbiter(radius, ofs, t0, exp_spd, rot_spd, rot_dir)
+    type fast
     mvmt
         x abs spiral_x(spawn_x, radius, ofs, exp_spd, rot_spd, rot_dir, t0)
         y abs spiral_y(spawn_y, radius, ofs, exp_spd, rot_spd, rot_dir, t0)

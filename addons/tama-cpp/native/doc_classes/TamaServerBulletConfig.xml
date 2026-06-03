@@ -38,10 +38,16 @@
 			The physics layers this bullet type detects overlaps with.
 		</member>
 		<member name="rotates" type="bool" setter="set_rotates" getter="get_rotates" default="true">
-			When [code]true[/code], each bullet is visually rotated to match its movement angle.
+			When [code]true[/code], each bullet visually rotates. When [code]false[/code], [member face_velocity] has no effect.
+		</member>
+		<member name="face_velocity" type="bool" setter="set_face_velocity" getter="get_face_velocity" default="true">
+			When [code]true[/code] and [member rotates] is [code]true[/code], each bullet rotates to face its actual velocity vector (the combination of [member angle]/[member speed] and [member speed_x]/[member speed_y]). This is useful when [code]accel[/code] adds lateral movement without changing [member angle]. Has no effect when using [code]mvmt[/code] expression directives. Read-only in the inspector when [member rotates] is [code]false[/code].
 		</member>
 		<member name="pool_size" type="int" setter="set_pool_size" getter="get_pool_size" default="1000">
 			Maximum number of bullets of this type that can be alive simultaneously. Bullets fired beyond this limit are silently dropped.
+		</member>
+		<member name="out_of_bounds_margin" type="float" setter="set_out_of_bounds_margin" getter="get_out_of_bounds_margin" default="50.0">
+			How far outside the visible viewport (in pixels) a bullet of this type must travel before it is recycled. A value of [code]50[/code] means bullets are despawned once their position is more than 50 pixels beyond any edge of the screen. Overridden by [member TamaManager.global_out_of_bounds_margin] when that value is [code]0[/code] or greater.
 		</member>
 	</members>
 </class>

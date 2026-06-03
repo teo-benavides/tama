@@ -46,10 +46,10 @@ struct TamaExprChunk {
 // GDExtension singleton class
 // ---------------------------------------------------------------------------
 
-class TamaExprRuntime : public godot::Object {
-    GDCLASS(TamaExprRuntime, godot::Object)
+class _TamaExprRuntime : public godot::Object {
+    GDCLASS(_TamaExprRuntime, godot::Object)
 
-    static TamaExprRuntime *_singleton;
+    static _TamaExprRuntime *_singleton;
 
     // cache key: expr_string + "|" + comma-joined var names
     std::unordered_map<std::string, TamaExprChunk> _cache;
@@ -105,10 +105,10 @@ protected:
     static void _bind_methods();
 
 public:
-    static TamaExprRuntime *get_singleton() { return _singleton; }
+    static _TamaExprRuntime *get_singleton() { return _singleton; }
 
-    TamaExprRuntime();
-    ~TamaExprRuntime();
+    _TamaExprRuntime();
+    ~_TamaExprRuntime();
 
     // Evaluate an expression string.
     // expr:       expression string

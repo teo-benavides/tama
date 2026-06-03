@@ -16,8 +16,8 @@
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
-class TamaServerBulletPool : public godot::Node2D {
-    GDCLASS(TamaServerBulletPool, godot::Node2D)
+class _TamaServerBulletPool : public godot::Node2D {
+    GDCLASS(_TamaServerBulletPool, godot::Node2D)
 
     // ------------------------------------------------------------------
     // Internal structures
@@ -48,8 +48,10 @@ class TamaServerBulletPool : public godot::Node2D {
         float  shape_radius   = 6.0f;
         int    collision_layer = 1;
         int    collision_mask  = 2;
-        bool   rotates         = true;
-        int    pool_size       = 1000;
+        bool   rotates              = true;
+        bool   face_velocity        = true;
+        int    pool_size            = 1000;
+        float  out_of_bounds_margin = 50.0f;
 
         // GPU resources
         godot::Ref<godot::QuadMesh> quad;
@@ -60,7 +62,7 @@ class TamaServerBulletPool : public godot::Node2D {
 
         // Bullet state flat array (indexed by global slot)
         std::vector<BulletState>        bullets;
-        std::vector<TamaServerBullet *> wrappers;
+        std::vector<_TamaServerBullet *> wrappers;
 
         // FIFO ring buffer for slot allocation
         std::vector<int32_t> ring;
@@ -87,8 +89,6 @@ class TamaServerBulletPool : public godot::Node2D {
     // Registrations queued before the node enters the scene tree
     struct PendingReg { godot::String key; godot::Object *config; };
     std::vector<PendingReg> _pending_regs;
-
-    float _bounds_margin = 64.0f;
 
     // Cached threshold (read from ProjectSettings in _ready)
     int _composite_threshold = 1000;
@@ -119,14 +119,14 @@ class TamaServerBulletPool : public godot::Node2D {
     static void _area_monitor_callback(
             int status, godot::RID body_rid, int64_t body_iid,
             int body_shape, int local_shape,
-            TamaServerBulletPool *self, godot::String type_key);
+            _TamaServerBulletPool *self, godot::String type_key);
 
 protected:
     static void _bind_methods();
 
 public:
-    TamaServerBulletPool()  = default;
-    ~TamaServerBulletPool() override;
+    _TamaServerBulletPool()  = default;
+    ~_TamaServerBulletPool() override;
 
     // Godot virtuals
     void _ready()                   override;
@@ -140,7 +140,7 @@ public:
 
     void register_type(const godot::String &key, godot::Object *config);
 
-    // Returns the TamaServerBullet wrapper, or null if the pool is full.
+    // Returns the _TamaServerBullet wrapper, or null if the pool is full.
     godot::Object *spawn(godot::Object *data, godot::Object *config,
                          float angle, float speed, godot::Vector2 position,
                          godot::Object *context);
@@ -152,11 +152,8 @@ public:
     // Properties
     // ------------------------------------------------------------------
 
-    void  set_bounds_margin(float v) { _bounds_margin = v; }
-    float get_bounds_margin() const  { return _bounds_margin; }
-
     // ------------------------------------------------------------------
     // Signals
     // ------------------------------------------------------------------
-    // bullet_hit(bullet: TamaServerBullet, body_instance_id: int)
+    // bullet_hit(bullet: _TamaServerBullet, body_instance_id: int)
 };

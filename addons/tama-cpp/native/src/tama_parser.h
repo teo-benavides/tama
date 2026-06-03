@@ -10,7 +10,7 @@
 
 // Called by the parser to resolve 'include' directives.
 // Should return the ProgramNode for the named script, or an empty Ref on failure.
-using TamaResolver = std::function<godot::Ref<TamaASTNode>(const std::string &)>;
+using TamaResolver = std::function<godot::Ref<_TamaASTNode>(const std::string &)>;
 
 struct TamaParseError {
     int         line, col, length;
@@ -18,13 +18,13 @@ struct TamaParseError {
 };
 
 struct TamaParseResult {
-    godot::Ref<TamaASTNode>      program; // NodeType::PROGRAM, or empty on total failure
+    godot::Ref<_TamaASTNode>      program; // NodeType::PROGRAM, or empty on total failure
     std::vector<TamaParseError>  errors;
     bool ok() const { return errors.empty(); }
 };
 
 // Pure C++ recursive-descent parser. Not exposed to Godot directly;
-// TamaScriptRepository calls it internally.
+// _TamaScriptRepository calls it internally.
 class TamaParserCpp {
 public:
     TamaParseResult parse(const std::vector<TamaToken> &tokens,
@@ -49,7 +49,7 @@ private:
     std::vector<Ref3> _fire_refs, _act_refs, _bullet_refs;
 
     TamaResolver _resolver;
-    std::unordered_map<std::string, godot::Ref<TamaASTNode>> _resolved_includes;
+    std::unordered_map<std::string, godot::Ref<_TamaASTNode>> _resolved_includes;
 
     // -----------------------------------------------------------------------
     // Cursor helpers
@@ -87,65 +87,65 @@ private:
     // -----------------------------------------------------------------------
     // Shared sub-parsers
     // -----------------------------------------------------------------------
-    godot::Ref<TamaASTNode> parse_dir();
-    godot::Ref<TamaASTNode> parse_speed();
-    godot::Ref<TamaASTNode> parse_wait();
-    godot::Ref<TamaASTNode> parse_waitf();
-    godot::Ref<TamaASTNode> parse_vanish();
-    godot::Ref<TamaASTNode> parse_break();
-    godot::Ref<TamaASTNode> parse_over();
-    godot::Ref<TamaASTNode> parse_offset();
-    godot::Ref<TamaASTNode> parse_pos();
-    godot::Ref<TamaASTNode> parse_chdir();
-    godot::Ref<TamaASTNode> parse_chspd();
-    godot::Ref<TamaASTNode> parse_chpos();
-    godot::Ref<TamaASTNode> parse_accel();
-    godot::Ref<TamaASTNode> parse_repeatf();
-    godot::Ref<TamaASTNode> parse_mvmt();
-    godot::Ref<TamaASTNode> parse_while();
-    godot::Ref<TamaASTNode> parse_if();
-    godot::Ref<TamaASTNode> parse_var_decl();
-    godot::Ref<TamaASTNode> parse_var_assign();
-    godot::Ref<TamaASTNode> parse_repeat();
-    godot::Ref<TamaASTNode> parse_inline_act();
-    godot::Ref<TamaASTNode> parse_inline_emitter();
-    godot::Ref<TamaASTNode> parse_inline_fire();
-    godot::Ref<TamaASTNode> parse_fire_call();
-    godot::Ref<TamaASTNode> parse_act_call();
-    godot::Ref<TamaASTNode> parse_async_act();
-    godot::Ref<TamaASTNode> parse_bullet_call();
-    godot::Ref<TamaASTNode> parse_inline_bullet();
+    godot::Ref<_TamaASTNode> parse_dir();
+    godot::Ref<_TamaASTNode> parse_speed();
+    godot::Ref<_TamaASTNode> parse_wait();
+    godot::Ref<_TamaASTNode> parse_waitf();
+    godot::Ref<_TamaASTNode> parse_vanish();
+    godot::Ref<_TamaASTNode> parse_break();
+    godot::Ref<_TamaASTNode> parse_over();
+    godot::Ref<_TamaASTNode> parse_offset();
+    godot::Ref<_TamaASTNode> parse_pos();
+    godot::Ref<_TamaASTNode> parse_chdir();
+    godot::Ref<_TamaASTNode> parse_chspd();
+    godot::Ref<_TamaASTNode> parse_chpos();
+    godot::Ref<_TamaASTNode> parse_accel();
+    godot::Ref<_TamaASTNode> parse_repeatf();
+    godot::Ref<_TamaASTNode> parse_mvmt();
+    godot::Ref<_TamaASTNode> parse_while();
+    godot::Ref<_TamaASTNode> parse_if();
+    godot::Ref<_TamaASTNode> parse_var_decl();
+    godot::Ref<_TamaASTNode> parse_var_assign();
+    godot::Ref<_TamaASTNode> parse_repeat();
+    godot::Ref<_TamaASTNode> parse_inline_act();
+    godot::Ref<_TamaASTNode> parse_inline_emitter();
+    godot::Ref<_TamaASTNode> parse_inline_fire();
+    godot::Ref<_TamaASTNode> parse_fire_call();
+    godot::Ref<_TamaASTNode> parse_act_call();
+    godot::Ref<_TamaASTNode> parse_async_act();
+    godot::Ref<_TamaASTNode> parse_bullet_call();
+    godot::Ref<_TamaASTNode> parse_inline_bullet();
 
     // -----------------------------------------------------------------------
     // Action-block dispatcher
     // -----------------------------------------------------------------------
-    godot::Ref<TamaASTNode> parse_action_statement();
+    godot::Ref<_TamaASTNode> parse_action_statement();
 
     // -----------------------------------------------------------------------
     // Fire-block parser (fills dir/speed/offset/pos/bullet onto node)
     // -----------------------------------------------------------------------
-    void parse_fire_block(godot::Ref<TamaASTNode> node, const TamaToken &open_tok);
+    void parse_fire_block(godot::Ref<_TamaASTNode> node, const TamaToken &open_tok);
 
     // -----------------------------------------------------------------------
     // Axis sub-parser (used by offset/pos/chpos/accel/mvmt blocks)
     // -----------------------------------------------------------------------
-    godot::Ref<TamaASTNode> parse_axis_node(int default_qt); // ValueType default
+    godot::Ref<_TamaASTNode> parse_axis_node(int default_qt); // ValueType default
 
     // -----------------------------------------------------------------------
     // Block helper: consumes INDENT … DEDENT, calling stmt_fn for each stmt.
     // -----------------------------------------------------------------------
-    using StmtFn = std::function<godot::Ref<TamaASTNode>()>;
+    using StmtFn = std::function<godot::Ref<_TamaASTNode>()>;
     godot::Array parse_block(StmtFn stmt_fn);
 
     // -----------------------------------------------------------------------
     // Top-level definition parsers
     // -----------------------------------------------------------------------
-    void                    parse_include(godot::Ref<TamaASTNode> program);
-    godot::Ref<TamaASTNode> parse_export();
-    godot::Ref<TamaASTNode> parse_main();
-    godot::Ref<TamaASTNode> parse_fire_def();
-    godot::Ref<TamaASTNode> parse_act_def();
-    godot::Ref<TamaASTNode> parse_bullet_def();
+    void                    parse_include(godot::Ref<_TamaASTNode> program);
+    godot::Ref<_TamaASTNode> parse_export();
+    godot::Ref<_TamaASTNode> parse_main();
+    godot::Ref<_TamaASTNode> parse_fire_def();
+    godot::Ref<_TamaASTNode> parse_act_def();
+    godot::Ref<_TamaASTNode> parse_bullet_def();
 
     // -----------------------------------------------------------------------
     // Post-parse reference validation

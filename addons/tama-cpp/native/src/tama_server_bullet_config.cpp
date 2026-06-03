@@ -24,26 +24,27 @@ void TamaServerBulletConfig::set_auto_rect(bool v) {
 }
 
 bool TamaServerBulletConfig::_get(const StringName &p_name, Variant &r_ret) const {
-    if (p_name == StringName("rect")) {
-        r_ret = rect;
-        return true;
-    }
+    if (p_name == StringName("rect"))           { r_ret = rect;          return true; }
+    if (p_name == StringName("face_velocity"))  { r_ret = face_velocity; return true; }
     return false;
 }
 
 bool TamaServerBulletConfig::_set(const StringName &p_name, const Variant &p_value) {
-    if (p_name == StringName("rect")) {
-        rect = p_value;
-        return true;
-    }
+    if (p_name == StringName("rect"))           { rect          = p_value; return true; }
+    if (p_name == StringName("face_velocity"))  { face_velocity = p_value; return true; }
     return false;
 }
 
 void TamaServerBulletConfig::_get_property_list(List<PropertyInfo> *p_list) const {
-    uint32_t usage = auto_rect
+    uint32_t rect_usage = auto_rect
         ? (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_READ_ONLY)
         : PROPERTY_USAGE_DEFAULT;
-    p_list->push_back(PropertyInfo(Variant::RECT2, "rect", PROPERTY_HINT_NONE, "", usage));
+    p_list->push_back(PropertyInfo(Variant::RECT2, "rect", PROPERTY_HINT_NONE, "", rect_usage));
+
+    uint32_t fv_usage = rotates
+        ? PROPERTY_USAGE_DEFAULT
+        : (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_READ_ONLY);
+    p_list->push_back(PropertyInfo(Variant::BOOL, "face_velocity", PROPERTY_HINT_NONE, "", fv_usage));
 }
 
 void TamaServerBulletConfig::_bind_methods() {
@@ -65,8 +66,12 @@ void TamaServerBulletConfig::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_collision_mask","v"),&TamaServerBulletConfig::set_collision_mask);
     ClassDB::bind_method(D_METHOD("get_rotates"),          &TamaServerBulletConfig::get_rotates);
     ClassDB::bind_method(D_METHOD("set_rotates","v"),      &TamaServerBulletConfig::set_rotates);
-    ClassDB::bind_method(D_METHOD("get_pool_size"),        &TamaServerBulletConfig::get_pool_size);
-    ClassDB::bind_method(D_METHOD("set_pool_size","v"),    &TamaServerBulletConfig::set_pool_size);
+    ClassDB::bind_method(D_METHOD("get_face_velocity"),    &TamaServerBulletConfig::get_face_velocity);
+    ClassDB::bind_method(D_METHOD("set_face_velocity","v"),&TamaServerBulletConfig::set_face_velocity);
+    ClassDB::bind_method(D_METHOD("get_pool_size"),                    &TamaServerBulletConfig::get_pool_size);
+    ClassDB::bind_method(D_METHOD("set_pool_size","v"),                &TamaServerBulletConfig::set_pool_size);
+    ClassDB::bind_method(D_METHOD("get_out_of_bounds_margin"),         &TamaServerBulletConfig::get_out_of_bounds_margin);
+    ClassDB::bind_method(D_METHOD("set_out_of_bounds_margin","v"),     &TamaServerBulletConfig::set_out_of_bounds_margin);
 
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "frames", PROPERTY_HINT_ARRAY_TYPE, "Texture2D"),
                  "set_frames", "get_frames");
@@ -80,6 +85,8 @@ void TamaServerBulletConfig::_bind_methods() {
                  "set_collision_layer", "get_collision_layer");
     ADD_PROPERTY(PropertyInfo(Variant::INT,    "collision_mask",  PROPERTY_HINT_LAYERS_2D_PHYSICS),
                  "set_collision_mask",  "get_collision_mask");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,   "rotates"),   "set_rotates",   "get_rotates");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "pool_size"), "set_pool_size", "get_pool_size");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rotates"),       "set_rotates",       "get_rotates");
+    // "face_velocity" is dynamic via _get_property_list so it can be read-only when rotates is false
+    ADD_PROPERTY(PropertyInfo(Variant::INT,   "pool_size"),              "set_pool_size",              "get_pool_size");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "out_of_bounds_margin"),   "set_out_of_bounds_margin",   "get_out_of_bounds_margin");
 }

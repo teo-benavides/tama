@@ -137,7 +137,7 @@ void TamaEmitter::start() {
         return;
     }
 
-    _interpreter = memnew(TamaInterpreter);
+    _interpreter = memnew(_TamaInterpreter);
     _interpreter->set_context(mgr->_get_context());
     _interpreter->connect("finished", callable_mp(this, &TamaEmitter::stop));
     mgr->_connect_interpreter(_interpreter, this);
@@ -185,7 +185,7 @@ void TamaEmitter::_refresh_exports() {
         String scripts_dir(String(ProjectSettings::get_singleton()->get_setting("tama/scripts_path", "res://tamascripts")));
         // Must use memnew — Godot Objects cannot be stack-allocated.
         // parse_source_for_exports stores the AST in the repo so the raw pointer stays valid.
-        TamaScriptRepository *temp = memnew(TamaScriptRepository);
+        _TamaScriptRepository *temp = memnew(_TamaScriptRepository);
         Object *program = temp->parse_source_for_exports(source, scripts_dir);
         if (program) _read_exports_from(program);
         memdelete(temp);

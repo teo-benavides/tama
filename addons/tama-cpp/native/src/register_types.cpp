@@ -20,7 +20,7 @@
 
 using namespace godot;
 
-static TamaExprRuntime *s_expr_runtime  = nullptr;
+static _TamaExprRuntime *s_expr_runtime  = nullptr;
 static TamaManager *s_tama_manager  = nullptr;
 
 void initialize_tama_module(ModuleInitializationLevel p_level) {
@@ -28,19 +28,19 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
         return;
     }
     // Internal classes — not visible in the editor or docs
-    ClassDB::register_internal_class<TamaASTNode>();
-    ClassDB::register_internal_class<TamaScriptRepository>();
-    ClassDB::register_internal_class<TamaSpawnManager>();
-    ClassDB::register_internal_class<TamaExprRuntime>();
-    ClassDB::register_internal_class<TamaBulletFireData>();
-    ClassDB::register_internal_class<TamaChdirData>();
-    ClassDB::register_internal_class<TamaChspdData>();
-    ClassDB::register_internal_class<TamaChposData>();
-    ClassDB::register_internal_class<TamaAccelData>();
-    ClassDB::register_internal_class<TamaRef>();
-    ClassDB::register_internal_class<TamaInterpreter>();
-    ClassDB::register_internal_class<TamaServerBullet>();
-    ClassDB::register_internal_class<TamaServerBulletPool>();
+    ClassDB::register_internal_class<_TamaASTNode>();
+    ClassDB::register_internal_class<_TamaScriptRepository>();
+    ClassDB::register_internal_class<_TamaSpawnManager>();
+    ClassDB::register_internal_class<_TamaExprRuntime>();
+    ClassDB::register_internal_class<_TamaBulletFireData>();
+    ClassDB::register_internal_class<_TamaChdirData>();
+    ClassDB::register_internal_class<_TamaChspdData>();
+    ClassDB::register_internal_class<_TamaChposData>();
+    ClassDB::register_internal_class<_TamaAccelData>();
+    ClassDB::register_internal_class<_TamaRef>();
+    ClassDB::register_internal_class<_TamaInterpreter>();
+    ClassDB::register_internal_class<_TamaServerBullet>();
+    ClassDB::register_internal_class<_TamaServerBulletPool>();
 
     // User-facing classes
     ClassDB::register_class<TamaContext>();
@@ -50,11 +50,11 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     ClassDB::register_class<TamaEmitter>();
     ClassDB::register_class<TamaManager>();
 
-    s_expr_runtime = memnew(TamaExprRuntime);
-    Engine::get_singleton()->register_singleton("TamaExprRuntime", s_expr_runtime);
+    s_expr_runtime = memnew(_TamaExprRuntime);
+    Engine::get_singleton()->register_singleton("_TamaExprRuntime", s_expr_runtime);
 
     s_tama_manager = memnew(TamaManager);
-    s_tama_manager->_repository = memnew(TamaScriptRepository);
+    s_tama_manager->_repository = memnew(_TamaScriptRepository);
     Engine::get_singleton()->register_singleton("TamaManager", s_tama_manager);
     TamaManager::s_instance = s_tama_manager;
 }
@@ -70,7 +70,7 @@ void uninitialize_tama_module(ModuleInitializationLevel p_level) {
         s_tama_manager = nullptr;
     }
     if (s_expr_runtime) {
-        Engine::get_singleton()->unregister_singleton("TamaExprRuntime");
+        Engine::get_singleton()->unregister_singleton("_TamaExprRuntime");
         memdelete(s_expr_runtime);
         s_expr_runtime = nullptr;
     }

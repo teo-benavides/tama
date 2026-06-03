@@ -14,17 +14,17 @@ using namespace godot;
 // DirType: AIM=0 ABS=1 REL=2 SEQ=3   ValueType: ABS=0 REL=1 SEQ=2
 // OffsetMode: NONE=0 INLINE=1 BLOCK=2
 
-void TamaSpawnManager::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("connect_interpreter","interpreter","spawner"), &TamaSpawnManager::connect_interpreter);
-    ClassDB::bind_method(D_METHOD("get_tama_script","filename"), &TamaSpawnManager::get_tama_script);
-    ClassDB::bind_method(D_METHOD("get_registry"),     &TamaSpawnManager::get_registry);
-    ClassDB::bind_method(D_METHOD("set_registry","v"), &TamaSpawnManager::set_registry);
-    ClassDB::bind_method(D_METHOD("get_context"),      &TamaSpawnManager::get_context);
-    ClassDB::bind_method(D_METHOD("set_context","v"),  &TamaSpawnManager::set_context);
-    ClassDB::bind_method(D_METHOD("get_player_position"),    &TamaSpawnManager::get_player_position);
-    ClassDB::bind_method(D_METHOD("set_player_position","v"),&TamaSpawnManager::set_player_position);
-    ClassDB::bind_method(D_METHOD("get_spawn_parent"),       &TamaSpawnManager::get_spawn_parent);
-    ClassDB::bind_method(D_METHOD("set_spawn_parent","v"),   &TamaSpawnManager::set_spawn_parent);
+void _TamaSpawnManager::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("connect_interpreter","interpreter","spawner"), &_TamaSpawnManager::connect_interpreter);
+    ClassDB::bind_method(D_METHOD("get_tama_script","filename"), &_TamaSpawnManager::get_tama_script);
+    ClassDB::bind_method(D_METHOD("get_registry"),     &_TamaSpawnManager::get_registry);
+    ClassDB::bind_method(D_METHOD("set_registry","v"), &_TamaSpawnManager::set_registry);
+    ClassDB::bind_method(D_METHOD("get_context"),      &_TamaSpawnManager::get_context);
+    ClassDB::bind_method(D_METHOD("set_context","v"),  &_TamaSpawnManager::set_context);
+    ClassDB::bind_method(D_METHOD("get_player_position"),    &_TamaSpawnManager::get_player_position);
+    ClassDB::bind_method(D_METHOD("set_player_position","v"),&_TamaSpawnManager::set_player_position);
+    ClassDB::bind_method(D_METHOD("get_spawn_parent"),       &_TamaSpawnManager::get_spawn_parent);
+    ClassDB::bind_method(D_METHOD("set_spawn_parent","v"),   &_TamaSpawnManager::set_spawn_parent);
 
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT,"registry",   PROPERTY_HINT_NONE,"",PROPERTY_USAGE_NONE),"set_registry","get_registry");
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT,"context",    PROPERTY_HINT_NONE,"",PROPERTY_USAGE_NONE),"set_context","get_context");
@@ -32,17 +32,17 @@ void TamaSpawnManager::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH,"spawn_parent",PROPERTY_HINT_NONE,"",PROPERTY_USAGE_NONE),"set_spawn_parent","get_spawn_parent");
 }
 
-void TamaSpawnManager::_exit_tree() {
+void _TamaSpawnManager::_exit_tree() {
     TamaManager *mgr = TamaManager::get_instance();
     if (mgr) mgr->_on_scene_nodes_freed();
 }
 
-void TamaSpawnManager::connect_interpreter(Object *interpreter, Node2D *spawner) {
+void _TamaSpawnManager::connect_interpreter(Object *interpreter, Node2D *spawner) {
     interpreter->connect("bullet_fired",
-        callable_mp(this, &TamaSpawnManager::_on_bullet_fired).bind(Variant(spawner)));
+        callable_mp(this, &_TamaSpawnManager::_on_bullet_fired).bind(Variant(spawner)));
 }
 
-Object *TamaSpawnManager::get_tama_script(const String &filename) const {
+Object *_TamaSpawnManager::get_tama_script(const String &filename) const {
     if (_repository) return _repository->get_tama_script(filename);
     return nullptr;
 }
@@ -51,7 +51,7 @@ Object *TamaSpawnManager::get_tama_script(const String &filename) const {
 // Bullet firing
 // ===========================================================================
 
-void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
+void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
     Object *data = data_v.operator Object *();
     if (!data) return;
 
@@ -94,7 +94,7 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
         }
     }
     if (!scene.is_valid()) {
-        UtilityFunctions::push_error("TamaSpawnManager: no scene for bullet type '" + bullet_type + "' (no default set)");
+        UtilityFunctions::push_error("_TamaSpawnManager: no scene for bullet type '" + bullet_type + "' (no default set)");
         return;
     }
 
@@ -105,11 +105,11 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
 
     TamaBullet *bullet = Object::cast_to<TamaBullet>(scene->instantiate());
     if (!bullet) {
-        UtilityFunctions::push_error("TamaSpawnManager: scene for type '" + bullet_type + "' is not a TamaBullet");
+        UtilityFunctions::push_error("_TamaSpawnManager: scene for type '" + bullet_type + "' is not a TamaBullet");
         return;
     }
 
-    TamaInterpreter *bullet_runner = memnew(TamaInterpreter);
+    _TamaInterpreter *bullet_runner = memnew(_TamaInterpreter);
     bullet_runner->set_context(context.ptr());
     bullet->add_child(bullet_runner);
     bullet->_runner = bullet_runner;
@@ -154,15 +154,15 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
         act_scope["spawn_y"] = bullet->_initial_position.y;
         connect_interpreter(bullet_runner, bullet);
         bullet->connect("ready",
-            callable_mp(bullet_runner, &TamaInterpreter::start_act)
+            callable_mp(bullet_runner, &_TamaInterpreter::start_act)
                 .bind(Variant(source_program), Variant(bullet_act), Variant(act_scope)),
             Object::CONNECT_ONE_SHOT);
     }
 
     if (bullet_emitter_act) {
-        TamaInterpreter *spawner_runner;
+        _TamaInterpreter *spawner_runner;
         if (bullet_act) {
-            spawner_runner = memnew(TamaInterpreter);
+            spawner_runner = memnew(_TamaInterpreter);
             spawner_runner->set_context(context.ptr());
             bullet->add_child(spawner_runner);
         } else {
@@ -175,7 +175,7 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
         emt_scope["spawn_x"] = bullet->_initial_position.x;
         emt_scope["spawn_y"] = bullet->_initial_position.y;
         bullet->connect("ready",
-            callable_mp(spawner_runner, &TamaInterpreter::start_act)
+            callable_mp(spawner_runner, &_TamaInterpreter::start_act)
                 .bind(Variant(source_program), Variant(bullet_emitter_act), Variant(emt_scope)),
             Object::CONNECT_ONE_SHOT);
     }
@@ -185,7 +185,7 @@ void TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
 // Resolution helpers
 // ===========================================================================
 
-float TamaSpawnManager::_resolve_angle(Object *data, Node2D *spawner) const {
+float _TamaSpawnManager::_resolve_angle(Object *data, Node2D *spawner) const {
     static const float DEG2RAD = 3.14159265f / 180.0f;
     int   dir_type  = (int)  data->get("dir_type");
     float dir_value = (float)data->get("dir_value");
@@ -199,7 +199,7 @@ float TamaSpawnManager::_resolve_angle(Object *data, Node2D *spawner) const {
     return spawner->get_angle_to(player_position) + dir_value * DEG2RAD;
 }
 
-float TamaSpawnManager::_resolve_speed(Object *data, Node2D *spawner) const {
+float _TamaSpawnManager::_resolve_speed(Object *data, Node2D *spawner) const {
     int   speed_type  = (int)  data->get("speed_type");
     float speed_value = (float)data->get("speed_value");
     switch (speed_type) {
@@ -209,7 +209,7 @@ float TamaSpawnManager::_resolve_speed(Object *data, Node2D *spawner) const {
     }
 }
 
-Vector2 TamaSpawnManager::_resolve_position(Object *data, Node2D *spawner, float angle) const {
+Vector2 _TamaSpawnManager::_resolve_position(Object *data, Node2D *spawner, float angle) const {
     bool has_pos = (bool)data->get("has_pos");
     if (has_pos) {
         Vector2 pos = spawner->get_global_position();
@@ -239,7 +239,7 @@ Vector2 TamaSpawnManager::_resolve_position(Object *data, Node2D *spawner, float
     return spawner->get_global_position();
 }
 
-Node *TamaSpawnManager::_get_spawn_parent() const {
+Node *_TamaSpawnManager::_get_spawn_parent() const {
     if (!is_inside_tree()) return nullptr;
     if (!spawn_parent.is_empty()) {
         Node *n = get_node_or_null(spawn_parent);

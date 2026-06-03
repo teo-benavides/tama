@@ -8,8 +8,8 @@
 #include <string>
 #include <unordered_map>
 
-class TamaScriptRepository : public godot::Node {
-    GDCLASS(TamaScriptRepository, godot::Node)
+class _TamaScriptRepository : public godot::Node {
+    GDCLASS(_TamaScriptRepository, godot::Node)
 
 protected:
     static void _bind_methods();
@@ -32,12 +32,12 @@ public:
                                             const godot::String &scripts_dir);
 
 private:
-    std::unordered_map<std::string, godot::Ref<TamaASTNode>> _scripts;
+    std::unordered_map<std::string, godot::Ref<_TamaASTNode>> _scripts;
     std::string _scripts_dir;
 
-    using Resolver = std::function<godot::Ref<TamaASTNode>(const std::string &)>;
+    using Resolver = std::function<godot::Ref<_TamaASTNode>(const std::string &)>;
 
-    godot::Ref<TamaASTNode> _parse_source(const std::string &source,
+    godot::Ref<_TamaASTNode> _parse_source(const std::string &source,
                                            const std::string &label,
                                            Resolver resolver = nullptr) const;
 

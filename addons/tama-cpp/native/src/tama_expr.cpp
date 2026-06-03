@@ -21,14 +21,14 @@ using namespace godot;
 // Singleton
 // ---------------------------------------------------------------------------
 
-TamaExprRuntime *TamaExprRuntime::_singleton = nullptr;
+_TamaExprRuntime *_TamaExprRuntime::_singleton = nullptr;
 
-TamaExprRuntime::TamaExprRuntime() {
+_TamaExprRuntime::_TamaExprRuntime() {
     ERR_FAIL_COND(_singleton != nullptr);
     _singleton = this;
 }
 
-TamaExprRuntime::~TamaExprRuntime() {
+_TamaExprRuntime::~_TamaExprRuntime() {
     if (_singleton == this) _singleton = nullptr;
 }
 
@@ -365,7 +365,7 @@ static double dispatch_builtin(uint8_t id, const double *args) {
 // Returns true on success, false on parse error. On error, partial code is
 // left in cs.result (caller discards it).
 
-bool TamaExprRuntime::_compile_primary(CompileState &cs) {
+bool _TamaExprRuntime::_compile_primary(CompileState &cs) {
     cs.skip_ws();
     if (cs.at_end()) return false;
 
@@ -433,7 +433,7 @@ bool TamaExprRuntime::_compile_primary(CompileState &cs) {
     return false;
 }
 
-bool TamaExprRuntime::_compile_call(CompileState &cs, const std::string &name) {
+bool _TamaExprRuntime::_compile_call(CompileState &cs, const std::string &name) {
     ensure_builtin_map();
     ++cs.pos; // consume '('
 
@@ -474,7 +474,7 @@ bool TamaExprRuntime::_compile_call(CompileState &cs, const std::string &name) {
     return true;
 }
 
-bool TamaExprRuntime::_compile_unary(CompileState &cs) {
+bool _TamaExprRuntime::_compile_unary(CompileState &cs) {
     cs.skip_ws();
     char c = cs.peek();
     if (c == '-') {
@@ -492,7 +492,7 @@ bool TamaExprRuntime::_compile_unary(CompileState &cs) {
     return _compile_primary(cs);
 }
 
-bool TamaExprRuntime::_compile_mul(CompileState &cs) {
+bool _TamaExprRuntime::_compile_mul(CompileState &cs) {
     if (!_compile_unary(cs)) return false;
     while (true) {
         cs.skip_ws();
@@ -506,7 +506,7 @@ bool TamaExprRuntime::_compile_mul(CompileState &cs) {
     return true;
 }
 
-bool TamaExprRuntime::_compile_add(CompileState &cs) {
+bool _TamaExprRuntime::_compile_add(CompileState &cs) {
     if (!_compile_mul(cs)) return false;
     while (true) {
         cs.skip_ws();
@@ -520,7 +520,7 @@ bool TamaExprRuntime::_compile_add(CompileState &cs) {
     return true;
 }
 
-bool TamaExprRuntime::_compile_cmp(CompileState &cs) {
+bool _TamaExprRuntime::_compile_cmp(CompileState &cs) {
     if (!_compile_add(cs)) return false;
     while (true) {
         cs.skip_ws();
@@ -541,7 +541,7 @@ bool TamaExprRuntime::_compile_cmp(CompileState &cs) {
     return true;
 }
 
-bool TamaExprRuntime::_compile_and(CompileState &cs) {
+bool _TamaExprRuntime::_compile_and(CompileState &cs) {
     if (!_compile_cmp(cs)) return false;
     while (cs.skip_ws(), cs.peek() == '&' && cs.peek(1) == '&') {
         cs.pos += 2;
@@ -551,7 +551,7 @@ bool TamaExprRuntime::_compile_and(CompileState &cs) {
     return true;
 }
 
-bool TamaExprRuntime::_compile_expr(CompileState &cs) {
+bool _TamaExprRuntime::_compile_expr(CompileState &cs) {
     if (!_compile_and(cs)) return false;
     while (cs.skip_ws(), cs.peek() == '|' && cs.peek(1) == '|') {
         cs.pos += 2;
@@ -561,7 +561,7 @@ bool TamaExprRuntime::_compile_expr(CompileState &cs) {
     return true;
 }
 
-TamaExprChunk TamaExprRuntime::_compile(const std::string &expr, const std::vector<std::string> &var_names) {
+TamaExprChunk _TamaExprRuntime::_compile(const std::string &expr, const std::vector<std::string> &var_names) {
     CompileState cs(expr, var_names);
     if (!_compile_expr(cs)) {
         // Return empty chunk — eval will return 0.0
@@ -574,7 +574,7 @@ TamaExprChunk TamaExprRuntime::_compile(const std::string &expr, const std::vect
 // Stack-machine evaluator
 // ---------------------------------------------------------------------------
 
-double TamaExprRuntime::_eval_chunk(
+double _TamaExprRuntime::_eval_chunk(
         const TamaExprChunk &chunk,
         const double *values, size_t count,
         Object *context,
@@ -645,7 +645,7 @@ double TamaExprRuntime::_eval_chunk(
 // Cache lookup / public eval
 // ---------------------------------------------------------------------------
 
-const TamaExprChunk &TamaExprRuntime::_get_chunk(
+const TamaExprChunk &_TamaExprRuntime::_get_chunk(
         const std::string &expr,
         const std::vector<std::string> &var_names,
         const std::string &cache_key)
@@ -656,7 +656,7 @@ const TamaExprChunk &TamaExprRuntime::_get_chunk(
     return ins->second;
 }
 
-double TamaExprRuntime::eval(
+double _TamaExprRuntime::eval(
         const String &p_expr,
         const PackedStringArray &p_var_names,
         const PackedFloat64Array &p_var_values,
@@ -712,7 +712,7 @@ double TamaExprRuntime::eval(
 // User function registration
 // ---------------------------------------------------------------------------
 
-void TamaExprRuntime::register_function(const String &p_name, const Callable &p_callable) {
+void _TamaExprRuntime::register_function(const String &p_name, const Callable &p_callable) {
     _user_fns[p_name.utf8().get_data()] = p_callable;
     // Invalidate cache entries that might reference this function name
     std::string name = p_name.utf8().get_data();
@@ -724,15 +724,15 @@ void TamaExprRuntime::register_function(const String &p_name, const Callable &p_
     }
 }
 
-void TamaExprRuntime::unregister_function(const String &p_name) {
+void _TamaExprRuntime::unregister_function(const String &p_name) {
     _user_fns.erase(p_name.utf8().get_data());
 }
 
-void TamaExprRuntime::clear_cache() {
+void _TamaExprRuntime::clear_cache() {
     _cache.clear();
 }
 
-const TamaExprChunk *TamaExprRuntime::get_chunk(
+const TamaExprChunk *_TamaExprRuntime::get_chunk(
         const std::string &expr,
         const std::vector<std::string> &var_names,
         const std::string &cache_key)
@@ -740,7 +740,7 @@ const TamaExprChunk *TamaExprRuntime::get_chunk(
     return &_get_chunk(expr, var_names, cache_key);
 }
 
-double TamaExprRuntime::eval_chunk(
+double _TamaExprRuntime::eval_chunk(
         const TamaExprChunk &chunk,
         const double *values, size_t count,
         Object *context) const
@@ -752,13 +752,13 @@ double TamaExprRuntime::eval_chunk(
 // GDExtension binding
 // ---------------------------------------------------------------------------
 
-void TamaExprRuntime::_bind_methods() {
+void _TamaExprRuntime::_bind_methods() {
     ClassDB::bind_method(D_METHOD("eval", "expr", "var_names", "var_values", "context"),
-                         &TamaExprRuntime::eval);
+                         &_TamaExprRuntime::eval);
     ClassDB::bind_method(D_METHOD("register_function", "name", "callable"),
-                         &TamaExprRuntime::register_function);
+                         &_TamaExprRuntime::register_function);
     ClassDB::bind_method(D_METHOD("unregister_function", "name"),
-                         &TamaExprRuntime::unregister_function);
+                         &_TamaExprRuntime::unregister_function);
     ClassDB::bind_method(D_METHOD("clear_cache"),
-                         &TamaExprRuntime::clear_cache);
+                         &_TamaExprRuntime::clear_cache);
 }

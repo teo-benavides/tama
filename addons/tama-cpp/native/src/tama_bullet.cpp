@@ -2,6 +2,7 @@
 #include "tama_manager.h"
 
 #include <cmath>
+#include <godot_cpp/core/property_info.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/property_tweener.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
@@ -25,8 +26,10 @@ void TamaBullet::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_speed_x","v"),      &TamaBullet::set_speed_x);
     ClassDB::bind_method(D_METHOD("get_speed_y"),          &TamaBullet::get_speed_y);
     ClassDB::bind_method(D_METHOD("set_speed_y","v"),      &TamaBullet::set_speed_y);
-    ClassDB::bind_method(D_METHOD("get_rotates"),          &TamaBullet::get_rotates);
-    ClassDB::bind_method(D_METHOD("set_rotates","v"),      &TamaBullet::set_rotates);
+    ClassDB::bind_method(D_METHOD("get_rotates"),            &TamaBullet::get_rotates);
+    ClassDB::bind_method(D_METHOD("set_rotates","v"),        &TamaBullet::set_rotates);
+    ClassDB::bind_method(D_METHOD("get_face_velocity"),      &TamaBullet::get_face_velocity);
+    ClassDB::bind_method(D_METHOD("set_face_velocity","v"),  &TamaBullet::set_face_velocity);
     ClassDB::bind_method(D_METHOD("get_initial_position"), &TamaBullet::get_initial_position);
     ClassDB::bind_method(D_METHOD("set_initial_position","v"),&TamaBullet::set_initial_position);
     ClassDB::bind_method(D_METHOD("destroy"), &TamaBullet::destroy);
@@ -40,8 +43,26 @@ void TamaBullet::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "_speed_y", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
                  "set_speed_y", "get_speed_y");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rotates"), "set_rotates", "get_rotates");
+    // "face_velocity" is dynamic via _get_property_list so it can be read-only when rotates is false
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "_initial_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
                  "set_initial_position", "get_initial_position");
+}
+
+bool TamaBullet::_get(const StringName &p_name, Variant &r_ret) const {
+    if (p_name == StringName("face_velocity")) { r_ret = face_velocity; return true; }
+    return false;
+}
+
+bool TamaBullet::_set(const StringName &p_name, const Variant &p_value) {
+    if (p_name == StringName("face_velocity")) { face_velocity = p_value; return true; }
+    return false;
+}
+
+void TamaBullet::_get_property_list(List<PropertyInfo> *p_list) const {
+    uint32_t fv_usage = rotates
+        ? PROPERTY_USAGE_DEFAULT
+        : (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_READ_ONLY);
+    p_list->push_back(PropertyInfo(Variant::BOOL, "face_velocity", PROPERTY_HINT_NONE, "", fv_usage));
 }
 
 void TamaBullet::_ready() {
@@ -61,7 +82,7 @@ void TamaBullet::_ready() {
     if (rotates) set_rotation(_angle);
 
     if (!_runner) return;
-    TamaInterpreter *runner = Object::cast_to<TamaInterpreter>(_runner);
+    _TamaInterpreter *runner = Object::cast_to<_TamaInterpreter>(_runner);
     if (!runner) return;
 
     runner->connect("changed_direction", callable_mp(this, &TamaBullet::_on_changed_direction));
@@ -73,8 +94,9 @@ void TamaBullet::_ready() {
 
 void TamaBullet::_physics_process(double /*delta*/) {
     if (_mvmt_x_set || _mvmt_y_set) {
-        Vector2 pos = get_global_position();
-        TamaInterpreter *runner = Object::cast_to<TamaInterpreter>(_runner);
+        Vector2 pos_before = get_global_position();
+        Vector2 pos = pos_before;
+        _TamaInterpreter *runner = Object::cast_to<_TamaInterpreter>(_runner);
         if (runner) {
             if (_mvmt_x_set) {
                 float vx = runner->eval_expr(_mvmt_x_expr, _mvmt_scope);
@@ -86,7 +108,17 @@ void TamaBullet::_physics_process(double /*delta*/) {
             }
         }
         set_global_position(pos);
-        if (rotates) set_rotation(_angle);
+        if (rotates) {
+            if (face_velocity) {
+                Vector2 dp = pos - pos_before;
+                if (dp.length_squared() > 1e-8f)
+                    set_rotation(std::atan2(dp.y, dp.x));
+                else
+                    set_rotation(_angle);
+            } else {
+                set_rotation(_angle);
+            }
+        }
         return;
     }
 
@@ -95,7 +127,12 @@ void TamaBullet::_physics_process(double /*delta*/) {
         std::sin(_angle) * _speed + _speed_y
     );
     set_velocity(vel);
-    if (rotates) set_rotation(_angle);
+    if (rotates) {
+        if (face_velocity && (vel.x != 0.0f || vel.y != 0.0f))
+            set_rotation(std::atan2(vel.y, vel.x));
+        else
+            set_rotation(_angle);
+    }
     move_and_slide();
 }
 

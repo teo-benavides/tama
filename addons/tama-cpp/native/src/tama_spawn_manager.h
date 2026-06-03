@@ -11,15 +11,15 @@
 #include <godot_cpp/variant/node_path.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
-class TamaSpawnManager : public godot::Node {
-    GDCLASS(TamaSpawnManager, godot::Node)
+class _TamaSpawnManager : public godot::Node {
+    GDCLASS(_TamaSpawnManager, godot::Node)
 protected:
     static void _bind_methods();
 
 public:
     godot::Ref<TamaBulletRegistry> registry;
-    TamaScriptRepository*_repository  = nullptr;
-    TamaServerBulletPool*_server_pool = nullptr;
+    _TamaScriptRepository*_repository  = nullptr;
+    _TamaServerBulletPool*_server_pool = nullptr;
     godot::Ref<TamaContext> context;
     godot::Vector2 player_position;
     godot::NodePath spawn_parent;

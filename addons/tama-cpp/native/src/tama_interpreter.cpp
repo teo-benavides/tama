@@ -20,36 +20,36 @@ using namespace godot;
     ClassDB::bind_method(D_METHOD("set_" #field, "v"), [](cls *s, auto v) { s->field = v; }); \
     ADD_PROPERTY(PropertyInfo(Variant::vtype, #field), "set_" #field, "get_" #field)
 
-void TamaBulletFireData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_dir_type"),        &TamaBulletFireData::get_dir_type);
-    ClassDB::bind_method(D_METHOD("get_dir_value"),       &TamaBulletFireData::get_dir_value);
-    ClassDB::bind_method(D_METHOD("get_speed_type"),      &TamaBulletFireData::get_speed_type);
-    ClassDB::bind_method(D_METHOD("get_speed_value"),     &TamaBulletFireData::get_speed_value);
-    ClassDB::bind_method(D_METHOD("get_offset_mode"),     &TamaBulletFireData::get_offset_mode);
-    ClassDB::bind_method(D_METHOD("get_offset_value"),    &TamaBulletFireData::get_offset_value);
-    ClassDB::bind_method(D_METHOD("get_offset_x_type"),   &TamaBulletFireData::get_offset_x_type);
-    ClassDB::bind_method(D_METHOD("get_offset_x"),        &TamaBulletFireData::get_offset_x);
-    ClassDB::bind_method(D_METHOD("get_offset_y_type"),   &TamaBulletFireData::get_offset_y_type);
-    ClassDB::bind_method(D_METHOD("get_offset_y"),        &TamaBulletFireData::get_offset_y);
-    ClassDB::bind_method(D_METHOD("get_has_pos"),         &TamaBulletFireData::get_has_pos);
-    ClassDB::bind_method(D_METHOD("get_pos_x_set"),       &TamaBulletFireData::get_pos_x_set);
-    ClassDB::bind_method(D_METHOD("get_pos_x_type"),      &TamaBulletFireData::get_pos_x_type);
-    ClassDB::bind_method(D_METHOD("get_pos_x"),           &TamaBulletFireData::get_pos_x);
-    ClassDB::bind_method(D_METHOD("get_pos_y_set"),       &TamaBulletFireData::get_pos_y_set);
-    ClassDB::bind_method(D_METHOD("get_pos_y_type"),      &TamaBulletFireData::get_pos_y_type);
-    ClassDB::bind_method(D_METHOD("get_pos_y"),           &TamaBulletFireData::get_pos_y);
-    ClassDB::bind_method(D_METHOD("get_bullet_type"),     &TamaBulletFireData::get_bullet_type);
-    ClassDB::bind_method(D_METHOD("get_bullet_emitter_act"), &TamaBulletFireData::get_bullet_emitter_act);
-    ClassDB::bind_method(D_METHOD("get_bullet_act"),      &TamaBulletFireData::get_bullet_act);
-    ClassDB::bind_method(D_METHOD("get_bullet_params"),   &TamaBulletFireData::get_bullet_params);
-    ClassDB::bind_method(D_METHOD("get_bullet_args"),     &TamaBulletFireData::get_bullet_args);
-    ClassDB::bind_method(D_METHOD("get_mvmt_x_set"),      &TamaBulletFireData::get_mvmt_x_set);
-    ClassDB::bind_method(D_METHOD("get_mvmt_x_type"),     &TamaBulletFireData::get_mvmt_x_type);
-    ClassDB::bind_method(D_METHOD("get_mvmt_x_expr"),     &TamaBulletFireData::get_mvmt_x_expr);
-    ClassDB::bind_method(D_METHOD("get_mvmt_y_set"),      &TamaBulletFireData::get_mvmt_y_set);
-    ClassDB::bind_method(D_METHOD("get_mvmt_y_type"),     &TamaBulletFireData::get_mvmt_y_type);
-    ClassDB::bind_method(D_METHOD("get_mvmt_y_expr"),     &TamaBulletFireData::get_mvmt_y_expr);
-    ClassDB::bind_method(D_METHOD("get_source_program"),  &TamaBulletFireData::get_source_program);
+void _TamaBulletFireData::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_dir_type"),        &_TamaBulletFireData::get_dir_type);
+    ClassDB::bind_method(D_METHOD("get_dir_value"),       &_TamaBulletFireData::get_dir_value);
+    ClassDB::bind_method(D_METHOD("get_speed_type"),      &_TamaBulletFireData::get_speed_type);
+    ClassDB::bind_method(D_METHOD("get_speed_value"),     &_TamaBulletFireData::get_speed_value);
+    ClassDB::bind_method(D_METHOD("get_offset_mode"),     &_TamaBulletFireData::get_offset_mode);
+    ClassDB::bind_method(D_METHOD("get_offset_value"),    &_TamaBulletFireData::get_offset_value);
+    ClassDB::bind_method(D_METHOD("get_offset_x_type"),   &_TamaBulletFireData::get_offset_x_type);
+    ClassDB::bind_method(D_METHOD("get_offset_x"),        &_TamaBulletFireData::get_offset_x);
+    ClassDB::bind_method(D_METHOD("get_offset_y_type"),   &_TamaBulletFireData::get_offset_y_type);
+    ClassDB::bind_method(D_METHOD("get_offset_y"),        &_TamaBulletFireData::get_offset_y);
+    ClassDB::bind_method(D_METHOD("get_has_pos"),         &_TamaBulletFireData::get_has_pos);
+    ClassDB::bind_method(D_METHOD("get_pos_x_set"),       &_TamaBulletFireData::get_pos_x_set);
+    ClassDB::bind_method(D_METHOD("get_pos_x_type"),      &_TamaBulletFireData::get_pos_x_type);
+    ClassDB::bind_method(D_METHOD("get_pos_x"),           &_TamaBulletFireData::get_pos_x);
+    ClassDB::bind_method(D_METHOD("get_pos_y_set"),       &_TamaBulletFireData::get_pos_y_set);
+    ClassDB::bind_method(D_METHOD("get_pos_y_type"),      &_TamaBulletFireData::get_pos_y_type);
+    ClassDB::bind_method(D_METHOD("get_pos_y"),           &_TamaBulletFireData::get_pos_y);
+    ClassDB::bind_method(D_METHOD("get_bullet_type"),     &_TamaBulletFireData::get_bullet_type);
+    ClassDB::bind_method(D_METHOD("get_bullet_emitter_act"), &_TamaBulletFireData::get_bullet_emitter_act);
+    ClassDB::bind_method(D_METHOD("get_bullet_act"),      &_TamaBulletFireData::get_bullet_act);
+    ClassDB::bind_method(D_METHOD("get_bullet_params"),   &_TamaBulletFireData::get_bullet_params);
+    ClassDB::bind_method(D_METHOD("get_bullet_args"),     &_TamaBulletFireData::get_bullet_args);
+    ClassDB::bind_method(D_METHOD("get_mvmt_x_set"),      &_TamaBulletFireData::get_mvmt_x_set);
+    ClassDB::bind_method(D_METHOD("get_mvmt_x_type"),     &_TamaBulletFireData::get_mvmt_x_type);
+    ClassDB::bind_method(D_METHOD("get_mvmt_x_expr"),     &_TamaBulletFireData::get_mvmt_x_expr);
+    ClassDB::bind_method(D_METHOD("get_mvmt_y_set"),      &_TamaBulletFireData::get_mvmt_y_set);
+    ClassDB::bind_method(D_METHOD("get_mvmt_y_type"),     &_TamaBulletFireData::get_mvmt_y_type);
+    ClassDB::bind_method(D_METHOD("get_mvmt_y_expr"),     &_TamaBulletFireData::get_mvmt_y_expr);
+    ClassDB::bind_method(D_METHOD("get_source_program"),  &_TamaBulletFireData::get_source_program);
 
     ADD_PROPERTY(PropertyInfo(Variant::INT,    "dir_type"),        "", "get_dir_type");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "dir_value"),       "", "get_dir_value");
@@ -82,69 +82,69 @@ void TamaBulletFireData::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "source_program"), "", "get_source_program");
 }
 
-// Accessor definitions for TamaBulletFireData
-int    TamaBulletFireData::get_dir_type()        const { return dir_type; }
-float  TamaBulletFireData::get_dir_value()       const { return dir_value; }
-int    TamaBulletFireData::get_speed_type()      const { return speed_type; }
-float  TamaBulletFireData::get_speed_value()     const { return speed_value; }
-int    TamaBulletFireData::get_offset_mode()     const { return offset_mode; }
-float  TamaBulletFireData::get_offset_value()    const { return offset_value; }
-int    TamaBulletFireData::get_offset_x_type()   const { return offset_x_type; }
-float  TamaBulletFireData::get_offset_x()        const { return offset_x; }
-int    TamaBulletFireData::get_offset_y_type()   const { return offset_y_type; }
-float  TamaBulletFireData::get_offset_y()        const { return offset_y; }
-bool   TamaBulletFireData::get_has_pos()         const { return has_pos; }
-bool   TamaBulletFireData::get_pos_x_set()       const { return pos_x_set; }
-int    TamaBulletFireData::get_pos_x_type()      const { return pos_x_type; }
-float  TamaBulletFireData::get_pos_x()           const { return pos_x; }
-bool   TamaBulletFireData::get_pos_y_set()       const { return pos_y_set; }
-int    TamaBulletFireData::get_pos_y_type()      const { return pos_y_type; }
-float  TamaBulletFireData::get_pos_y()           const { return pos_y; }
-String TamaBulletFireData::get_bullet_type()     const { return bullet_type; }
-Object*TamaBulletFireData::get_bullet_emitter_act()const{ return bullet_emitter_act; }
-Object*TamaBulletFireData::get_bullet_act()      const { return bullet_act; }
-Array  TamaBulletFireData::get_bullet_params()   const { return bullet_params; }
-Array  TamaBulletFireData::get_bullet_args()     const { return bullet_args; }
-bool   TamaBulletFireData::get_mvmt_x_set()      const { return mvmt_x_set; }
-int    TamaBulletFireData::get_mvmt_x_type()     const { return mvmt_x_type; }
-String TamaBulletFireData::get_mvmt_x_expr()     const { return mvmt_x_expr; }
-bool   TamaBulletFireData::get_mvmt_y_set()      const { return mvmt_y_set; }
-int    TamaBulletFireData::get_mvmt_y_type()     const { return mvmt_y_type; }
-String TamaBulletFireData::get_mvmt_y_expr()     const { return mvmt_y_expr; }
-Object*TamaBulletFireData::get_source_program()  const { return source_program; }
+// Accessor definitions for _TamaBulletFireData
+int    _TamaBulletFireData::get_dir_type()        const { return dir_type; }
+float  _TamaBulletFireData::get_dir_value()       const { return dir_value; }
+int    _TamaBulletFireData::get_speed_type()      const { return speed_type; }
+float  _TamaBulletFireData::get_speed_value()     const { return speed_value; }
+int    _TamaBulletFireData::get_offset_mode()     const { return offset_mode; }
+float  _TamaBulletFireData::get_offset_value()    const { return offset_value; }
+int    _TamaBulletFireData::get_offset_x_type()   const { return offset_x_type; }
+float  _TamaBulletFireData::get_offset_x()        const { return offset_x; }
+int    _TamaBulletFireData::get_offset_y_type()   const { return offset_y_type; }
+float  _TamaBulletFireData::get_offset_y()        const { return offset_y; }
+bool   _TamaBulletFireData::get_has_pos()         const { return has_pos; }
+bool   _TamaBulletFireData::get_pos_x_set()       const { return pos_x_set; }
+int    _TamaBulletFireData::get_pos_x_type()      const { return pos_x_type; }
+float  _TamaBulletFireData::get_pos_x()           const { return pos_x; }
+bool   _TamaBulletFireData::get_pos_y_set()       const { return pos_y_set; }
+int    _TamaBulletFireData::get_pos_y_type()      const { return pos_y_type; }
+float  _TamaBulletFireData::get_pos_y()           const { return pos_y; }
+String _TamaBulletFireData::get_bullet_type()     const { return bullet_type; }
+Object*_TamaBulletFireData::get_bullet_emitter_act()const{ return bullet_emitter_act; }
+Object*_TamaBulletFireData::get_bullet_act()      const { return bullet_act; }
+Array  _TamaBulletFireData::get_bullet_params()   const { return bullet_params; }
+Array  _TamaBulletFireData::get_bullet_args()     const { return bullet_args; }
+bool   _TamaBulletFireData::get_mvmt_x_set()      const { return mvmt_x_set; }
+int    _TamaBulletFireData::get_mvmt_x_type()     const { return mvmt_x_type; }
+String _TamaBulletFireData::get_mvmt_x_expr()     const { return mvmt_x_expr; }
+bool   _TamaBulletFireData::get_mvmt_y_set()      const { return mvmt_y_set; }
+int    _TamaBulletFireData::get_mvmt_y_type()     const { return mvmt_y_type; }
+String _TamaBulletFireData::get_mvmt_y_expr()     const { return mvmt_y_expr; }
+Object*_TamaBulletFireData::get_source_program()  const { return source_program; }
 
-void TamaChdirData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_dir_type"),  &TamaChdirData::get_dir_type);
-    ClassDB::bind_method(D_METHOD("get_dir_value"), &TamaChdirData::get_dir_value);
-    ClassDB::bind_method(D_METHOD("get_over"),      &TamaChdirData::get_over);
+void _TamaChdirData::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_dir_type"),  &_TamaChdirData::get_dir_type);
+    ClassDB::bind_method(D_METHOD("get_dir_value"), &_TamaChdirData::get_dir_value);
+    ClassDB::bind_method(D_METHOD("get_over"),      &_TamaChdirData::get_over);
     ADD_PROPERTY(PropertyInfo(Variant::INT,   "dir_type"),  "", "get_dir_type");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "dir_value"), "", "get_dir_value");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),      "", "get_over");
 }
-int   TamaChdirData::get_dir_type()  const { return dir_type; }
-float TamaChdirData::get_dir_value() const { return dir_value; }
-float TamaChdirData::get_over()      const { return over; }
+int   _TamaChdirData::get_dir_type()  const { return dir_type; }
+float _TamaChdirData::get_dir_value() const { return dir_value; }
+float _TamaChdirData::get_over()      const { return over; }
 
-void TamaChspdData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_speed_type"),  &TamaChspdData::get_speed_type);
-    ClassDB::bind_method(D_METHOD("get_speed_value"), &TamaChspdData::get_speed_value);
-    ClassDB::bind_method(D_METHOD("get_over"),        &TamaChspdData::get_over);
+void _TamaChspdData::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_speed_type"),  &_TamaChspdData::get_speed_type);
+    ClassDB::bind_method(D_METHOD("get_speed_value"), &_TamaChspdData::get_speed_value);
+    ClassDB::bind_method(D_METHOD("get_over"),        &_TamaChspdData::get_over);
     ADD_PROPERTY(PropertyInfo(Variant::INT,   "speed_type"),  "", "get_speed_type");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "speed_value"), "", "get_speed_value");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),        "", "get_over");
 }
-int   TamaChspdData::get_speed_type()  const { return speed_type; }
-float TamaChspdData::get_speed_value() const { return speed_value; }
-float TamaChspdData::get_over()        const { return over; }
+int   _TamaChspdData::get_speed_type()  const { return speed_type; }
+float _TamaChspdData::get_speed_value() const { return speed_value; }
+float _TamaChspdData::get_over()        const { return over; }
 
-void TamaChposData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_has_x"),  &TamaChposData::get_has_x);
-    ClassDB::bind_method(D_METHOD("get_x_type"), &TamaChposData::get_x_type);
-    ClassDB::bind_method(D_METHOD("get_x"),      &TamaChposData::get_x);
-    ClassDB::bind_method(D_METHOD("get_has_y"),  &TamaChposData::get_has_y);
-    ClassDB::bind_method(D_METHOD("get_y_type"), &TamaChposData::get_y_type);
-    ClassDB::bind_method(D_METHOD("get_y"),      &TamaChposData::get_y);
-    ClassDB::bind_method(D_METHOD("get_over"),   &TamaChposData::get_over);
+void _TamaChposData::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_has_x"),  &_TamaChposData::get_has_x);
+    ClassDB::bind_method(D_METHOD("get_x_type"), &_TamaChposData::get_x_type);
+    ClassDB::bind_method(D_METHOD("get_x"),      &_TamaChposData::get_x);
+    ClassDB::bind_method(D_METHOD("get_has_y"),  &_TamaChposData::get_has_y);
+    ClassDB::bind_method(D_METHOD("get_y_type"), &_TamaChposData::get_y_type);
+    ClassDB::bind_method(D_METHOD("get_y"),      &_TamaChposData::get_y);
+    ClassDB::bind_method(D_METHOD("get_over"),   &_TamaChposData::get_over);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL,  "has_x"),  "", "get_has_x");
     ADD_PROPERTY(PropertyInfo(Variant::INT,   "x_type"), "", "get_x_type");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "x"),      "", "get_x");
@@ -153,22 +153,22 @@ void TamaChposData::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "y"),      "", "get_y");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),   "", "get_over");
 }
-bool  TamaChposData::get_has_x()  const { return has_x; }
-int   TamaChposData::get_x_type() const { return x_type; }
-float TamaChposData::get_x()      const { return x; }
-bool  TamaChposData::get_has_y()  const { return has_y; }
-int   TamaChposData::get_y_type() const { return y_type; }
-float TamaChposData::get_y()      const { return y; }
-float TamaChposData::get_over()   const { return over; }
+bool  _TamaChposData::get_has_x()  const { return has_x; }
+int   _TamaChposData::get_x_type() const { return x_type; }
+float _TamaChposData::get_x()      const { return x; }
+bool  _TamaChposData::get_has_y()  const { return has_y; }
+int   _TamaChposData::get_y_type() const { return y_type; }
+float _TamaChposData::get_y()      const { return y; }
+float _TamaChposData::get_over()   const { return over; }
 
-void TamaAccelData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_has_x"),  &TamaAccelData::get_has_x);
-    ClassDB::bind_method(D_METHOD("get_x_type"), &TamaAccelData::get_x_type);
-    ClassDB::bind_method(D_METHOD("get_x"),      &TamaAccelData::get_x);
-    ClassDB::bind_method(D_METHOD("get_has_y"),  &TamaAccelData::get_has_y);
-    ClassDB::bind_method(D_METHOD("get_y_type"), &TamaAccelData::get_y_type);
-    ClassDB::bind_method(D_METHOD("get_y"),      &TamaAccelData::get_y);
-    ClassDB::bind_method(D_METHOD("get_over"),   &TamaAccelData::get_over);
+void _TamaAccelData::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_has_x"),  &_TamaAccelData::get_has_x);
+    ClassDB::bind_method(D_METHOD("get_x_type"), &_TamaAccelData::get_x_type);
+    ClassDB::bind_method(D_METHOD("get_x"),      &_TamaAccelData::get_x);
+    ClassDB::bind_method(D_METHOD("get_has_y"),  &_TamaAccelData::get_has_y);
+    ClassDB::bind_method(D_METHOD("get_y_type"), &_TamaAccelData::get_y_type);
+    ClassDB::bind_method(D_METHOD("get_y"),      &_TamaAccelData::get_y);
+    ClassDB::bind_method(D_METHOD("get_over"),   &_TamaAccelData::get_over);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL,  "has_x"),  "", "get_has_x");
     ADD_PROPERTY(PropertyInfo(Variant::INT,   "x_type"), "", "get_x_type");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "x"),      "", "get_x");
@@ -177,36 +177,36 @@ void TamaAccelData::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "y"),      "", "get_y");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),   "", "get_over");
 }
-bool  TamaAccelData::get_has_x()  const { return has_x; }
-int   TamaAccelData::get_x_type() const { return x_type; }
-float TamaAccelData::get_x()      const { return x; }
-bool  TamaAccelData::get_has_y()  const { return has_y; }
-int   TamaAccelData::get_y_type() const { return y_type; }
-float TamaAccelData::get_y()      const { return y; }
-float TamaAccelData::get_over()   const { return over; }
+bool  _TamaAccelData::get_has_x()  const { return has_x; }
+int   _TamaAccelData::get_x_type() const { return x_type; }
+float _TamaAccelData::get_x()      const { return x; }
+bool  _TamaAccelData::get_has_y()  const { return has_y; }
+int   _TamaAccelData::get_y_type() const { return y_type; }
+float _TamaAccelData::get_y()      const { return y; }
+float _TamaAccelData::get_over()   const { return over; }
 
-void TamaRef::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_name"),       &TamaRef::get_ref_name);
-    ClassDB::bind_method(D_METHOD("get_bound_args"), &TamaRef::get_bound_args);
+void _TamaRef::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_name"),       &_TamaRef::get_ref_name);
+    ClassDB::bind_method(D_METHOD("get_bound_args"), &_TamaRef::get_bound_args);
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "name"),       "", "get_name");
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY,  "bound_args"), "", "get_bound_args");
 }
-String TamaRef::get_ref_name()   const { return name; }
-Array  TamaRef::get_bound_args() const { return bound_args; }
+String _TamaRef::get_ref_name()   const { return name; }
+Array  _TamaRef::get_bound_args() const { return bound_args; }
 
 // ===========================================================================
-// TamaInterpreter
+// _TamaInterpreter
 // ===========================================================================
 
-void TamaInterpreter::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("step", "delta"),                 &TamaInterpreter::step);
-    ClassDB::bind_method(D_METHOD("start", "program", "scope"),    &TamaInterpreter::start);
-    ClassDB::bind_method(D_METHOD("start_act", "program", "act", "scope"), &TamaInterpreter::start_act);
-    ClassDB::bind_method(D_METHOD("stop"),                          &TamaInterpreter::stop);
-    ClassDB::bind_method(D_METHOD("is_running"),                    &TamaInterpreter::is_running);
-    ClassDB::bind_method(D_METHOD("set_context", "ctx"),              &TamaInterpreter::set_context);
-    ClassDB::bind_method(D_METHOD("get_context"),                     &TamaInterpreter::get_context);
-    ClassDB::bind_method(D_METHOD("eval_expr", "expr", "scope"),      &TamaInterpreter::eval_expr);
+void _TamaInterpreter::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("step", "delta"),                 &_TamaInterpreter::step);
+    ClassDB::bind_method(D_METHOD("start", "program", "scope"),    &_TamaInterpreter::start);
+    ClassDB::bind_method(D_METHOD("start_act", "program", "act", "scope"), &_TamaInterpreter::start_act);
+    ClassDB::bind_method(D_METHOD("stop"),                          &_TamaInterpreter::stop);
+    ClassDB::bind_method(D_METHOD("is_running"),                    &_TamaInterpreter::is_running);
+    ClassDB::bind_method(D_METHOD("set_context", "ctx"),              &_TamaInterpreter::set_context);
+    ClassDB::bind_method(D_METHOD("get_context"),                     &_TamaInterpreter::get_context);
+    ClassDB::bind_method(D_METHOD("eval_expr", "expr", "scope"),      &_TamaInterpreter::eval_expr);
 
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "context"), "set_context", "get_context");
 
@@ -219,11 +219,11 @@ void TamaInterpreter::_bind_methods() {
     ADD_SIGNAL(MethodInfo("finished"));
 }
 
-void TamaInterpreter::_ready() {
+void _TamaInterpreter::_ready() {
     set_physics_process(false);
 }
 
-void TamaInterpreter::_physics_process(double delta) {
+void _TamaInterpreter::_physics_process(double delta) {
     step(delta);
 }
 
@@ -231,7 +231,7 @@ void TamaInterpreter::_physics_process(double delta) {
 // Public entry points
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::start(Object *program, Dictionary scope) {
+void _TamaInterpreter::start(Object *program, Dictionary scope) {
     _program = program;
     _scope   = scope;
     _exec_stack.clear();
@@ -245,7 +245,7 @@ void TamaInterpreter::start(Object *program, Dictionary scope) {
 
     Object *main_node = Object::cast_to<Object>(_program->get("main"));
     if (!main_node) {
-        UtilityFunctions::push_error("TamaInterpreter: program has no main block");
+        UtilityFunctions::push_error("_TamaInterpreter: program has no main block");
         _running = false;
         return;
     }
@@ -255,7 +255,7 @@ void TamaInterpreter::start(Object *program, Dictionary scope) {
     if (is_inside_tree()) set_physics_process(true);
 }
 
-void TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope) {
+void _TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope) {
     _program = program;
     _scope   = scope;
     _exec_stack.clear();
@@ -275,7 +275,7 @@ void TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope) 
         String name_str = (String)act->get("name");
         std::string name = name_str.utf8().get_data();
 
-        // Check if name resolves through scope (first-class acts / TamaRef)
+        // Check if name resolves through scope (first-class acts / _TamaRef)
         Variant scope_val = _scope.get(name_str, Variant());
         if (scope_val.get_type() == Variant::OBJECT) {
             Object *sv = scope_val.operator Object *();
@@ -285,7 +285,7 @@ void TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope) 
             }
         }
         {
-            Ref<TamaRef> tref = Object::cast_to<TamaRef>(scope_val.operator Object *());
+            Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(scope_val.operator Object *());
             std::string ref_name = name;
             Array pre_bound;
             if (tref.is_valid()) {
@@ -294,7 +294,7 @@ void TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope) 
             }
             Object *act_def = _find_act(ref_name);
             if (!act_def) {
-                UtilityFunctions::push_error(String("TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
+                UtilityFunctions::push_error(String("_TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
                 _running = false;
                 return;
             }
@@ -316,7 +316,7 @@ void TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope) 
     if (is_inside_tree()) set_physics_process(true);
 }
 
-void TamaInterpreter::stop() {
+void _TamaInterpreter::stop() {
     _running = false;
     _exec_stack.clear();
     for (auto *child : _async_children) {
@@ -331,12 +331,12 @@ void TamaInterpreter::stop() {
 // Step — called every physics frame
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::step(double p_delta) {
+void _TamaInterpreter::step(double p_delta) {
     float delta = (float)p_delta;
 
     // Step async children first
     for (auto it = _async_children.begin(); it != _async_children.end(); ) {
-        TamaInterpreter *child = *it;
+        _TamaInterpreter *child = *it;
         if (child->is_running()) {
             child->step(delta);
             ++it;
@@ -392,7 +392,7 @@ void TamaInterpreter::step(double p_delta) {
 // Frame management
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::_build_lookup_tables() {
+void _TamaInterpreter::_build_lookup_tables() {
     _fires_map.clear();
     _acts_map.clear();
     _bullets_map.clear();
@@ -416,7 +416,7 @@ void TamaInterpreter::_build_lookup_tables() {
     }
 }
 
-std::vector<std::string> TamaInterpreter::_snapshot_scope_keys() const {
+std::vector<std::string> _TamaInterpreter::_snapshot_scope_keys() const {
     std::vector<std::string> keys;
     Array ks = _scope.keys();
     for (int i = 0; i < ks.size(); ++i)
@@ -424,7 +424,7 @@ std::vector<std::string> TamaInterpreter::_snapshot_scope_keys() const {
     return keys;
 }
 
-void TamaInterpreter::_push_body(const Array &body, bool sync_only, bool pops_scope) {
+void _TamaInterpreter::_push_body(const Array &body, bool sync_only, bool pops_scope) {
     ExecFrame f;
     f.kind       = ExecFrame::Kind::BODY;
     f.body       = body;
@@ -435,7 +435,7 @@ void TamaInterpreter::_push_body(const Array &body, bool sync_only, bool pops_sc
     _exec_stack.push_back(std::move(f));
 }
 
-void TamaInterpreter::_push_repeat_ctrl(const Array &body, int n, const String &idx_var) {
+void _TamaInterpreter::_push_repeat_ctrl(const Array &body, int n, const String &idx_var) {
     ExecFrame f;
     f.kind             = ExecFrame::Kind::REPEAT_CTRL;
     f.loop_body        = body;
@@ -446,7 +446,7 @@ void TamaInterpreter::_push_repeat_ctrl(const Array &body, int n, const String &
     _exec_stack.push_back(std::move(f));
 }
 
-void TamaInterpreter::_push_while_ctrl(const Array &body, const String &cond) {
+void _TamaInterpreter::_push_while_ctrl(const Array &body, const String &cond) {
     ExecFrame f;
     f.kind       = ExecFrame::Kind::WHILE_CTRL;
     f.loop_body  = body;
@@ -456,7 +456,7 @@ void TamaInterpreter::_push_while_ctrl(const Array &body, const String &cond) {
     _exec_stack.push_back(std::move(f));
 }
 
-void TamaInterpreter::_push_repeatf_ctrl(const Array &body, int n, const String &idx_var) {
+void _TamaInterpreter::_push_repeatf_ctrl(const Array &body, int n, const String &idx_var) {
     ExecFrame f;
     f.kind           = ExecFrame::Kind::REPEATF_CTRL;
     f.loop_body      = body;
@@ -467,7 +467,7 @@ void TamaInterpreter::_push_repeatf_ctrl(const Array &body, int n, const String 
     _exec_stack.push_back(std::move(f));
 }
 
-void TamaInterpreter::_pop_body_frame() {
+void _TamaInterpreter::_pop_body_frame() {
     if (_exec_stack.empty()) return;
     ExecFrame &f = _exec_stack.back();
 
@@ -489,7 +489,7 @@ void TamaInterpreter::_pop_body_frame() {
     _exec_stack.pop_back();
 }
 
-float TamaInterpreter::eval_expr(const String &expr, const Dictionary &scope) {
+float _TamaInterpreter::eval_expr(const String &expr, const Dictionary &scope) {
     Dictionary saved = _scope;
     _scope = scope;
     float result = _eval_float(expr);
@@ -501,7 +501,7 @@ float TamaInterpreter::eval_expr(const String &expr, const Dictionary &scope) {
 // Frame stepping
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::_step_body(ExecFrame &f, bool &yielded) {
+void _TamaInterpreter::_step_body(ExecFrame &f, bool &yielded) {
     while (f.pc < f.body.size()) {
         if (!_running) return;
 
@@ -523,7 +523,7 @@ void TamaInterpreter::_step_body(ExecFrame &f, bool &yielded) {
     _pop_body_frame();
 }
 
-void TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
+void _TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
     bool is_repeatf = (f.kind == ExecFrame::Kind::REPEATF_CTRL);
 
     // Between-iteration wait (REPEATF only)
@@ -584,7 +584,7 @@ void TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
 // Single node dispatch
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, bool &yielded) {
+void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, bool &yielded) {
     using NT = TamaNodeType;
 
     switch ((NT)type_id) {
@@ -776,8 +776,8 @@ void TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, bool
                 }
             }
         }
-        // TamaRef in scope?
-        Ref<TamaRef> tref = Object::cast_to<TamaRef>(scope_val.operator Object *());
+        // _TamaRef in scope?
+        Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(scope_val.operator Object *());
 
         std::string ref_name = name.utf8().get_data();
         Array pre_bound;
@@ -788,7 +788,7 @@ void TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, bool
 
         Object *act_def = _find_act(ref_name);
         if (!act_def) {
-            UtilityFunctions::push_warning(String("TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
+            UtilityFunctions::push_warning(String("_TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
             return;
         }
         Array params = (Array)act_def->get("params");
@@ -832,7 +832,7 @@ void TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, bool
 // Sync body execution (for repeatf body — no suspension)
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::_exec_body_sync(const Array &body) {
+void _TamaInterpreter::_exec_body_sync(const Array &body) {
     for (int i = 0; i < body.size(); ++i) {
         if (!_running || _breaking) return;
         Object *node = body[i].operator Object *();
@@ -846,8 +846,8 @@ void TamaInterpreter::_exec_body_sync(const Array &body) {
 // Async acts
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_copy) {
-    TamaInterpreter *child = memnew(TamaInterpreter);
+void _TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_copy) {
+    _TamaInterpreter *child = memnew(_TamaInterpreter);
     child->_context  = _context;
     child->_program  = _program;
     child->_fires_map  = _fires_map;
@@ -855,12 +855,12 @@ void TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_c
     child->_bullets_map = _bullets_map;
 
     // Forward child signals to this interpreter's own signals via dedicated methods
-    child->connect("bullet_fired",      callable_mp(this, &TamaInterpreter::_fwd_bullet_fired));
-    child->connect("vanished",          callable_mp(this, &TamaInterpreter::_fwd_vanished));
-    child->connect("changed_direction", callable_mp(this, &TamaInterpreter::_fwd_changed_direction));
-    child->connect("changed_speed",     callable_mp(this, &TamaInterpreter::_fwd_changed_speed));
-    child->connect("changed_position",  callable_mp(this, &TamaInterpreter::_fwd_changed_position));
-    child->connect("accelerated",       callable_mp(this, &TamaInterpreter::_fwd_accelerated));
+    child->connect("bullet_fired",      callable_mp(this, &_TamaInterpreter::_fwd_bullet_fired));
+    child->connect("vanished",          callable_mp(this, &_TamaInterpreter::_fwd_vanished));
+    child->connect("changed_direction", callable_mp(this, &_TamaInterpreter::_fwd_changed_direction));
+    child->connect("changed_speed",     callable_mp(this, &_TamaInterpreter::_fwd_changed_speed));
+    child->connect("changed_position",  callable_mp(this, &_TamaInterpreter::_fwd_changed_position));
+    child->connect("accelerated",       callable_mp(this, &_TamaInterpreter::_fwd_accelerated));
 
     child->_scope    = scope_copy;
     child->_running  = true;
@@ -880,11 +880,11 @@ void TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_c
 // Fire emission
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::_exec_fire_call(Object *node) {
+void _TamaInterpreter::_exec_fire_call(Object *node) {
     String name  = (String)node->get("name");
     Array  args  = (Array)node->get("args");
 
-    // Scope may hold an InlineFireNode or TamaRef for this name
+    // Scope may hold an InlineFireNode or _TamaRef for this name
     Variant scope_val = _scope.get(name, Variant());
     if (scope_val.get_type() == Variant::OBJECT) {
         Object *sv = scope_val.operator Object *();
@@ -896,7 +896,7 @@ void TamaInterpreter::_exec_fire_call(Object *node) {
 
     std::string ref_name = name.utf8().get_data();
     Array pre_bound;
-    Ref<TamaRef> tref = Object::cast_to<TamaRef>(scope_val.operator Object *());
+    Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(scope_val.operator Object *());
     if (tref.is_valid()) {
         ref_name  = tref->name.utf8().get_data();
         pre_bound = tref->bound_args;
@@ -904,7 +904,7 @@ void TamaInterpreter::_exec_fire_call(Object *node) {
 
     Object *fire_def = _find_fire(ref_name);
     if (!fire_def) {
-        UtilityFunctions::push_warning(String("TamaInterpreter: unknown fire '") + String(ref_name.c_str()) + "'");
+        UtilityFunctions::push_warning(String("_TamaInterpreter: unknown fire '") + String(ref_name.c_str()) + "'");
         return;
     }
 
@@ -920,8 +920,8 @@ void TamaInterpreter::_exec_fire_call(Object *node) {
     _scope = saved;
 }
 
-void TamaInterpreter::_exec_fire_node(Object *node) {
-    Ref<TamaBulletFireData> data = memnew(TamaBulletFireData);
+void _TamaInterpreter::_exec_fire_node(Object *node) {
+    Ref<_TamaBulletFireData> data = memnew(_TamaBulletFireData);
 
     // Direction
     Object *dir_node = Object::cast_to<Object>(node->get("dir"));
@@ -995,7 +995,7 @@ void TamaInterpreter::_exec_fire_node(Object *node) {
                     if (mvmt) _populate_mvmt(data.ptr(), mvmt);
                     goto bullet_done;
                 }
-                Ref<TamaRef> tref = Object::cast_to<TamaRef>(svo);
+                Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(svo);
                 if (tref.is_valid()) {
                     pre_bound = tref->bound_args;
                     bul_name  = tref->name.utf8().get_data();
@@ -1004,7 +1004,7 @@ void TamaInterpreter::_exec_fire_node(Object *node) {
             {
                 Object *bullet_def = _find_bullet(bul_name);
                 if (!bullet_def) {
-                    UtilityFunctions::push_warning(String("TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
+                    UtilityFunctions::push_warning(String("_TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
                     goto bullet_done;
                 }
                 Array params = (Array)bullet_def->get("params");
@@ -1030,7 +1030,7 @@ void TamaInterpreter::_exec_fire_node(Object *node) {
     emit_signal("bullet_fired", data);
 }
 
-void TamaInterpreter::_populate_mvmt(TamaBulletFireData *data, Object *mvmt_node) {
+void _TamaInterpreter::_populate_mvmt(_TamaBulletFireData *data, Object *mvmt_node) {
     Object *mx = Object::cast_to<Object>(mvmt_node->get("x"));
     Object *my = Object::cast_to<Object>(mvmt_node->get("y"));
     if (mx) {
@@ -1049,10 +1049,10 @@ void TamaInterpreter::_populate_mvmt(TamaBulletFireData *data, Object *mvmt_node
 // Signal emission helpers
 // ---------------------------------------------------------------------------
 
-void TamaInterpreter::_emit_chdir(Object *node) {
+void _TamaInterpreter::_emit_chdir(Object *node) {
     Object *dir_node = Object::cast_to<Object>(node->get("dir"));
     if (!dir_node) return;
-    Ref<TamaChdirData> d = memnew(TamaChdirData);
+    Ref<_TamaChdirData> d = memnew(_TamaChdirData);
     d->dir_type  = _get_dir_type(dir_node);
     d->dir_value = _eval_float((String)dir_node->get("expr"));
     Object *over = Object::cast_to<Object>(node->get("over"));
@@ -1060,10 +1060,10 @@ void TamaInterpreter::_emit_chdir(Object *node) {
     emit_signal("changed_direction", d);
 }
 
-void TamaInterpreter::_emit_chspd(Object *node) {
+void _TamaInterpreter::_emit_chspd(Object *node) {
     Object *spd_node = Object::cast_to<Object>(node->get("speed"));
     if (!spd_node) return;
-    Ref<TamaChspdData> d = memnew(TamaChspdData);
+    Ref<_TamaChspdData> d = memnew(_TamaChspdData);
     d->speed_type  = _get_speed_type(spd_node);
     d->speed_value = _eval_float((String)spd_node->get("expr"));
     Object *over = Object::cast_to<Object>(node->get("over"));
@@ -1071,8 +1071,8 @@ void TamaInterpreter::_emit_chspd(Object *node) {
     emit_signal("changed_speed", d);
 }
 
-void TamaInterpreter::_emit_chpos(Object *node) {
-    Ref<TamaChposData> d = memnew(TamaChposData);
+void _TamaInterpreter::_emit_chpos(Object *node) {
+    Ref<_TamaChposData> d = memnew(_TamaChposData);
     Object *xn = Object::cast_to<Object>(node->get("x"));
     Object *yn = Object::cast_to<Object>(node->get("y"));
     Object *ov = Object::cast_to<Object>(node->get("over"));
@@ -1082,11 +1082,11 @@ void TamaInterpreter::_emit_chpos(Object *node) {
     emit_signal("changed_position", d);
 }
 
-void TamaInterpreter::_emit_accel(Object *node) {
+void _TamaInterpreter::_emit_accel(Object *node) {
     Object *xn = Object::cast_to<Object>(node->get("x"));
     Object *yn = Object::cast_to<Object>(node->get("y"));
     if (!xn && !yn) return;
-    Ref<TamaAccelData> d = memnew(TamaAccelData);
+    Ref<_TamaAccelData> d = memnew(_TamaAccelData);
     Object *ov = Object::cast_to<Object>(node->get("over"));
     if (xn) { d->has_x = true; d->x_type = _get_axis_type(xn); d->x = _eval_float((String)xn->get("expr")); }
     if (yn) { d->has_y = true; d->y_type = _get_axis_type(yn); d->y = _eval_float((String)yn->get("expr")); }
@@ -1098,24 +1098,24 @@ void TamaInterpreter::_emit_accel(Object *node) {
 // Expression evaluation
 // ---------------------------------------------------------------------------
 
-Variant TamaInterpreter::_eval_arg(const Variant &arg) {
+Variant _TamaInterpreter::_eval_arg(const Variant &arg) {
     if (arg.get_type() == Variant::OBJECT) {
         Object *obj = arg.operator Object *();
         if (!obj) return Variant(0.0f);
         int tid = (int)obj->get("type_id");
         if (tid == (int)TamaNodeType::REF_CALL_ARG) {
-            // Build a TamaRef
+            // Build a _TamaRef
             String ref_name = (String)obj->get("name");
             Array  sub_args = (Array)obj->get("args");
-            Ref<TamaRef> tr = memnew(TamaRef);
+            Ref<_TamaRef> tr = memnew(_TamaRef);
             tr->name = ref_name;
             for (int i = 0; i < sub_args.size(); ++i)
                 tr->bound_args.push_back(_eval_arg(sub_args[i]));
-            // Merge with existing TamaRef in scope if present
+            // Merge with existing _TamaRef in scope if present
             Variant sv = _scope.get(ref_name, Variant());
-            Ref<TamaRef> existing = Object::cast_to<TamaRef>(sv.operator Object *());
+            Ref<_TamaRef> existing = Object::cast_to<_TamaRef>(sv.operator Object *());
             if (existing.is_valid()) {
-                Ref<TamaRef> merged = memnew(TamaRef);
+                Ref<_TamaRef> merged = memnew(_TamaRef);
                 merged->name = existing->name;
                 merged->bound_args = existing->bound_args;
                 for (int i = 0; i < tr->bound_args.size(); ++i)
@@ -1143,7 +1143,7 @@ Variant TamaInterpreter::_eval_arg(const Variant &arg) {
             // Numeric scope value → float
             if (sv.get_type() == Variant::FLOAT || sv.get_type() == Variant::INT || sv.get_type() == Variant::BOOL)
                 return Variant((float)sv);
-            return sv; // pass through non-numeric (TamaRef, Object, String)
+            return sv; // pass through non-numeric (_TamaRef, Object, String)
         }
         // Qualifier keywords
         if (stripped == "aim" || stripped == "abs" || stripped == "rel" || stripped == "seq")
@@ -1153,11 +1153,11 @@ Variant TamaInterpreter::_eval_arg(const Variant &arg) {
         return stripped; // treat as bullet/act type string name
     }
 
-    // Full expression — evaluate via TamaExprRuntime
+    // Full expression — evaluate via _TamaExprRuntime
     return Variant(_eval_float(expr));
 }
 
-float TamaInterpreter::_eval_float(const String &expr) {
+float _TamaInterpreter::_eval_float(const String &expr) {
     String s = expr.strip_edges();
     if (s.is_empty()) return 0.0f;
     if (s.is_valid_float()) return s.to_float();
@@ -1170,7 +1170,7 @@ float TamaInterpreter::_eval_float(const String &expr) {
     }
 
     // Build var_names / var_values arrays from numeric scope entries
-    TamaExprRuntime *er = TamaExprRuntime::get_singleton();
+    _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
     if (!er) return 0.0f;
 
     PackedStringArray var_names;
@@ -1187,7 +1187,7 @@ float TamaInterpreter::_eval_float(const String &expr) {
     return (float)(double)er->eval(s, var_names, var_values, _context);
 }
 
-float TamaInterpreter::_eval_arg_as_float(const Variant &arg) {
+float _TamaInterpreter::_eval_arg_as_float(const Variant &arg) {
     Variant v = _eval_arg(arg);
     if (v.get_type() == Variant::FLOAT || v.get_type() == Variant::INT || v.get_type() == Variant::BOOL)
         return (float)v;
@@ -1198,7 +1198,7 @@ float TamaInterpreter::_eval_arg_as_float(const Variant &arg) {
 // Qualifier resolution
 // ---------------------------------------------------------------------------
 
-int TamaInterpreter::_get_dir_type(Object *dir_node) const {
+int _TamaInterpreter::_get_dir_type(Object *dir_node) const {
     String type_var = (String)dir_node->get("dir_type_var");
     if (type_var.is_empty()) return (int)dir_node->get("dir_type");
     Variant sv = _scope.get(type_var, Variant());
@@ -1210,7 +1210,7 @@ int TamaInterpreter::_get_dir_type(Object *dir_node) const {
     return 0; // AIM
 }
 
-int TamaInterpreter::_get_speed_type(Object *spd_node) const {
+int _TamaInterpreter::_get_speed_type(Object *spd_node) const {
     String type_var = (String)spd_node->get("speed_type_var");
     if (type_var.is_empty()) return (int)spd_node->get("speed_type");
     Variant sv = _scope.get(type_var, Variant());
@@ -1221,7 +1221,7 @@ int TamaInterpreter::_get_speed_type(Object *spd_node) const {
     return 0; // ABS
 }
 
-int TamaInterpreter::_get_axis_type(Object *axis_node) const {
+int _TamaInterpreter::_get_axis_type(Object *axis_node) const {
     String type_var = (String)axis_node->get("axis_type_var");
     if (type_var.is_empty()) return (int)axis_node->get("axis_type");
     Variant sv = _scope.get(type_var, Variant());
@@ -1236,17 +1236,17 @@ int TamaInterpreter::_get_axis_type(Object *axis_node) const {
 // Definition lookups
 // ---------------------------------------------------------------------------
 
-Object *TamaInterpreter::_find_fire(const std::string &name) const {
+Object *_TamaInterpreter::_find_fire(const std::string &name) const {
     auto it = _fires_map.find(name);
     return it != _fires_map.end() ? it->second : nullptr;
 }
 
-Object *TamaInterpreter::_find_act(const std::string &name) const {
+Object *_TamaInterpreter::_find_act(const std::string &name) const {
     auto it = _acts_map.find(name);
     return it != _acts_map.end() ? it->second : nullptr;
 }
 
-Object *TamaInterpreter::_find_bullet(const std::string &name) const {
+Object *_TamaInterpreter::_find_bullet(const std::string &name) const {
     auto it = _bullets_map.find(name);
     return it != _bullets_map.end() ? it->second : nullptr;
 }
@@ -1255,7 +1255,7 @@ Object *TamaInterpreter::_find_bullet(const std::string &name) const {
 // Scope helpers
 // ---------------------------------------------------------------------------
 
-Dictionary TamaInterpreter::_scope_snapshot_plus_params(
+Dictionary _TamaInterpreter::_scope_snapshot_plus_params(
         const Array &params, const Array &args) const {
     Dictionary d = _scope.duplicate();
     int n = std::min(params.size(), args.size());

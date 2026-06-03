@@ -142,5 +142,8 @@
 		<member name="registry" type="TamaBulletRegistry" setter="set_registry" getter="get_registry">
 			The registry that maps bullet type names to scenes and server configs.
 		</member>
+		<member name="global_out_of_bounds_margin" type="float" setter="set_global_out_of_bounds_margin" getter="get_global_out_of_bounds_margin" default="-1.0">
+			When set to [code]0[/code] or greater, overrides the [member TamaServerBulletConfig.out_of_bounds_margin] of every registered server bullet type. A value of [code]-1[/code] (default) means each type uses its own margin.
+		</member>
 	</members>
 </class>

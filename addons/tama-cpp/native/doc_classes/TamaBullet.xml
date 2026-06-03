@@ -90,7 +90,10 @@
 			Independent Y-axis speed. Active when a TamaScript [code]mvmt[/code] directive overrides vertical movement.
 		</member>
 		<member name="rotates" type="bool" setter="set_rotates" getter="get_rotates" default="true">
-			When [code]true[/code], the bullet's visual rotation tracks its movement angle.
+			When [code]true[/code], the bullet visually rotates. When [code]false[/code], [member face_velocity] has no effect.
+		</member>
+		<member name="face_velocity" type="bool" setter="set_face_velocity" getter="get_face_velocity" default="true">
+			When [code]true[/code] and [member rotates] is [code]true[/code], the bullet rotates to face its actual velocity vector (the combination of [member angle]/[member speed] and [member speed_x]/[member speed_y]). This is useful when [code]accel[/code] adds lateral movement without changing [member angle]. Has no effect when using [code]mvmt[/code] expression directives. Read-only in the inspector when [member rotates] is [code]false[/code].
 		</member>
 		<member name="initial_position" type="Vector2" setter="set_initial_position" getter="get_initial_position" default="Vector2(0, 0)">
 			The world position where the bullet was spawned. Used by TamaScript [code]pos seq[/code] directives.

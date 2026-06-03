@@ -55,7 +55,7 @@ private:
 
     godot::String _script_filename;
     bool          _excluded_from_group = false;
-    TamaInterpreter *_interpreter = nullptr;
+    _TamaInterpreter *_interpreter = nullptr;
     bool          _running        = false;
     godot::Dictionary _export_values;
     std::vector<ExportDef> _cached_export_defs;

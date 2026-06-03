@@ -30,7 +30,12 @@ void TamaManager::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_context","v"),                  &TamaManager::set_context);
     ClassDB::bind_method(D_METHOD("get_registry"),                     &TamaManager::get_registry);
     ClassDB::bind_method(D_METHOD("set_registry","v"),                 &TamaManager::set_registry);
-    ClassDB::bind_method(D_METHOD("get_server_bullet_pool"),           &TamaManager::get_server_bullet_pool);
+    ClassDB::bind_method(D_METHOD("get_server_bullet_pool"),                 &TamaManager::get_server_bullet_pool);
+    ClassDB::bind_method(D_METHOD("get_global_out_of_bounds_margin"),        &TamaManager::get_global_out_of_bounds_margin);
+    ClassDB::bind_method(D_METHOD("set_global_out_of_bounds_margin","v"),    &TamaManager::set_global_out_of_bounds_margin);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "global_out_of_bounds_margin",
+                              PROPERTY_HINT_RANGE, "-1,1000,1,or_greater"),
+                 "set_global_out_of_bounds_margin", "get_global_out_of_bounds_margin");
 }
 
 // ---------------------------------------------------------------------------
@@ -41,8 +46,8 @@ void TamaManager::_ensure_scene_nodes() {
     if (_nodes_injected) return;
     SceneTree *tree = Object::cast_to<SceneTree>(Engine::get_singleton()->get_main_loop());
     if (!tree || !tree->get_root()) return;
-    _spawn_manager = memnew(TamaSpawnManager);
-    _server_pool   = memnew(TamaServerBulletPool);
+    _spawn_manager = memnew(_TamaSpawnManager);
+    _server_pool   = memnew(_TamaServerBulletPool);
     _spawn_manager->_repository  = _repository;
     _spawn_manager->_server_pool = _server_pool;
     _spawn_manager->context = Ref<TamaContext>(memnew(TamaContext));

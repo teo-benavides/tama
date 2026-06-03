@@ -3,6 +3,7 @@
 
 #include <godot_cpp/classes/character_body2d.hpp>
 #include <godot_cpp/classes/tween.hpp>
+#include <godot_cpp/templates/list.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
@@ -28,10 +29,15 @@ public:
     godot::Dictionary _mvmt_scope;
     godot::Vector2 _initial_position;
 
-    bool rotates = true;
+    bool rotates       = true;
+    bool face_velocity = true;
 
     void _ready()                       override;
     void _physics_process(double delta) override;
+
+    bool _get(const godot::StringName &p_name, godot::Variant &r_ret) const;
+    bool _set(const godot::StringName &p_name, const godot::Variant &p_value);
+    void _get_property_list(godot::List<godot::PropertyInfo> *p_list) const;
 
     virtual void destroy();
 
@@ -44,8 +50,10 @@ public:
     float  get_speed_y()  const { return _speed_y; }
     void   set_speed_y(float v) { _speed_y = v; }
 
-    bool  get_rotates()   const { return rotates; }
-    void  set_rotates(bool v)   { rotates = v; }
+    bool  get_rotates()         const { return rotates; }
+    void  set_rotates(bool v)         { rotates = v; notify_property_list_changed(); }
+    bool  get_face_velocity()   const { return face_velocity; }
+    void  set_face_velocity(bool v)   { face_velocity = v; }
 
     godot::Vector2 get_initial_position() const { return _initial_position; }
     void set_initial_position(godot::Vector2 v) { _initial_position = v; }

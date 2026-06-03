@@ -42,6 +42,9 @@ public:
     void set_registry(TamaBulletRegistry *v);
     godot::Object *get_server_bullet_pool() const;
 
+    float get_global_out_of_bounds_margin() const { return _global_out_of_bounds_margin; }
+    void  set_global_out_of_bounds_margin(float v) { _global_out_of_bounds_margin = v; }
+
     godot::Object *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
     godot::Object *_get_script_from_repository(const godot::String &filename) const;
@@ -55,10 +58,11 @@ public:
     friend void initialize_tama_module(godot::ModuleInitializationLevel);
 
 private:
-    TamaScriptRepository *_repository    = nullptr;
-    TamaSpawnManager     *_spawn_manager = nullptr;
-    TamaServerBulletPool *_server_pool   = nullptr;
+    _TamaScriptRepository *_repository    = nullptr;
+    _TamaSpawnManager     *_spawn_manager = nullptr;
+    _TamaServerBulletPool *_server_pool   = nullptr;
     bool                  _nodes_injected = false;
+    float _global_out_of_bounds_margin    = -1.0f;
 
     void _ensure_scene_nodes();
     void _ensure_registry();

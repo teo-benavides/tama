@@ -52,7 +52,9 @@ struct BulletState {
     float speed      = 0.0f;
     float speed_x    = 0.0f;
     float speed_y    = 0.0f;
-    bool  rotates    = true;
+    bool  rotates             = true;
+    bool  face_velocity       = true;
+    float out_of_bounds_margin = 50.0f;
     float last_angle = 0.0f;
     float last_speed = 0.0f;
     godot::Vector2 texture_scale = {1.0f, 1.0f};
@@ -80,14 +82,14 @@ struct BulletState {
     bool mvmt_y_set  = false;
     int  mvmt_x_type = 0;     // ValueType enum: 0=ABS, 1=REL, 2=SEQ
     int  mvmt_y_type = 0;
-    const TamaExprChunk *mvmt_x_chunk = nullptr;  // stable ptr into TamaExprRuntime cache
+    const TamaExprChunk *mvmt_x_chunk = nullptr;  // stable ptr into _TamaExprRuntime cache
     const TamaExprChunk *mvmt_y_chunk = nullptr;
     std::vector<double> mvmt_values;               // snapshot of variable values at spawn time
 
     godot::Object *runner = nullptr;
 
     // Wrapper Object exposed through bullet_hit signal (created once per slot)
-    // Pointer set by TamaServerBulletPool::register_type, valid for pool lifetime.
+    // Pointer set by _TamaServerBulletPool::register_type, valid for pool lifetime.
     godot::Object *wrapper = nullptr;
 };
 
@@ -95,14 +97,14 @@ struct BulletState {
 // Thin proxy exposed through the bullet_hit signal
 // ---------------------------------------------------------------------------
 
-class TamaServerBulletPool; // forward declaration
+class _TamaServerBulletPool; // forward declaration
 
-class TamaServerBullet : public godot::Object {
-    GDCLASS(TamaServerBullet, godot::Object)
+class _TamaServerBullet : public godot::Object {
+    GDCLASS(_TamaServerBullet, godot::Object)
 
     // Pointer back to the owning pool and this bullet's slot index.
     // Only valid while the pool is alive.
-    TamaServerBulletPool *_pool     = nullptr;
+    _TamaServerBulletPool *_pool     = nullptr;
     int32_t               _slot_idx = -1;
 
     // Cached type key for fast slot lookup
@@ -115,10 +117,10 @@ protected:
     static void _bind_methods();
 
 public:
-    TamaServerBullet() = default;
+    _TamaServerBullet() = default;
 
     // Called once by the pool when the slot is created.
-    void _init_slot(TamaServerBulletPool *pool, BulletState *state);
+    void _init_slot(_TamaServerBulletPool *pool, BulletState *state);
 
     godot::Vector2 get_position()  const;
     float          get_angle()     const;

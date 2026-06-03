@@ -21,16 +21,16 @@
 using namespace godot;
 
 // ---------------------------------------------------------------------------
-// TamaServerBullet binding
+// _TamaServerBullet binding
 // ---------------------------------------------------------------------------
 
-void TamaServerBullet::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_position"), &TamaServerBullet::get_position);
-    ClassDB::bind_method(D_METHOD("get_angle"),    &TamaServerBullet::get_angle);
-    ClassDB::bind_method(D_METHOD("get_speed"),    &TamaServerBullet::get_speed);
-    ClassDB::bind_method(D_METHOD("get_active"),   &TamaServerBullet::get_active);
-    ClassDB::bind_method(D_METHOD("get_speed_x"),  &TamaServerBullet::get_speed_x);
-    ClassDB::bind_method(D_METHOD("get_speed_y"),  &TamaServerBullet::get_speed_y);
+void _TamaServerBullet::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_position"), &_TamaServerBullet::get_position);
+    ClassDB::bind_method(D_METHOD("get_angle"),    &_TamaServerBullet::get_angle);
+    ClassDB::bind_method(D_METHOD("get_speed"),    &_TamaServerBullet::get_speed);
+    ClassDB::bind_method(D_METHOD("get_active"),   &_TamaServerBullet::get_active);
+    ClassDB::bind_method(D_METHOD("get_speed_x"),  &_TamaServerBullet::get_speed_x);
+    ClassDB::bind_method(D_METHOD("get_speed_y"),  &_TamaServerBullet::get_speed_y);
 
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position"), "", "get_position");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT,   "angle"),    "", "get_angle");
@@ -40,39 +40,35 @@ void TamaServerBullet::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT,   "speed_y"),  "", "get_speed_y");
 }
 
-void TamaServerBullet::_init_slot(TamaServerBulletPool *pool, BulletState *state) {
+void _TamaServerBullet::_init_slot(_TamaServerBulletPool *pool, BulletState *state) {
     _pool  = pool;
     _state = state;
     state->wrapper = this;
 }
 
-Vector2 TamaServerBullet::get_position() const { return _state ? _state->position    : Vector2{}; }
-float   TamaServerBullet::get_angle()    const { return _state ? _state->angle       : 0.0f; }
-float   TamaServerBullet::get_speed()    const { return _state ? _state->speed       : 0.0f; }
-bool    TamaServerBullet::get_active()   const { return _state ? _state->active      : false; }
-float   TamaServerBullet::get_speed_x()  const { return _state ? _state->speed_x     : 0.0f; }
-float   TamaServerBullet::get_speed_y()  const { return _state ? _state->speed_y     : 0.0f; }
+Vector2 _TamaServerBullet::get_position() const { return _state ? _state->position    : Vector2{}; }
+float   _TamaServerBullet::get_angle()    const { return _state ? _state->angle       : 0.0f; }
+float   _TamaServerBullet::get_speed()    const { return _state ? _state->speed       : 0.0f; }
+bool    _TamaServerBullet::get_active()   const { return _state ? _state->active      : false; }
+float   _TamaServerBullet::get_speed_x()  const { return _state ? _state->speed_x     : 0.0f; }
+float   _TamaServerBullet::get_speed_y()  const { return _state ? _state->speed_y     : 0.0f; }
 
 // ---------------------------------------------------------------------------
-// TamaServerBulletPool — GDExtension binding
+// _TamaServerBulletPool — GDExtension binding
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::_bind_methods() {
+void _TamaServerBulletPool::_bind_methods() {
     ClassDB::bind_method(D_METHOD("register_type", "key", "config"),
-                         &TamaServerBulletPool::register_type);
+                         &_TamaServerBulletPool::register_type);
     ClassDB::bind_method(D_METHOD("spawn", "data", "config", "angle", "speed", "position", "context"),
-                         &TamaServerBulletPool::spawn);
+                         &_TamaServerBulletPool::spawn);
     ClassDB::bind_method(D_METHOD("recycle", "bullet_wrapper"),
-                         &TamaServerBulletPool::recycle);
+                         &_TamaServerBulletPool::recycle);
     ClassDB::bind_method(D_METHOD("recycle_all"),
-                         &TamaServerBulletPool::recycle_all);
-
-    ClassDB::bind_method(D_METHOD("set_bounds_margin", "v"), &TamaServerBulletPool::set_bounds_margin);
-    ClassDB::bind_method(D_METHOD("get_bounds_margin"),       &TamaServerBulletPool::get_bounds_margin);
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "bounds_margin"), "set_bounds_margin", "get_bounds_margin");
+                         &_TamaServerBulletPool::recycle_all);
 
     ADD_SIGNAL(MethodInfo("bullet_hit",
-        PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerBullet"),
+        PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "_TamaServerBullet"),
         PropertyInfo(Variant::INT,    "body_instance_id")));
 }
 
@@ -80,7 +76,7 @@ void TamaServerBulletPool::_bind_methods() {
 // Destructor — free all GPU resources
 // ---------------------------------------------------------------------------
 
-TamaServerBulletPool::~TamaServerBulletPool() {
+_TamaServerBulletPool::~_TamaServerBulletPool() {
     for (auto &[key, td] : _types) {
         for (auto *b : td->active_batches) delete b;
         for (auto *b : td->free_batches)   delete b;
@@ -99,7 +95,7 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 // Godot virtuals
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::_ready() {
+void _TamaServerBulletPool::_ready() {
     set_physics_process(true);
     _composite_threshold = (int)ProjectSettings::get_singleton()
         ->get_setting("tama/server_bullet_composite_threshold", 1000);
@@ -108,7 +104,7 @@ void TamaServerBulletPool::_ready() {
     _pending_regs.clear();
 }
 
-void TamaServerBulletPool::_exit_tree() {
+void _TamaServerBulletPool::_exit_tree() {
     TamaManager *mgr = TamaManager::get_instance();
     if (mgr) mgr->_on_scene_nodes_freed();
 
@@ -123,14 +119,14 @@ void TamaServerBulletPool::_exit_tree() {
 // Type registration
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) {
+void _TamaServerBulletPool::register_type(const String &p_key, Object *p_config) {
     if (!is_inside_tree()) {
         _pending_regs.push_back({p_key, p_config});
         return;
     }
     std::string key = p_key.utf8().get_data();
     if (_types.count(key)) {
-        UtilityFunctions::push_warning("TamaServerBulletPool: type '" + p_key + "' already registered.");
+        UtilityFunctions::push_warning("_TamaServerBulletPool: type '" + p_key + "' already registered.");
         return;
     }
 
@@ -146,8 +142,10 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     td->shape_radius   = (float)p_config->get("shape_radius");
     td->collision_layer = (int)p_config->get("collision_layer");
     td->collision_mask  = (int)p_config->get("collision_mask");
-    td->rotates        = (bool)p_config->get("rotates");
-    td->pool_size      = (int)p_config->get("pool_size");
+    td->rotates              = (bool)p_config->get("rotates");
+    td->face_velocity        = (bool)p_config->get("face_velocity");
+    td->pool_size            = (int)p_config->get("pool_size");
+    td->out_of_bounds_margin = (float)p_config->get("out_of_bounds_margin");
 
     int n = td->pool_size;
     _types[key] = td;
@@ -180,7 +178,7 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     }
 
     // Monitor callback — local_shape is the global slot index
-    Callable cb = callable_mp_static(TamaServerBulletPool::_area_monitor_callback)
+    Callable cb = callable_mp_static(_TamaServerBulletPool::_area_monitor_callback)
                       .bind(this, p_key);
     PhysicsServer2D::get_singleton()->area_set_monitor_callback(td->area, cb);
 
@@ -190,7 +188,7 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     for (int i = 0; i < n; ++i) {
         td->bullets[i].global_slot = i;
         td->bullets[i].area_rid    = td->area;
-        TamaServerBullet *w = memnew(TamaServerBullet);
+        _TamaServerBullet *w = memnew(_TamaServerBullet);
         w->_init_slot(this, &td->bullets[i]);
         td->wrappers[i] = w;
     }
@@ -207,10 +205,10 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
 // Area collision callback (static)
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::_area_monitor_callback(
+void _TamaServerBulletPool::_area_monitor_callback(
         int status, RID /*body_rid*/, int64_t body_iid,
         int /*body_shape*/, int local_shape,
-        TamaServerBulletPool *self, String type_key)
+        _TamaServerBulletPool *self, String type_key)
 {
     if (status != PhysicsServer2D::AREA_BODY_ADDED) return;
     std::string key = type_key.utf8().get_data();
@@ -227,7 +225,7 @@ void TamaServerBulletPool::_area_monitor_callback(
 // Batch helpers
 // ---------------------------------------------------------------------------
 
-TamaServerBulletPool::BatchData *TamaServerBulletPool::_get_batch(TypeData &td) {
+_TamaServerBulletPool::BatchData *_TamaServerBulletPool::_get_batch(TypeData &td) {
     BatchData *b;
     if (!td.free_batches.empty()) {
         b = td.free_batches.back();
@@ -250,7 +248,7 @@ TamaServerBulletPool::BatchData *TamaServerBulletPool::_get_batch(TypeData &td) 
     return b;
 }
 
-void TamaServerBulletPool::_recycle_batch(TypeData &td, BatchData *batch) {
+void _TamaServerBulletPool::_recycle_batch(TypeData &td, BatchData *batch) {
     if (td.cur_batch == batch) td.cur_batch = nullptr;
     Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
     for (int i = 0; i < batch->used; ++i)
@@ -267,7 +265,7 @@ void TamaServerBulletPool::_recycle_batch(TypeData &td, BatchData *batch) {
 // Spawn
 // ---------------------------------------------------------------------------
 
-Object *TamaServerBulletPool::spawn(
+Object *_TamaServerBulletPool::spawn(
         Object *p_data, Object *p_config,
         float angle, float speed, Vector2 position,
         Object *p_context)
@@ -280,12 +278,12 @@ Object *TamaServerBulletPool::spawn(
 
     auto it = _types.find(key);
     if (it == _types.end()) {
-        UtilityFunctions::push_warning("TamaServerBulletPool: type '" + bullet_type_str + "' not registered.");
+        UtilityFunctions::push_warning("_TamaServerBulletPool: type '" + bullet_type_str + "' not registered.");
         return nullptr;
     }
     TypeData &td = *it->second;
     if (td.ring_count == 0) {
-        UtilityFunctions::push_warning("TamaServerBulletPool: pool full for type '" + bullet_type_str + "'.");
+        UtilityFunctions::push_warning("_TamaServerBulletPool: pool full for type '" + bullet_type_str + "'.");
         return nullptr;
     }
 
@@ -324,7 +322,9 @@ Object *TamaServerBulletPool::spawn(
     b.speed             = speed;
     b.speed_x           = 0.0f;
     b.speed_y           = 0.0f;
-    b.rotates           = td.rotates;
+    b.rotates              = td.rotates;
+    b.face_velocity        = td.face_velocity;
+    b.out_of_bounds_margin = td.out_of_bounds_margin;
     b.texture_scale     = Vector2(td.texture_scale.x, -td.texture_scale.y); // negate Y for QuadMesh UV convention
     b.last_angle        = angle;
     b.last_speed        = speed;
@@ -372,7 +372,7 @@ Object *TamaServerBulletPool::spawn(
             return k;
         };
 
-        TamaExprRuntime *er = TamaExprRuntime::get_singleton();
+        _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
         if (er) {
             if (b.mvmt_x_set) {
                 std::string expr = ((String)p_data->get("mvmt_x_expr")).utf8().get_data();
@@ -396,7 +396,7 @@ Object *TamaServerBulletPool::spawn(
         td.area, global_slot, Transform2D(0.0f, position));
     PhysicsServer2D::get_singleton()->area_set_shape_disabled(td.area, global_slot, false);
 
-    // bullet_act runner — C++ TamaInterpreter (stepped in _physics_process)
+    // bullet_act runner — C++ _TamaInterpreter (stepped in _physics_process)
     b.runner = nullptr;
     Variant bullet_act_v = p_data->get("bullet_act");
     bool has_act = bullet_act_v.get_type() != Variant::NIL &&
@@ -410,7 +410,7 @@ Object *TamaServerBulletPool::spawn(
     has_act = (bullet_act_obj != nullptr);
 
     if (has_act) {
-        TamaInterpreter *runner = memnew(TamaInterpreter);
+        _TamaInterpreter *runner = memnew(_TamaInterpreter);
         runner->set_context(p_context);
         b.runner = runner;
 
@@ -427,15 +427,15 @@ Object *TamaServerBulletPool::spawn(
         // Connect runner signals — bind wrapper Object* for state resolution
         Object *wrapper_obj = b.wrapper;
         runner->connect("changed_direction",
-            callable_mp(this, &TamaServerBulletPool::_on_changed_direction).bind(wrapper_obj));
+            callable_mp(this, &_TamaServerBulletPool::_on_changed_direction).bind(wrapper_obj));
         runner->connect("changed_speed",
-            callable_mp(this, &TamaServerBulletPool::_on_changed_speed).bind(wrapper_obj));
+            callable_mp(this, &_TamaServerBulletPool::_on_changed_speed).bind(wrapper_obj));
         runner->connect("changed_position",
-            callable_mp(this, &TamaServerBulletPool::_on_changed_position).bind(wrapper_obj));
+            callable_mp(this, &_TamaServerBulletPool::_on_changed_position).bind(wrapper_obj));
         runner->connect("accelerated",
-            callable_mp(this, &TamaServerBulletPool::_on_accelerated).bind(wrapper_obj));
+            callable_mp(this, &_TamaServerBulletPool::_on_accelerated).bind(wrapper_obj));
         runner->connect("vanished",
-            callable_mp(this, &TamaServerBulletPool::recycle).bind(wrapper_obj));
+            callable_mp(this, &_TamaServerBulletPool::recycle).bind(wrapper_obj));
 
         Object *source_program = Object::cast_to<Object>(p_data->get("source_program"));
         runner->start_act(source_program, bullet_act_obj, act_scope);
@@ -448,14 +448,14 @@ Object *TamaServerBulletPool::spawn(
 // Recycle
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::recycle(Object *p_wrapper) {
+void _TamaServerBulletPool::recycle(Object *p_wrapper) {
     if (!p_wrapper) return;
-    TamaServerBullet *w = Object::cast_to<TamaServerBullet>(p_wrapper);
+    _TamaServerBullet *w = Object::cast_to<_TamaServerBullet>(p_wrapper);
     if (!w || !w->_state) return;
     _recycle_internal(w->_state);
 }
 
-void TamaServerBulletPool::recycle_all() {
+void _TamaServerBulletPool::recycle_all() {
     std::vector<BulletState *> copy = _active;
     for (auto *b : copy) _recycle_internal(b);
     // Force one more _draw() so Godot clears the persistent canvas draw commands
@@ -464,7 +464,7 @@ void TamaServerBulletPool::recycle_all() {
     queue_redraw();
 }
 
-void TamaServerBulletPool::_recycle_internal(BulletState *b) {
+void _TamaServerBulletPool::_recycle_internal(BulletState *b) {
     if (!b || !b->active) return;
     b->active = false;
 
@@ -500,7 +500,7 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
 
     // Clean up runner
     if (b->runner) {
-        TamaInterpreter *ti = Object::cast_to<TamaInterpreter>(b->runner);
+        _TamaInterpreter *ti = Object::cast_to<_TamaInterpreter>(b->runner);
         if (ti) {
             ti->stop();
             ti->queue_free();
@@ -521,15 +521,18 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
 // Physics process
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::_physics_process(double p_delta) {
-    float delta   = (float)p_delta;
-    Rect2 bounds  = _world_bounds().grow(_bounds_margin);
-    TamaExprRuntime *er = TamaExprRuntime::get_singleton();
+void _TamaServerBulletPool::_physics_process(double p_delta) {
+    float delta = (float)p_delta;
+    Rect2 world = _world_bounds();
+    TamaManager *mgr = TamaManager::get_instance();
+    float global_margin = mgr ? mgr->get_global_out_of_bounds_margin() : -1.0f;
+    godot::Object *ctx  = mgr ? mgr->_get_context() : nullptr;
+    _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
 
     // Step all bullet act runners before updating positions
     for (BulletState *b : _active) {
         if (b->runner) {
-            TamaInterpreter *ti = Object::cast_to<TamaInterpreter>(b->runner);
+            _TamaInterpreter *ti = Object::cast_to<_TamaInterpreter>(b->runner);
             if (ti && ti->is_running()) ti->step(delta);
         }
     }
@@ -539,17 +542,19 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
     for (BulletState *b : _active) {
         _step_tweens(*b, delta);
 
+        Vector2 pos_before = b->position;
+
         if (b->mvmt_x_set || b->mvmt_y_set) {
             const double *vals = b->mvmt_values.data();
             size_t        cnt  = b->mvmt_values.size();
             if (b->mvmt_x_set && b->mvmt_x_chunk && er) {
-                double vx = er->eval_chunk(*b->mvmt_x_chunk, vals, cnt);
+                double vx = er->eval_chunk(*b->mvmt_x_chunk, vals, cnt, ctx);
                 b->position.x = (b->mvmt_x_type == 0) // ABS
                     ? (float)vx
                     : b->initial_position.x + (float)vx;
             }
             if (b->mvmt_y_set && b->mvmt_y_chunk && er) {
-                double vy = er->eval_chunk(*b->mvmt_y_chunk, vals, cnt);
+                double vy = er->eval_chunk(*b->mvmt_y_chunk, vals, cnt, ctx);
                 b->position.y = (b->mvmt_y_type == 0) // ABS
                     ? (float)vy
                     : b->initial_position.y + (float)vy;
@@ -560,14 +565,33 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             b->position.y += (cy * b->speed + b->speed_y) * delta;
         }
 
-        float rot = b->rotates ? b->angle : 0.0f;
+        float rot = 0.0f;
+        if (b->rotates) {
+            if (b->face_velocity) {
+                if (b->mvmt_x_set || b->mvmt_y_set) {
+                    // Derive velocity from position delta this frame
+                    Vector2 dp = b->position - pos_before;
+                    rot = dp.length_squared() > 1e-8f ? std::atan2(dp.y, dp.x) : b->angle;
+                } else {
+                    float vx = std::cos(b->angle) * b->speed + b->speed_x;
+                    float vy = std::sin(b->angle) * b->speed + b->speed_y;
+                    rot = (vx != 0.0f || vy != 0.0f) ? std::atan2(vy, vx) : b->angle;
+                }
+            } else {
+                rot = b->angle;
+            }
+        }
         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
             b->multimesh_rid, b->local_slot,
             Transform2D(rot, b->texture_scale, 0.0f, b->position));
         PhysicsServer2D::get_singleton()->area_set_shape_transform(
             b->area_rid, b->global_slot, Transform2D(0.0f, b->position));
 
-        if (!bounds.has_point(b->position))
+        float m = (global_margin >= 0.0f) ? global_margin : b->out_of_bounds_margin;
+        if (b->position.x < world.position.x - m ||
+            b->position.y < world.position.y - m ||
+            b->position.x > world.get_end().x   + m ||
+            b->position.y > world.get_end().y   + m)
             to_recycle.push_back(b);
     }
 
@@ -597,7 +621,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 // Draw
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::_draw() {
+void _TamaServerBulletPool::_draw() {
     for (auto &[key, td] : _types) {
         if (td->active_batches.empty()) continue;
         bool animated = td->fps > 0.0f && td->frames.size() > 1;
@@ -633,7 +657,7 @@ void TamaServerBulletPool::_draw() {
 // Tween stepping
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::_step_tweens(BulletState &b, float delta) {
+void _TamaServerBulletPool::_step_tweens(BulletState &b, float delta) {
     if (b.angle_tween.active)  b.angle   = b.angle_tween.step(delta);
     if (b.speed_tween.active)  b.speed   = b.speed_tween.step(delta);
     if (b.pos_tween.active)    b.position = b.pos_tween.step(delta);
@@ -647,7 +671,7 @@ void TamaServerBulletPool::_step_tweens(BulletState &b, float delta) {
 
 // DirType: AIM=0, ABS=1, REL=2, SEQ=3 — ValueType: ABS=0, REL=1, SEQ=2
 
-float TamaServerBulletPool::_dir_to_angle(const BulletState &b, int dir_type, float value) const {
+float _TamaServerBulletPool::_dir_to_angle(const BulletState &b, int dir_type, float value) const {
     // AIM=0: player_pos - bullet_pos angle + offset
     // ABS=1: value in radians (already converted by interpreter)
     // REL=2: current angle + offset
@@ -668,7 +692,7 @@ float TamaServerBulletPool::_dir_to_angle(const BulletState &b, int dir_type, fl
     return value;
 }
 
-float TamaServerBulletPool::_spd_to_value(const BulletState &b, int speed_type, float value) const {
+float _TamaServerBulletPool::_spd_to_value(const BulletState &b, int speed_type, float value) const {
     switch (speed_type) {
     case 0: return value;                  // ABS
     case 1: return b.speed + value;        // REL
@@ -677,7 +701,7 @@ float TamaServerBulletPool::_spd_to_value(const BulletState &b, int speed_type, 
     return value;
 }
 
-float TamaServerBulletPool::_accel_axis_end(int axis_type, float value, float current, float over) const {
+float _TamaServerBulletPool::_accel_axis_end(int axis_type, float value, float current, float over) const {
     switch (axis_type) {
     case 0: return value;                          // ABS
     case 1: return (value - current) * over;       // REL
@@ -691,11 +715,11 @@ float TamaServerBulletPool::_accel_axis_end(int axis_type, float value, float cu
 // We resolve BulletState via the wrapper's public _state pointer.
 
 #define RESOLVE_BULLET(wrapper_param)                                    \
-    TamaServerBullet *w_ = Object::cast_to<TamaServerBullet>(wrapper_param); \
+    _TamaServerBullet *w_ = Object::cast_to<_TamaServerBullet>(wrapper_param); \
     if (!w_ || !w_->_state) return;                                      \
     BulletState &b = *w_->_state;
 
-void TamaServerBulletPool::_on_changed_direction(Object *p_data, Object *p_wrapper) {
+void _TamaServerBulletPool::_on_changed_direction(Object *p_data, Object *p_wrapper) {
     RESOLVE_BULLET(p_wrapper)
     int   dir_type  = (int)p_data->get("dir_type");
     float dir_value = (float)p_data->get("dir_value");
@@ -710,7 +734,7 @@ void TamaServerBulletPool::_on_changed_direction(Object *p_data, Object *p_wrapp
     }
 }
 
-void TamaServerBulletPool::_on_changed_speed(Object *p_data, Object *p_wrapper) {
+void _TamaServerBulletPool::_on_changed_speed(Object *p_data, Object *p_wrapper) {
     RESOLVE_BULLET(p_wrapper)
     int   speed_type  = (int)p_data->get("speed_type");
     float speed_value = (float)p_data->get("speed_value");
@@ -725,7 +749,7 @@ void TamaServerBulletPool::_on_changed_speed(Object *p_data, Object *p_wrapper) 
     }
 }
 
-void TamaServerBulletPool::_on_changed_position(Object *p_data, Object *p_wrapper) {
+void _TamaServerBulletPool::_on_changed_position(Object *p_data, Object *p_wrapper) {
     RESOLVE_BULLET(p_wrapper)
     bool    has_x  = (bool)p_data->get("has_x");
     bool    has_y  = (bool)p_data->get("has_y");
@@ -755,7 +779,7 @@ void TamaServerBulletPool::_on_changed_position(Object *p_data, Object *p_wrappe
     }
 }
 
-void TamaServerBulletPool::_on_accelerated(Object *p_data, Object *p_wrapper) {
+void _TamaServerBulletPool::_on_accelerated(Object *p_data, Object *p_wrapper) {
     RESOLVE_BULLET(p_wrapper)
     bool  has_x = (bool)p_data->get("has_x");
     bool  has_y = (bool)p_data->get("has_y");
@@ -787,7 +811,7 @@ void TamaServerBulletPool::_on_accelerated(Object *p_data, Object *p_wrapper) {
 // World bounds
 // ---------------------------------------------------------------------------
 
-Rect2 TamaServerBulletPool::_world_bounds() const {
+Rect2 _TamaServerBulletPool::_world_bounds() const {
     Viewport *vp  = get_viewport();
     if (!vp) return Rect2(-10000, -10000, 20000, 20000);
     Transform2D inv = vp->get_canvas_transform().affine_inverse();
