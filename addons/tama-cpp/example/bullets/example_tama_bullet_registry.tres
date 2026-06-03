@@ -10,8 +10,20 @@
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_qlh80"]
 frames = Array[Texture2D]([ExtResource("3_gulsf")])
 shape_radius = 1.0
+collision_layer = 2
+collision_mask = 1
 pool_size = 10000
 rect = Rect2(-7, -4, 14, 8)
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_n53vu"]
+frames = Array[Texture2D]([ExtResource("6_gulsf")])
+texture_scale = Vector2(0.2, 0.2)
+shape_radius = 1.0
+collision_layer = 2
+collision_mask = 1
+rotates = false
+pool_size = 10000
+rect = Rect2(-64, -64, 128, 128)
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_4uqhx"]
 frames = Array[Texture2D]([ExtResource("2_wetqc")])
@@ -24,28 +36,26 @@ rect = Rect2(-7, -4, 14, 8)
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_3xnr6"]
 frames = Array[Texture2D]([ExtResource("4_n53vu")])
 shape_radius = 1.0
+collision_layer = 2
+collision_mask = 1
 pool_size = 10000
 rect = Rect2(-7, -4, 14, 8)
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_d4i3m"]
 frames = Array[Texture2D]([ExtResource("5_d4i3m")])
 shape_radius = 1.0
+collision_layer = 2
+collision_mask = 1
 pool_size = 10000
 rect = Rect2(-7, -4, 14, 8)
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_i2sv8"]
 frames = Array[Texture2D]([ExtResource("2_wetqc"), ExtResource("3_gulsf"), ExtResource("4_n53vu"), ExtResource("5_d4i3m")])
 fps = 30.0
+collision_layer = 2
+collision_mask = 1
 pool_size = 10000
 rect = Rect2(-7, -4, 14, 8)
-
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_n53vu"]
-frames = Array[Texture2D]([ExtResource("6_gulsf")])
-texture_scale = Vector2(0.2, 0.2)
-shape_radius = 1.0
-rotates = false
-pool_size = 10000
-rect = Rect2(-64, -64, 128, 128)
 
 [resource]
 default_bullet = ExtResource("1_0v7u8")

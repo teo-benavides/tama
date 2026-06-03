@@ -155,4 +155,24 @@
 			The total number of currently active bullets — server bullets and scene bullets combined. Read-only.
 		</member>
 	</members>
+	<signals>
+		<signal name="bullet_hit">
+			<param index="0" name="bullet" type="Object" />
+			<param index="1" name="body_instance_id" type="int" />
+			<description>
+				Emitted when a server bullet hits a physics body. [param bullet] is the [code]_TamaServerBullet[/code] wrapper for the bullet that made contact. [param body_instance_id] is the [method Object.get_instance_id] of the body that was hit — use [method @GlobalScope.instance_from_id] to retrieve the node.
+
+				[codeblock]
+				func _ready():
+				    TamaManager.bullet_hit.connect(_on_bullet_hit)
+
+				func _on_bullet_hit(bullet, body_instance_id: int) -> void:
+				    if body_instance_id == get_instance_id():
+				        pass  # this node was hit
+				[/codeblock]
+
+				[b]Note:[/b] This signal is only emitted for server bullets (registered with [method register_server_bullet]). Scene bullets use normal Godot [Area2D] collision signals.
+			</description>
+		</signal>
+	</signals>
 </class>

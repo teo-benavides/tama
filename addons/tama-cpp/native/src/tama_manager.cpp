@@ -40,6 +40,10 @@ void TamaManager::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::INT, "bullet_count",
                               PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
                  "", "get_bullet_count");
+    ClassDB::bind_method(D_METHOD("_on_pool_bullet_hit", "bullet", "body_instance_id"), &TamaManager::_on_pool_bullet_hit);
+    ADD_SIGNAL(MethodInfo("bullet_hit",
+        PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "_TamaServerBullet"),
+        PropertyInfo(Variant::INT,    "body_instance_id")));
 }
 
 // ---------------------------------------------------------------------------
@@ -55,6 +59,7 @@ void TamaManager::_ensure_scene_nodes() {
     _spawn_manager->_repository  = _repository;
     _spawn_manager->_server_pool = _server_pool;
     _spawn_manager->context = Ref<TamaContext>(memnew(TamaContext));
+    _server_pool->connect("bullet_hit", callable_mp(this, &TamaManager::_on_pool_bullet_hit));
     tree->get_root()->call_deferred("add_child", _spawn_manager);
     tree->get_root()->call_deferred("add_child", _server_pool);
     _nodes_injected = true;
@@ -169,6 +174,10 @@ void TamaManager::set_registry(TamaBulletRegistry *v) {
     }
 }
 Object *TamaManager::get_server_bullet_pool() const { return _server_pool; }
+
+void TamaManager::_on_pool_bullet_hit(Object *bullet, int64_t body_instance_id) {
+    emit_signal("bullet_hit", bullet, body_instance_id);
+}
 
 int TamaManager::get_bullet_count() const {
     int server_count = _server_pool  ? _server_pool->get_active_count()      : 0;

@@ -47,6 +47,9 @@ public:
 
     int get_bullet_count() const;
 
+    // Forwarded from _TamaServerBulletPool — emitted when a server bullet hits a body.
+    void _on_pool_bullet_hit(godot::Object *bullet, int64_t body_instance_id);
+
     godot::Object *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
     godot::Object *_get_script_from_repository(const godot::String &filename) const;

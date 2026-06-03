@@ -19,6 +19,11 @@ config/icon="uid://2rof51lmjyrt"
 
 enabled=PackedStringArray("res://addons/tama-cpp/plugin.cfg")
 
+[layer_names]
+
+2d_physics/layer_1="player"
+2d_physics/layer_2="bullets"
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
