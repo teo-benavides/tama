@@ -128,6 +128,12 @@
 				Returns the internal server bullet pool node. Exposed for advanced use; most projects should not need to call this directly.
 			</description>
 		</method>
+		<method name="get_bullet_count">
+			<return type="int" />
+			<description>
+				Returns the total number of currently active bullets across all types — both server bullets and scene bullets combined. Read-only; also accessible as the [member bullet_count] property.
+			</description>
+		</method>
 	</methods>
 	<members>
 		<member name="player_position" type="Vector2" setter="set_player_position" getter="get_player_position" default="Vector2(0, 0)">
@@ -144,6 +150,9 @@
 		</member>
 		<member name="global_out_of_bounds_margin" type="float" setter="set_global_out_of_bounds_margin" getter="get_global_out_of_bounds_margin" default="-1.0">
 			When set to [code]0[/code] or greater, overrides the [member TamaServerBulletConfig.out_of_bounds_margin] of every registered server bullet type. A value of [code]-1[/code] (default) means each type uses its own margin.
+		</member>
+		<member name="bullet_count" type="int" setter="" getter="get_bullet_count">
+			The total number of currently active bullets — server bullets and scene bullets combined. Read-only.
 		</member>
 	</members>
 </class>

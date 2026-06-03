@@ -38,6 +38,8 @@ public:
     godot::NodePath get_spawn_parent() const { return spawn_parent; }
     void set_spawn_parent(godot::NodePath v)  { spawn_parent = v; }
 
+    int get_scene_bullet_count() const;
+
 private:
     void _on_bullet_fired(godot::Variant data_v, godot::Node2D *spawner);
 

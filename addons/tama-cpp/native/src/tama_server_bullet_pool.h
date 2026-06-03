@@ -140,6 +140,8 @@ public:
 
     void register_type(const godot::String &key, godot::Object *config);
 
+    int get_active_count() const { return (int)_active.size(); }
+
     // Returns the _TamaServerBullet wrapper, or null if the pool is full.
     godot::Object *spawn(godot::Object *data, godot::Object *config,
                          float angle, float speed, godot::Vector2 position,

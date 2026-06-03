@@ -47,6 +47,11 @@ Object *_TamaSpawnManager::get_tama_script(const String &filename) const {
     return nullptr;
 }
 
+int _TamaSpawnManager::get_scene_bullet_count() const {
+    SceneTree *tree = get_tree();
+    return tree ? tree->get_nodes_in_group("tama_bullets").size() : 0;
+}
+
 // ===========================================================================
 // Bullet firing
 // ===========================================================================

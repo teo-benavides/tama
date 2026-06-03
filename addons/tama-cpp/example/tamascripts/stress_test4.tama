@@ -1,7 +1,7 @@
 main
     repeat 5000
         fire
-            dir abs 0
-            spd 0
+            dir abs randf_range(0.0, 360.0)
+            spd abs randf_range(1.0, 10.0)
             bul
                 type fast

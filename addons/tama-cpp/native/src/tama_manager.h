@@ -45,6 +45,8 @@ public:
     float get_global_out_of_bounds_margin() const { return _global_out_of_bounds_margin; }
     void  set_global_out_of_bounds_margin(float v) { _global_out_of_bounds_margin = v; }
 
+    int get_bullet_count() const;
+
     godot::Object *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
     godot::Object *_get_script_from_repository(const godot::String &filename) const;

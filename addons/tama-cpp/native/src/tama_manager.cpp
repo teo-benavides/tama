@@ -36,6 +36,10 @@ void TamaManager::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "global_out_of_bounds_margin",
                               PROPERTY_HINT_RANGE, "-1,1000,1,or_greater"),
                  "set_global_out_of_bounds_margin", "get_global_out_of_bounds_margin");
+    ClassDB::bind_method(D_METHOD("get_bullet_count"),                       &TamaManager::get_bullet_count);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "bullet_count",
+                              PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
+                 "", "get_bullet_count");
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +169,12 @@ void TamaManager::set_registry(TamaBulletRegistry *v) {
     }
 }
 Object *TamaManager::get_server_bullet_pool() const { return _server_pool; }
+
+int TamaManager::get_bullet_count() const {
+    int server_count = _server_pool  ? _server_pool->get_active_count()      : 0;
+    int scene_count  = _spawn_manager ? _spawn_manager->get_scene_bullet_count() : 0;
+    return server_count + scene_count;
+}
 
 // ---------------------------------------------------------------------------
 // Internal helpers
