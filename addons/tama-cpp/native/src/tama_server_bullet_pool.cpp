@@ -81,7 +81,7 @@ _TamaServerBulletPool::~_TamaServerBulletPool() {
     for (auto &[key, td] : _types) {
         for (auto *b : td->active_batches) delete b;
         for (auto *b : td->free_batches)   delete b;
-        // RIDs are freed in _exit_tree
+        // RIDs are not freed in _exit_tree (see comment there); the servers own them.
         for (auto *w : td->wrappers) memdelete(w);
         delete td;
     }
@@ -109,11 +109,11 @@ void _TamaServerBulletPool::_exit_tree() {
     TamaManager *mgr = TamaManager::get_instance();
     if (mgr) mgr->_on_scene_nodes_freed();
 
-    for (auto &[key, td] : _types) {
-        for (auto rid : td->shapes)
-            PhysicsServer2D::get_singleton()->free_rid(rid);
-        PhysicsServer2D::get_singleton()->free_rid(td->area);
-    }
+    // The pool is a persistent root child — _exit_tree only fires on game exit.
+    // The physics/rendering servers destroy all their own state on shutdown, so
+    // freeing every shape RID individually here (each a cross-thread call into
+    // PhysicsServer2D) is unnecessary and is the main cause of the frozen-window
+    // delay when closing via the OS title-bar button.
 }
 
 // ---------------------------------------------------------------------------
@@ -132,6 +132,7 @@ void _TamaServerBulletPool::register_type(const String &p_key, Object *p_config)
     }
 
     TypeData *td = new TypeData();
+    td->config_obj     = p_config;
 
     td->frames         = (TypedArray<Texture2D>)p_config->get("frames");
     td->fps            = (float)p_config->get("fps");
@@ -279,14 +280,14 @@ Object *_TamaServerBulletPool::spawn(
 
     auto it = _types.find(key);
     if (it == _types.end()) {
-        UtilityFunctions::push_warning("_TamaServerBulletPool: type '" + bullet_type_str + "' not registered.");
-        return nullptr;
+        // Key not found — fall back to matching by config pointer (used when spawning via default_server_bullet)
+        for (auto &[k, td_ptr] : _types) {
+            if (td_ptr->config_obj == p_config) { it = _types.find(k); break; }
+        }
+        if (it == _types.end()) return nullptr;
     }
     TypeData &td = *it->second;
-    if (td.ring_count == 0) {
-        UtilityFunctions::push_warning("_TamaServerBulletPool: pool full for type '" + bullet_type_str + "'.");
-        return nullptr;
-    }
+    if (td.ring_count == 0) return nullptr;
 
     // Allocate global slot from FIFO ring
     int  n           = (int)td.bullets.size();
@@ -439,6 +440,11 @@ Object *_TamaServerBulletPool::spawn(
         runner->connect("vanished",
             callable_mp(this, &_TamaServerBulletPool::recycle).bind(wrapper_obj));
 
+        // Allow server bullets to fire child bullets by connecting bullet_fired to the spawn manager.
+        TamaManager *mgr = TamaManager::get_instance();
+        _TamaSpawnManager *sm = mgr ? mgr->_get_spawn_manager() : nullptr;
+        if (sm) sm->connect_interpreter(runner, b.wrapper);
+
         Object *source_program = Object::cast_to<Object>(p_data->get("source_program"));
         runner->start_act(source_program, bullet_act_obj, act_scope);
     }
@@ -533,13 +539,23 @@ void _TamaServerBulletPool::_physics_process(double p_delta) {
 
     _to_recycle.clear();
 
-    for (BulletState *b : _active) {
+    // Snapshot the size before the loop. spawn() called from a runner's bullet_fired signal
+    // appends to _active (may reallocate), and _recycle_internal() from a vanished signal
+    // does swap-erase. An index-based loop with a size snapshot handles both safely:
+    // new spawns are appended past n (processed next frame), recycled bullets are skipped
+    // via the b->active guard below.
+    const int n = (int)_active.size();
+    for (int i = 0; i < n; ++i) {
+        BulletState *b = _active[i];
         // Step runner before this bullet's position update so script changes
         // take effect in the same frame they are issued.
         if (b->runner) {
             _TamaInterpreter *ti = Object::cast_to<_TamaInterpreter>(b->runner);
             if (ti && ti->is_running()) ti->step(delta);
         }
+
+        // The runner may have recycled this bullet (e.g. vanish command). Skip it.
+        if (!b->active) continue;
 
         // Mark velocity dirty when any relevant tween is active this frame.
         bool tween_was_active = b->angle_tween.active || b->speed_tween.active

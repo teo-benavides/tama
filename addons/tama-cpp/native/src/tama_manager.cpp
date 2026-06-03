@@ -115,14 +115,14 @@ void TamaManager::register_bullet(const String &type, Ref<PackedScene> scene) {
     _ensure_scene_nodes();
     if (!_spawn_manager) return;
     _ensure_registry();
-    _spawn_manager->registry->entries[type] = Variant(scene.ptr());
+    _spawn_manager->registry->scene_bullets[type] = Variant(scene.ptr());
 }
 
 void TamaManager::register_server_bullet(const String &type, TamaServerBulletConfig *config) {
     _ensure_scene_nodes();
     if (!_spawn_manager || !_server_pool) return;
     _ensure_registry();
-    _spawn_manager->registry->server_configs[type] = Variant(config);
+    _spawn_manager->registry->server_bullets[type] = Variant(config);
     _server_pool->register_type(type, config);
 }
 
@@ -130,7 +130,7 @@ void TamaManager::set_default_bullet(Ref<PackedScene> scene) {
     _ensure_scene_nodes();
     if (!_spawn_manager) return;
     _ensure_registry();
-    _spawn_manager->registry->default_bullet = scene;
+    _spawn_manager->registry->default_scene_bullet = scene;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,13 +165,16 @@ void TamaManager::set_registry(TamaBulletRegistry *v) {
     _spawn_manager->set_registry(v);
     if (!v || !_server_pool) return;
     // Register any server bullet types already in the registry with the pool.
-    Dictionary cfgs = v->server_configs;
+    Dictionary cfgs = v->server_bullets;
     Array keys = cfgs.keys();
     for (int i = 0; i < keys.size(); ++i) {
         String type = keys[i];
         Object *cfg = Object::cast_to<Object>(cfgs[type].operator Object *());
         if (cfg) _server_pool->register_type(type, cfg);
     }
+    // Register default_server_bullet under "" so typeless bullets can find its TypeData.
+    if (v->default_server_bullet.is_valid())
+        _server_pool->register_type(String(""), v->default_server_bullet.ptr());
 }
 Object *TamaManager::get_server_bullet_pool() const { return _server_pool; }
 
@@ -198,7 +201,7 @@ bool TamaManager::_has_tama_script(const String &filename) const {
 Object *TamaManager::_get_script_from_repository(const String &filename) const {
     return _repository ? _repository->get_tama_script(filename) : nullptr;
 }
-void TamaManager::_connect_interpreter(Object *interpreter, Node2D *spawner) {
+void TamaManager::_connect_interpreter(Object *interpreter, Object *spawner) {
     if (_spawn_manager) _spawn_manager->connect_interpreter(interpreter, spawner);
 }
 String TamaManager::_get_scripts_path() const {

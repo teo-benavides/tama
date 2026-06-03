@@ -39,6 +39,9 @@ class _TamaServerBulletPool : public godot::Node2D {
     };
 
     struct TypeData {
+        // Original config object — used for fallback lookup by pointer in spawn()
+        godot::Object *config_obj = nullptr;
+
         // Config properties (read once at register_type)
         godot::TypedArray<godot::Texture2D> frames;
         float  fps             = 0.0f;

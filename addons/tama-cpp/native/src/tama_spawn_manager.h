@@ -26,7 +26,8 @@ public:
 
     void _exit_tree();
 
-    void connect_interpreter(godot::Object *interpreter, godot::Node2D *spawner);
+    // spawner may be a Node2D (TamaEmitter / TamaBullet) or a _TamaServerBullet (Object)
+    void connect_interpreter(godot::Object *interpreter, godot::Object *spawner);
     godot::Object *get_tama_script(const godot::String &filename) const;
 
     TamaBulletRegistry *get_registry() const { return registry.ptr(); }
@@ -41,10 +42,10 @@ public:
     int get_scene_bullet_count() const;
 
 private:
-    void _on_bullet_fired(godot::Variant data_v, godot::Node2D *spawner);
+    void _on_bullet_fired(godot::Variant data_v, godot::Object *spawner);
 
-    float _resolve_angle(godot::Object *data, godot::Node2D *spawner) const;
-    float _resolve_speed(godot::Object *data, godot::Node2D *spawner) const;
-    godot::Vector2 _resolve_position(godot::Object *data, godot::Node2D *spawner, float angle) const;
+    float _resolve_angle(godot::Object *data, godot::Object *spawner) const;
+    float _resolve_speed(godot::Object *data, godot::Object *spawner) const;
+    godot::Vector2 _resolve_position(godot::Object *data, godot::Object *spawner, float angle) const;
     godot::Node *_get_spawn_parent() const;
 };

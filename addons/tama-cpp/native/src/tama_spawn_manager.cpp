@@ -38,7 +38,7 @@ void _TamaSpawnManager::_exit_tree() {
     if (mgr) mgr->_on_scene_nodes_freed();
 }
 
-void _TamaSpawnManager::connect_interpreter(Object *interpreter, Node2D *spawner) {
+void _TamaSpawnManager::connect_interpreter(Object *interpreter, Object *spawner) {
     interpreter->connect("bullet_fired",
         callable_mp(this, &_TamaSpawnManager::_on_bullet_fired).bind(Variant(spawner)));
 }
@@ -54,37 +54,56 @@ int _TamaSpawnManager::get_scene_bullet_count() const {
 }
 
 // ===========================================================================
-// Spawner accessors — direct C++ member access, no Godot property-system overhead
+// Spawner accessors — direct C++ member access, no Godot property-system overhead.
+// All helpers accept Object* so they work for Node2D spawners (TamaEmitter /
+// TamaBullet) and for _TamaServerBullet wrappers equally.
 // ===========================================================================
 
-static float spawner_get_last_angle(godot::Node2D *s) {
-    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  return e->_last_angle;
-    if (auto *b = godot::Object::cast_to<TamaBullet>(s))   return b->_last_angle;
+static godot::Vector2 spawner_get_global_position(godot::Object *s) {
+    if (auto *sb = godot::Object::cast_to<_TamaServerBullet>(s))
+        return sb->_state ? sb->_state->position : godot::Vector2();
+    if (auto *n = godot::Object::cast_to<godot::Node2D>(s)) return n->get_global_position();
+    return godot::Vector2();
+}
+static float spawner_get_last_angle(godot::Object *s) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   return e->_last_angle;
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))    return b->_last_angle;
+    if (auto *sb = godot::Object::cast_to<_TamaServerBullet>(s))
+        return sb->_state ? sb->_state->last_angle : 0.0f;
     return 0.0f;
 }
-static void spawner_set_last_angle(godot::Node2D *s, float v) {
-    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  { e->_last_angle = v; return; }
-    if (auto *b = godot::Object::cast_to<TamaBullet>(s))     b->_last_angle = v;
+static void spawner_set_last_angle(godot::Object *s, float v) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   { e->_last_angle = v; return; }
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))    { b->_last_angle = v; return; }
+    if (auto *sb = godot::Object::cast_to<_TamaServerBullet>(s))
+        { if (sb->_state) sb->_state->last_angle = v; }
 }
-static float spawner_get_last_speed(godot::Node2D *s) {
-    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  return e->_last_speed;
-    if (auto *b = godot::Object::cast_to<TamaBullet>(s))   return b->_last_speed;
+static float spawner_get_last_speed(godot::Object *s) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   return e->_last_speed;
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))    return b->_last_speed;
+    if (auto *sb = godot::Object::cast_to<_TamaServerBullet>(s))
+        return sb->_state ? sb->_state->last_speed : 0.0f;
     return 0.0f;
 }
-static void spawner_set_last_speed(godot::Node2D *s, float v) {
-    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))  { e->_last_speed = v; return; }
-    if (auto *b = godot::Object::cast_to<TamaBullet>(s))     b->_last_speed = v;
+static void spawner_set_last_speed(godot::Object *s, float v) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   { e->_last_speed = v; return; }
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))    { b->_last_speed = v; return; }
+    if (auto *sb = godot::Object::cast_to<_TamaServerBullet>(s))
+        { if (sb->_state) sb->_state->last_speed = v; }
 }
-static float spawner_get_angle(godot::Node2D *s) {
-    if (auto *b = godot::Object::cast_to<TamaBullet>(s))   return b->_angle;
-    return s->get_rotation(); // emitter: use node rotation as reference for dir rel
+static float spawner_get_angle(godot::Object *s) {
+    if (auto *b  = godot::Object::cast_to<TamaBullet>(s))       return b->_angle;
+    if (auto *sb = godot::Object::cast_to<_TamaServerBullet>(s))
+        return sb->_state ? sb->_state->angle : 0.0f;
+    if (auto *n  = godot::Object::cast_to<godot::Node2D>(s))    return n->get_rotation();
+    return 0.0f;
 }
 
 // ===========================================================================
 // Bullet firing
 // ===========================================================================
 
-void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
+void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Object *spawner) {
     Object *data = data_v.operator Object *();
     if (!data) return;
 
@@ -104,6 +123,12 @@ void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
     // Fast path: server bullet
     if (registry.is_valid() && _server_pool) {
         TamaServerBulletConfig *srv_cfg = registry->get_server_config(bullet_type);
+        if (!srv_cfg && registry->default_to_server_bullets && registry->default_server_bullet.is_valid()) {
+            // Only fall back to default server bullet when the type isn't in scene_bullets either.
+            bool in_scene = !bullet_type.is_empty() && registry->scene_bullets.has(bullet_type);
+            if (!in_scene)
+                srv_cfg = registry->default_server_bullet.ptr();
+        }
         if (srv_cfg) {
             float angle    = _resolve_angle(data, spawner);
             float speed    = _resolve_speed(data, spawner);
@@ -119,11 +144,11 @@ void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
     Ref<PackedScene> scene;
     if (registry.is_valid()) {
         if (!bullet_type or bullet_type.is_empty()) {
-            scene = registry->default_bullet;
+            scene = registry->default_scene_bullet;
         } else {
-            Variant sv = registry->entries.get(bullet_type, Variant());
+            Variant sv = registry->scene_bullets.get(bullet_type, Variant());
             scene = Ref<PackedScene>(Object::cast_to<PackedScene>(sv.operator Object *()));
-            if (!scene.is_valid()) scene = registry->default_bullet;
+            if (!scene.is_valid()) scene = registry->default_scene_bullet;
         }
     }
     if (!scene.is_valid()) {
@@ -218,21 +243,21 @@ void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Node2D *spawner) {
 // Resolution helpers
 // ===========================================================================
 
-float _TamaSpawnManager::_resolve_angle(Object *data, Node2D *spawner) const {
+float _TamaSpawnManager::_resolve_angle(Object *data, Object *spawner) const {
     static const float DEG2RAD = 3.14159265f / 180.0f;
     int   dir_type  = (int)  data->get("dir_type");
     float dir_value = (float)data->get("dir_value");
     switch (dir_type) {
-        case 0: return (player_position - spawner->get_global_position()).angle() + dir_value * DEG2RAD;
+        case 0: return (player_position - spawner_get_global_position(spawner)).angle() + dir_value * DEG2RAD;
         case 1: return dir_value * DEG2RAD;
         case 2: return spawner_get_angle(spawner) + dir_value * DEG2RAD;
         case 3: return spawner_get_last_angle(spawner) + dir_value * DEG2RAD;
         default: break;
     }
-    return spawner->get_angle_to(player_position) + dir_value * DEG2RAD;
+    return (player_position - spawner_get_global_position(spawner)).angle() + dir_value * DEG2RAD;
 }
 
-float _TamaSpawnManager::_resolve_speed(Object *data, Node2D *spawner) const {
+float _TamaSpawnManager::_resolve_speed(Object *data, Object *spawner) const {
     int   speed_type  = (int)  data->get("speed_type");
     float speed_value = (float)data->get("speed_value");
     switch (speed_type) {
@@ -242,10 +267,10 @@ float _TamaSpawnManager::_resolve_speed(Object *data, Node2D *spawner) const {
     }
 }
 
-Vector2 _TamaSpawnManager::_resolve_position(Object *data, Node2D *spawner, float angle) const {
+Vector2 _TamaSpawnManager::_resolve_position(Object *data, Object *spawner, float angle) const {
     bool has_pos = (bool)data->get("has_pos");
     if (has_pos) {
-        Vector2 pos = spawner->get_global_position();
+        Vector2 pos = spawner_get_global_position(spawner);
         if ((bool)data->get("pos_x_set")) {
             int xt = (int)data->get("pos_x_type"); float xv = (float)data->get("pos_x");
             if (xt == 0 || xt == 2) pos.x  = xv; else pos.x += xv;
@@ -259,7 +284,7 @@ Vector2 _TamaSpawnManager::_resolve_position(Object *data, Node2D *spawner, floa
     int offset_mode = (int)data->get("offset_mode");
     if (offset_mode == 1) { // INLINE
         float ov = (float)data->get("offset_value");
-        return spawner->get_global_position() + Vector2(ov, 0.0f).rotated(angle);
+        return spawner_get_global_position(spawner) + Vector2(ov, 0.0f).rotated(angle);
     }
     if (offset_mode == 2) { // BLOCK
         Vector2 world_offset, local_offset;
@@ -267,9 +292,9 @@ Vector2 _TamaSpawnManager::_resolve_position(Object *data, Node2D *spawner, floa
         if (oxt == 1) local_offset.x = oxv; else world_offset.x = oxv; // REL=1
         int oyt = (int)data->get("offset_y_type"); float oyv = (float)data->get("offset_y");
         if (oyt == 1) local_offset.y = oyv; else world_offset.y = oyv;
-        return spawner->get_global_position() + world_offset + local_offset.rotated(angle);
+        return spawner_get_global_position(spawner) + world_offset + local_offset.rotated(angle);
     }
-    return spawner->get_global_position();
+    return spawner_get_global_position(spawner);
 }
 
 Node *_TamaSpawnManager::_get_spawn_parent() const {
