@@ -10,7 +10,7 @@
 #include <godot_cpp/variant/vector2.hpp>
 
 // ---------------------------------------------------------------------------
-// Internal per-bullet state (flat array element — never exposed to GDScript)
+// Internal per-bullet state (flat array element)
 // ---------------------------------------------------------------------------
 
 struct TweenState1D {
@@ -84,7 +84,6 @@ struct BulletState {
     const TamaExprChunk *mvmt_y_chunk = nullptr;
     std::vector<double> mvmt_values;               // snapshot of variable values at spawn time
 
-    // GDScript act runner — null if no bullet_act
     godot::Object *runner = nullptr;
 
     // Wrapper Object exposed through bullet_hit signal (created once per slot)
@@ -93,7 +92,7 @@ struct BulletState {
 };
 
 // ---------------------------------------------------------------------------
-// GDExtension Object — thin proxy exposed through bullet_hit signal
+// Thin proxy exposed through the bullet_hit signal
 // ---------------------------------------------------------------------------
 
 class TamaServerBulletPool; // forward declaration
@@ -121,7 +120,6 @@ public:
     // Called once by the pool when the slot is created.
     void _init_slot(TamaServerBulletPool *pool, BulletState *state);
 
-    // Read-only GDScript-visible properties (mirror GDScript TamaServerBullet).
     godot::Vector2 get_position()  const;
     float          get_angle()     const;
     float          get_speed()     const;

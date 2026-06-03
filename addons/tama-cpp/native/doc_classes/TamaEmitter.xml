@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaEmitter" inherits="Node2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		A Node2D that runs a TamaScript bullet pattern.
+	</brief_description>
+	<description>
+		[b]TamaEmitter[/b] is the main scene node for playing back a TamaScript pattern. Add one to your scene, assign [member script_filename], and call [method start] to begin firing.
+
+		[b]TamaScript exports[/b] — variables declared with [code]export[/code] in the script appear as inspector properties under the [i]TamaScript Exports[/i] group and can be overridden per-emitter without editing the script. They can also be set at runtime with [method set_export].
+
+		[b]Hot-reload[/b] — while the game is running, TamaEmitter polls the script file for changes every second. When a change is detected, exports are refreshed automatically so the inspector stays in sync.
+
+		Multiple emitters can share the same script file; each maintains independent state.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="start">
+			<return type="void" />
+			<description>
+				Begins executing the TamaScript pattern from the [code]main[/code] block. Has no effect if the emitter is already running.
+			</description>
+		</method>
+		<method name="stop">
+			<return type="void" />
+			<description>
+				Stops the running pattern. In-flight bullets are not destroyed.
+			</description>
+		</method>
+		<method name="set_export">
+			<return type="void" />
+			<param index="0" name="name" type="String" />
+			<param index="1" name="value" type="Variant" />
+			<description>
+				Sets a TamaScript export variable by name. The value is passed to the script the next time the emitter starts (or live if it is already running).
+			</description>
+		</method>
+		<method name="set_export_num">
+			<return type="void" />
+			<param index="0" name="name" type="String" />
+			<param index="1" name="value" type="float" />
+			<description>
+				Convenience variant of [method set_export] for numeric values.
+			</description>
+		</method>
+		<method name="set_export_str">
+			<return type="void" />
+			<param index="0" name="name" type="String" />
+			<param index="1" name="value" type="String" />
+			<description>
+				Convenience variant of [method set_export] for string values.
+			</description>
+		</method>
+		<method name="set_export_bool">
+			<return type="void" />
+			<param index="0" name="name" type="String" />
+			<param index="1" name="value" type="bool" />
+			<description>
+				Convenience variant of [method set_export] for boolean values.
+			</description>
+		</method>
+		<method name="get_export">
+			<return type="Variant" />
+			<param index="0" name="name" type="String" />
+			<description>
+				Returns the current value of a TamaScript export variable, or [code]null[/code] if it does not exist.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="script_filename" type="String" setter="set_script_filename" getter="get_script_filename" default="&quot;&quot;">
+			The bare filename of the TamaScript to run (without path or extension), e.g. [code]"spiral"[/code]. The file must have been loaded by [TamaManager] before the emitter starts.
+		</member>
+		<member name="excluded_from_group" type="bool" setter="set_excluded_from_group" getter="get_excluded_from_group" default="false">
+			When [code]true[/code], this emitter is excluded from group-wide [code]start[/code]/[code]stop[/code] calls.
+		</member>
+	</members>
+</class>

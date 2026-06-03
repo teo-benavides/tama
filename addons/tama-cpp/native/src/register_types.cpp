@@ -21,42 +21,42 @@
 using namespace godot;
 
 static TamaExprRuntime *s_expr_runtime  = nullptr;
-static TamaManagerBase *s_tama_manager  = nullptr;
+static TamaManager *s_tama_manager  = nullptr;
 
 void initialize_tama_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
     }
-    ClassDB::register_class<TamaASTNode>();
-    ClassDB::register_class<TamaScriptRepository>();
+    // Internal classes — not visible in the editor or docs
+    ClassDB::register_internal_class<TamaASTNode>();
+    ClassDB::register_internal_class<TamaScriptRepository>();
+    ClassDB::register_internal_class<TamaSpawnManager>();
+    ClassDB::register_internal_class<TamaExprRuntime>();
+    ClassDB::register_internal_class<TamaBulletFireData>();
+    ClassDB::register_internal_class<TamaChdirData>();
+    ClassDB::register_internal_class<TamaChspdData>();
+    ClassDB::register_internal_class<TamaChposData>();
+    ClassDB::register_internal_class<TamaAccelData>();
+    ClassDB::register_internal_class<TamaRef>();
+    ClassDB::register_internal_class<TamaInterpreter>();
+    ClassDB::register_internal_class<TamaServerBullet>();
+    ClassDB::register_internal_class<TamaServerBulletPool>();
+
+    // User-facing classes
     ClassDB::register_class<TamaContext>();
     ClassDB::register_class<TamaServerBulletConfig>();
     ClassDB::register_class<TamaBulletRegistry>();
     ClassDB::register_class<TamaBullet>();
     ClassDB::register_class<TamaEmitter>();
-    ClassDB::register_class<TamaSpawnManager>();
-    ClassDB::register_class<TamaManagerBase>();
-    ClassDB::register_class<TamaExprRuntime>();
-    ClassDB::register_class<TamaBulletFireData>();
-    ClassDB::register_class<TamaChdirData>();
-    ClassDB::register_class<TamaChspdData>();
-    ClassDB::register_class<TamaChposData>();
-    ClassDB::register_class<TamaAccelData>();
-    ClassDB::register_class<TamaRef>();
-    ClassDB::register_class<TamaInterpreter>();
-    ClassDB::register_class<TamaServerBullet>();
-    ClassDB::register_class<TamaServerBulletPool>();
+    ClassDB::register_class<TamaManager>();
 
     s_expr_runtime = memnew(TamaExprRuntime);
     Engine::get_singleton()->register_singleton("TamaExprRuntime", s_expr_runtime);
 
-    // TamaManager is a pure C++ Engine singleton — no autoload, no GDScript wrapper.
-    // Sub-nodes (TamaSpawnManager, TamaServerBulletPool) are injected into the scene
-    // tree lazily on the first register_bullet / register_server_bullet call.
-    s_tama_manager = memnew(TamaManagerBase);
+    s_tama_manager = memnew(TamaManager);
     s_tama_manager->_repository = memnew(TamaScriptRepository);
     Engine::get_singleton()->register_singleton("TamaManager", s_tama_manager);
-    TamaManagerBase::s_instance = s_tama_manager;
+    TamaManager::s_instance = s_tama_manager;
 }
 
 void uninitialize_tama_module(ModuleInitializationLevel p_level) {

@@ -218,7 +218,7 @@ float TamaBullet::_dir_to_angle(int dir_type, float value) const {
     switch (dir_type) {
         case 0: { // AIM
             Vector2 player_pos;
-            TamaManagerBase *mgr = TamaManagerBase::get_instance();
+            TamaManager *mgr = TamaManager::get_instance();
             if (mgr) player_pos = mgr->get_player_position();
             return (player_pos - get_global_position()).angle() + value * DEG2RAD;
         }

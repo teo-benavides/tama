@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaBullet" inherits="CharacterBody2D" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		A scene-based bullet node managed by Tama.
+	</brief_description>
+	<description>
+		[b]TamaBullet[/b] is the base class for scene-based bullets. It extends [CharacterBody2D] and handles movement, rotation, and responding to TamaScript [code]chdir[/code], [code]chspd[/code], [code]chpos[/code], and [code]accel[/code] commands via tweens.
+
+		To use scene bullets, create a scene with a [TamaBullet] root (or a script that extends it), then register it with [method TamaManager.register_bullet].
+
+		For large bullet counts, prefer server bullets registered via [method TamaManager.register_server_bullet], which use MultiMesh batching instead of individual scene instances.
+
+		[b]Movement[/b] is driven by [member angle] and [member speed] each physics frame, or by [member speed_x]/[member speed_y] when independent axis movement is set by a TamaScript [code]mvmt[/code] directive.
+
+		Override [method destroy] in a subclass to add a death effect before freeing the node.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="destroy" qualifiers="virtual">
+			<return type="void" />
+			<description>
+				Called when the bullet should be removed from the scene. The default implementation calls [code]queue_free()[/code]. Override to play a destruction effect before freeing.
+			</description>
+		</method>
+		<method name="get_angle">
+			<return type="float" />
+			<description>
+				Returns the current movement angle in radians.
+			</description>
+		</method>
+		<method name="set_angle">
+			<return type="void" />
+			<param index="0" name="v" type="float" />
+			<description>
+				Sets the movement angle in radians.
+			</description>
+		</method>
+		<method name="get_speed">
+			<return type="float" />
+			<description>
+				Returns the current speed in pixels per second.
+			</description>
+		</method>
+		<method name="set_speed">
+			<return type="void" />
+			<param index="0" name="v" type="float" />
+			<description>
+				Sets the speed in pixels per second.
+			</description>
+		</method>
+		<method name="get_speed_x">
+			<return type="float" />
+			<description>
+				Returns the current X-axis speed component (used with [code]mvmt[/code] directives).
+			</description>
+		</method>
+		<method name="set_speed_x">
+			<return type="void" />
+			<param index="0" name="v" type="float" />
+			<description>
+				Sets the X-axis speed component.
+			</description>
+		</method>
+		<method name="get_speed_y">
+			<return type="float" />
+			<description>
+				Returns the current Y-axis speed component (used with [code]mvmt[/code] directives).
+			</description>
+		</method>
+		<method name="set_speed_y">
+			<return type="void" />
+			<param index="0" name="v" type="float" />
+			<description>
+				Sets the Y-axis speed component.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="angle" type="float" setter="set_angle" getter="get_angle" default="0.0">
+			Movement angle in radians. The bullet moves in this direction at [member speed] pixels per second.
+		</member>
+		<member name="speed" type="float" setter="set_speed" getter="get_speed" default="0.0">
+			Movement speed in pixels per second along [member angle].
+		</member>
+		<member name="speed_x" type="float" setter="set_speed_x" getter="get_speed_x" default="0.0">
+			Independent X-axis speed. Active when a TamaScript [code]mvmt[/code] directive overrides horizontal movement.
+		</member>
+		<member name="speed_y" type="float" setter="set_speed_y" getter="get_speed_y" default="0.0">
+			Independent Y-axis speed. Active when a TamaScript [code]mvmt[/code] directive overrides vertical movement.
+		</member>
+		<member name="rotates" type="bool" setter="set_rotates" getter="get_rotates" default="true">
+			When [code]true[/code], the bullet's visual rotation tracks its movement angle.
+		</member>
+		<member name="initial_position" type="Vector2" setter="set_initial_position" getter="get_initial_position" default="Vector2(0, 0)">
+			The world position where the bullet was spawned. Used by TamaScript [code]pos seq[/code] directives.
+		</member>
+	</members>
+</class>

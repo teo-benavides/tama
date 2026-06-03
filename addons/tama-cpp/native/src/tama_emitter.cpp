@@ -125,33 +125,26 @@ void TamaEmitter::set_script_filename(const String &v) {
 // ---------------------------------------------------------------------------
 
 void TamaEmitter::start() {
-    UtilityFunctions::print("[TAMA] TamaEmitter::start script='", _script_filename, "'");
     if (_script_filename.is_empty()) {
         UtilityFunctions::push_error("TamaEmitter: script_filename is not set");
         return;
     }
-    TamaManagerBase *mgr = TamaManagerBase::get_instance();
-    if (!mgr) { UtilityFunctions::print("[TAMA] TamaEmitter::start: no mgr"); return; }
+    TamaManager *mgr = TamaManager::get_instance();
+    if (!mgr) return;
     Object *program = mgr->_get_tama_script(_script_filename);
-    UtilityFunctions::print("[TAMA] TamaEmitter::start program=", (int64_t)(uintptr_t)program);
     if (!program) {
         UtilityFunctions::push_error(String("TamaEmitter: script '") + _script_filename + "' not found in repository (check tama/scripts_path project setting)");
         return;
     }
 
     _interpreter = memnew(TamaInterpreter);
-    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter created");
     _interpreter->set_context(mgr->_get_context());
-    UtilityFunctions::print("[TAMA] TamaEmitter::start: context set");
     _interpreter->connect("finished", callable_mp(this, &TamaEmitter::stop));
     mgr->_connect_interpreter(_interpreter, this);
-    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter connected");
     add_child(_interpreter);
-    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter added as child");
     _running = true;
     Dictionary scope = _export_values.duplicate();
     _interpreter->start(program, scope);
-    UtilityFunctions::print("[TAMA] TamaEmitter::start: interpreter started");
 }
 
 void TamaEmitter::stop() {
@@ -197,7 +190,7 @@ void TamaEmitter::_refresh_exports() {
         if (program) _read_exports_from(program);
         memdelete(temp);
     } else {
-        TamaManagerBase *mgr = TamaManagerBase::get_instance();
+        TamaManager *mgr = TamaManager::get_instance();
         if (mgr && mgr->_has_tama_script(_script_filename)) {
             Object *program = mgr->_get_script_from_repository(_script_filename);
             if (program) _read_exports_from(program);

@@ -28,11 +28,5 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_font_sizes/font_size = 12
 
-[node name="TamaEmitter" type="TamaEmitter" parent="." unique_id=675385308]
-script_filename = "export_example"
-excluded_from_group = true
-tama_export_speed_ = 300.0
-position = Vector2(441, 297)
-
 [connection signal="item_selected" from="CanvasLayer/Container/OptionButton" to="." method="_on_option_button_item_selected"]
 [connection signal="text_changed" from="CanvasLayer/Container/TextEdit" to="." method="_on_text_edit_text_changed"]

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaManager" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Engine singleton that manages bullet pattern scripts, bullet type registration, and global state for Tama.
+	</brief_description>
+	<description>
+		[b]TamaManager[/b] is the central singleton for the Tama bullet hell framework. Access it via [code]TamaManager[/code] in GDScript.
+
+		Before any emitters can fire, you must load TamaScript files and register at least one bullet type. A minimal setup looks like:
+		[codeblock]
+		func _ready():
+		    TamaManager.load_scripts()           # loads from tama/scripts_path project setting
+		    TamaManager.register_server_bullet("default", preload("res://bullets/my_config.tres"))
+		[/codeblock]
+
+		[b]Script loading[/b] reads [code].tama[/code] files from the directory configured in [code]tama/scripts_path[/code] (default: [code]res://tamascripts[/code]). Individual scripts can also be loaded by name/path or injected directly from source strings.
+
+		[b]Bullet types[/b] come in two flavours:
+		- [i]Server bullets[/i] (registered with [method register_server_bullet]) use MultiMesh batching and physics-server collision. They are the high-performance path for large numbers of bullets.
+		- [i]Scene bullets[/i] (registered with [method register_bullet]) instantiate a [PackedScene] per bullet, giving full scene-graph flexibility at a higher per-bullet cost.
+
+		The [member player_position] property must be updated every frame so that [code]aim[/code] direction directives in TamaScript resolve correctly.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="load_scripts">
+			<return type="void" />
+			<param index="0" name="path" type="String" default="&quot;&quot;" />
+			<description>
+				Loads all [code].tama[/code] files found in [param path]. If [param path] is empty, the directory configured in the [code]tama/scripts_path[/code] project setting is used (default: [code]res://tamascripts[/code]).
+			</description>
+		</method>
+		<method name="load_script">
+			<return type="void" />
+			<param index="0" name="filename" type="String" />
+			<param index="1" name="full_path" type="String" />
+			<description>
+				Loads a single TamaScript file. [param filename] is the bare name used to reference the script (e.g. [code]"spiral"[/code]); [param full_path] is the resource path to the file.
+			</description>
+		</method>
+		<method name="load_script_from_source">
+			<return type="void" />
+			<param index="0" name="name" type="String" />
+			<param index="1" name="source" type="String" />
+			<description>
+				Parses and registers a TamaScript directly from a source string. Useful for procedurally generated or runtime-defined patterns.
+			</description>
+		</method>
+		<method name="register_bullet">
+			<return type="void" />
+			<param index="0" name="type" type="String" />
+			<param index="1" name="scene" type="PackedScene" />
+			<description>
+				Registers a scene-based bullet type under [param type]. [TamaEmitter] nodes that reference this type will instantiate [param scene] for each bullet fired. Use [method register_server_bullet] instead for better performance with many simultaneous bullets.
+			</description>
+		</method>
+		<method name="register_server_bullet">
+			<return type="void" />
+			<param index="0" name="type" type="String" />
+			<param index="1" name="config" type="TamaServerBulletConfig" />
+			<description>
+				Registers a server bullet type under [param type] using [param config] for rendering and collision settings. Server bullets are drawn with MultiMesh and use the physics server directly, allowing very large numbers of bullets with minimal overhead.
+			</description>
+		</method>
+		<method name="set_default_bullet">
+			<return type="void" />
+			<param index="0" name="scene" type="PackedScene" />
+			<description>
+				Sets the fallback [PackedScene] used when a TamaScript fires a bullet with a type not found in the registry.
+			</description>
+		</method>
+		<method name="get_player_position">
+			<return type="Vector2" />
+			<description>
+				Returns the current player position used for [code]aim[/code] direction calculations.
+			</description>
+		</method>
+		<method name="set_player_position">
+			<return type="void" />
+			<param index="0" name="v" type="Vector2" />
+			<description>
+				Sets the player position. Call this every frame so that [code]aim[/code] direction directives track the player correctly.
+			</description>
+		</method>
+		<method name="get_spawn_parent">
+			<return type="NodePath" />
+			<description>
+				Returns the [NodePath] of the node that spawned scene bullets are added as children of.
+			</description>
+		</method>
+		<method name="set_spawn_parent">
+			<return type="void" />
+			<param index="0" name="v" type="NodePath" />
+			<description>
+				Sets the node under which scene bullets are spawned. Defaults to the scene root when left empty.
+			</description>
+		</method>
+		<method name="get_context">
+			<return type="TamaContext" />
+			<description>
+				Returns the active [TamaContext]. Override this with a custom subclass to expose game-specific values (such as [code]time()[/code]) to TamaScript expressions.
+			</description>
+		</method>
+		<method name="set_context">
+			<return type="void" />
+			<param index="0" name="v" type="TamaContext" />
+			<description>
+				Replaces the active [TamaContext] with [param v]. Set a custom subclass before any emitters start to make game-specific context functions available in TamaScript.
+			</description>
+		</method>
+		<method name="get_registry">
+			<return type="TamaBulletRegistry" />
+			<description>
+				Returns the [TamaBulletRegistry] that maps type names to bullet scenes and server configs.
+			</description>
+		</method>
+		<method name="set_registry">
+			<return type="void" />
+			<param index="0" name="v" type="TamaBulletRegistry" />
+			<description>
+				Replaces the active [TamaBulletRegistry] with a pre-configured one. Useful when you want to load a registry [Resource] from disk rather than registering types imperatively.
+			</description>
+		</method>
+		<method name="get_server_bullet_pool">
+			<return type="Object" />
+			<description>
+				Returns the internal server bullet pool node. Exposed for advanced use; most projects should not need to call this directly.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="player_position" type="Vector2" setter="set_player_position" getter="get_player_position" default="Vector2(0, 0)">
+			The current player position. Update this every frame so that TamaScript [code]aim[/code] directions resolve correctly.
+		</member>
+		<member name="spawn_parent" type="NodePath" setter="set_spawn_parent" getter="get_spawn_parent" default="NodePath(&quot;&quot;)">
+			The node path under which scene-based bullets are added. Defaults to the scene root when empty.
+		</member>
+		<member name="context" type="TamaContext" setter="set_context" getter="get_context">
+			The active context object queried by TamaScript expressions. Replace with a [TamaContext] subclass to expose custom values.
+		</member>
+		<member name="registry" type="TamaBulletRegistry" setter="set_registry" getter="get_registry">
+			The registry that maps bullet type names to scenes and server configs.
+		</member>
+	</members>
+</class>

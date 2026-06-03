@@ -16,7 +16,7 @@ protected:
 
 public:
     // -----------------------------------------------------------------------
-    // Public API  (mirrors tama_script_repository.gd)
+    // Public API
     // -----------------------------------------------------------------------
     void load_scripts(const godot::String &path);
     void load_script(const godot::String &filename, const godot::String &full_path);

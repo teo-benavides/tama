@@ -14,15 +14,11 @@
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
-// ---------------------------------------------------------------------------
-// TamaServerBulletPool — C++ port of tama_server_bullet_pool.gd
-// ---------------------------------------------------------------------------
-
 class TamaServerBulletPool : public godot::Node2D {
     GDCLASS(TamaServerBulletPool, godot::Node2D)
 
     // ------------------------------------------------------------------
-    // Internal structures (mirrors GDScript _BatchData / _TypeData)
+    // Internal structures
     // ------------------------------------------------------------------
 
     static constexpr int BATCH_CHUNK = 256;
@@ -36,7 +32,7 @@ class TamaServerBulletPool : public godot::Node2D {
     };
 
     struct TypeData {
-        // Config properties (read once at register_type from GDScript Resource)
+        // Config properties (read once at register_type)
         godot::Ref<godot::Texture2D> texture;
         godot::Rect2    rect         = {-8.0f, -8.0f, 16.0f, 16.0f};
         godot::Vector2  texture_scale = {1.0f, 1.0f};
@@ -130,16 +126,12 @@ public:
     void _exit_tree()               override;
 
     // ------------------------------------------------------------------
-    // Public GDScript API (same names as GDScript version)
+    // Public API
     // ------------------------------------------------------------------
 
-    // Register a bullet type. config is a GDScript TamaServerBulletConfig Resource.
     void register_type(const godot::String &key, godot::Object *config);
 
-    // Spawn a server bullet.
-    // data:    BulletFireData Object from GDScript TamaInterpreter
-    // config:  TamaServerBulletConfig Object
-    // Returns the TamaServerBullet wrapper, or null if pool full.
+    // Returns the TamaServerBullet wrapper, or null if the pool is full.
     godot::Object *spawn(godot::Object *data, godot::Object *config,
                          float angle, float speed, godot::Vector2 position,
                          godot::Object *context);

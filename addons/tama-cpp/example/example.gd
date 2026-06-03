@@ -6,19 +6,9 @@ var emitter: TamaEmitter
 var _loading_script := false
 
 func _ready() -> void:
-	var config = TamaServerBulletConfig.new()
-	config.texture = load("res://addons/tama-cpp/example/bullets/small_bullet.png")
-	config.rect = Rect2(-7.0, -4.0, 14.0, 8.0)
-	config.shape_radius = 1.0
-	config.collision_layer = 2
-	config.collision_mask = 1  # player's layer
-	config.pool_size = 10000
-	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
-	TamaManager.register_server_bullet("fast", config)
-	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)
+	TamaManager.set_registry(load("res://addons/tama-cpp/example/bullets/example_tama_bullet_registry.tres"))
 	TamaManager.set_context(ExampleTamaContext.new())
 	TamaManager.load_scripts()
-	$TamaEmitter.start()
 	_populate_script_list()
 	_on_option_button_item_selected(0)
 

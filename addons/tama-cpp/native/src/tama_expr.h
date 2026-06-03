@@ -51,7 +51,7 @@ class TamaExprRuntime : public godot::Object {
 
     static TamaExprRuntime *_singleton;
 
-    // cache key: expr_string + "|" + comma-joined var names (matches GDScript _prep_scope)
+    // cache key: expr_string + "|" + comma-joined var names
     std::unordered_map<std::string, TamaExprChunk> _cache;
 
     // user-registered context functions (name → Callable)
@@ -110,7 +110,7 @@ public:
     TamaExprRuntime();
     ~TamaExprRuntime();
 
-    // Evaluate an expression string (replaces GDScript Expression.execute).
+    // Evaluate an expression string.
     // expr:       expression string
     // var_names:  variable names (parallel with var_values)
     // var_values: variable float values
@@ -133,7 +133,7 @@ public:
                                    const std::vector<std::string> &var_names,
                                    const std::string &cache_key);
 
-    // Evaluate a pre-compiled chunk directly (no GDScript boundary).
+    // Evaluate a pre-compiled chunk directly.
     double eval_chunk(const TamaExprChunk &chunk,
                       const double *values, size_t count,
                       godot::Object *context = nullptr) const;

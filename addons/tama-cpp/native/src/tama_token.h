@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_map>
 
-// Token type discriminant — mirrors tama_token.gd constants.
+// Token type discriminant.
 enum class TT {
     NUMBER, WORD, LPAREN, RPAREN, OP, COMMA,
     NEWLINE, INDENT, DEDENT, EOF_, ERROR,

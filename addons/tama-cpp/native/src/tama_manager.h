@@ -11,14 +11,14 @@
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
-class TamaManagerBase : public godot::Object {
-    GDCLASS(TamaManagerBase, godot::Object)
+class TamaManager : public godot::Object {
+    GDCLASS(TamaManager, godot::Object)
 protected:
     static void _bind_methods();
 
 public:
-    static TamaManagerBase *s_instance;
-    static TamaManagerBase *get_instance() { return s_instance; }
+    static TamaManager *s_instance;
+    static TamaManager *get_instance() { return s_instance; }
 
     // -----------------------------------------------------------------------
     // Public API
@@ -42,7 +42,6 @@ public:
     void set_registry(TamaBulletRegistry *v);
     godot::Object *get_server_bullet_pool() const;
 
-    // Internal — used by TamaEmitter / TamaBullet / TamaServerBulletPool
     godot::Object *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
     godot::Object *_get_script_from_repository(const godot::String &filename) const;
@@ -50,9 +49,7 @@ public:
     godot::Object *_get_context() const { return _spawn_manager ? _spawn_manager->get_context().ptr() : nullptr; }
     godot::String  _get_scripts_path() const;
 
-    // Called from register_types
     void _shutdown();
-    // Called from TamaSpawnManager/TamaServerBulletPool when freed by the scene tree
     void _on_scene_nodes_freed();
 
     friend void initialize_tama_module(godot::ModuleInitializationLevel);

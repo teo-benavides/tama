@@ -100,18 +100,16 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 // ---------------------------------------------------------------------------
 
 void TamaServerBulletPool::_ready() {
-    UtilityFunctions::print("[TAMA] TamaServerBulletPool::_ready pending=", (int)_pending_regs.size());
     set_physics_process(true);
     _composite_threshold = (int)ProjectSettings::get_singleton()
         ->get_setting("tama/server_bullet_composite_threshold", 1000);
     for (auto &pr : _pending_regs)
         register_type(pr.key, pr.config);
     _pending_regs.clear();
-    UtilityFunctions::print("[TAMA] TamaServerBulletPool::_ready done types=", (int)_types.size());
 }
 
 void TamaServerBulletPool::_exit_tree() {
-    TamaManagerBase *mgr = TamaManagerBase::get_instance();
+    TamaManager *mgr = TamaManager::get_instance();
     if (mgr) mgr->_on_scene_nodes_freed();
 
     for (auto &[key, td] : _types) {
@@ -138,7 +136,6 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
 
     TypeData *td = new TypeData();
 
-    // Read config properties from GDScript Resource via Object::get()
     td->texture        = Ref<Texture2D>(Object::cast_to<Texture2D>(p_config->get("texture")));
     td->rect           = (Rect2)p_config->get("rect");
     td->texture_scale  = (Vector2)p_config->get("texture_scale");
@@ -320,8 +317,7 @@ Object *TamaServerBulletPool::spawn(
     b.speed_x           = 0.0f;
     b.speed_y           = 0.0f;
     b.rotates           = td.rotates;
-    // Negate Y for QuadMesh UV convention (matches GDScript version)
-    b.texture_scale     = Vector2(td.texture_scale.x, -td.texture_scale.y);
+    b.texture_scale     = Vector2(td.texture_scale.x, -td.texture_scale.y); // negate Y for QuadMesh UV convention
     b.last_angle        = angle;
     b.last_speed        = speed;
     b.angle_tween.active = false;
@@ -515,14 +511,8 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
 // ---------------------------------------------------------------------------
 
 void TamaServerBulletPool::_physics_process(double p_delta) {
-    static int pool_frame = 0;
-    ++pool_frame;
-    UtilityFunctions::print("[TAMA] pool _physics_process frame=", pool_frame,
-        " active=", (int)_active.size(), " types=", (int)_types.size());
-
     float delta   = (float)p_delta;
     Rect2 bounds  = _world_bounds().grow(_bounds_margin);
-    UtilityFunctions::print("[TAMA] pool bounds computed frame=", pool_frame);
     TamaExprRuntime *er = TamaExprRuntime::get_singleton();
 
     // Step all bullet act runners before updating positions
@@ -532,7 +522,6 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             if (ti && ti->is_running()) ti->step(delta);
         }
     }
-    UtilityFunctions::print("[TAMA] pool runners stepped frame=", pool_frame);
 
     std::vector<BulletState *> to_recycle;
 
@@ -571,13 +560,8 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             to_recycle.push_back(b);
     }
 
-    UtilityFunctions::print("[TAMA] pool bullets updated frame=", pool_frame,
-        " to_recycle=", (int)to_recycle.size());
-
     for (BulletState *b : to_recycle)
         _recycle_internal(b);
-
-    UtilityFunctions::print("[TAMA] pool frame=", pool_frame, " DONE");
 
     if (!_active.empty())
         queue_redraw();
@@ -628,11 +612,10 @@ void TamaServerBulletPool::_step_tweens(BulletState &b, float delta) {
 }
 
 // ---------------------------------------------------------------------------
-// Signal handlers from GDScript runners
+// Signal handlers
 // ---------------------------------------------------------------------------
 
-// DirType enum values from tama_ast.gd: AIM=0, ABS=1, REL=2, SEQ=3
-// ValueType: ABS=0, REL=1, SEQ=2
+// DirType: AIM=0, ABS=1, REL=2, SEQ=3 — ValueType: ABS=0, REL=1, SEQ=2
 
 float TamaServerBulletPool::_dir_to_angle(const BulletState &b, int dir_type, float value) const {
     // AIM=0: player_pos - bullet_pos angle + offset
@@ -642,7 +625,7 @@ float TamaServerBulletPool::_dir_to_angle(const BulletState &b, int dir_type, fl
     // Note: value is already in radians (interpreter calls deg_to_rad)
     switch (dir_type) {
     case 0: { // AIM
-        TamaManagerBase *mgr = TamaManagerBase::get_instance();
+        TamaManager *mgr = TamaManager::get_instance();
         if (mgr) {
             return (mgr->get_player_position() - b.position).angle() + value;
         }

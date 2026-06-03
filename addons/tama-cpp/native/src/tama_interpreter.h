@@ -14,7 +14,7 @@
 #include <godot_cpp/variant/variant.hpp>
 
 // ---------------------------------------------------------------------------
-// NodeType enum — mirrors tama_ast.gd NodeType enum for C++ dispatch
+// NodeType enum
 // ---------------------------------------------------------------------------
 enum class TamaNodeType : int {
     NONE = 0, PROGRAM = 1, EXPORT_VAR = 2, MAIN = 3,
@@ -30,7 +30,7 @@ enum class TamaNodeType : int {
 };
 
 // ---------------------------------------------------------------------------
-// Signal payload classes (RefCounted so GDScript can use them as Objects)
+// Signal payload classes
 // ---------------------------------------------------------------------------
 
 class TamaBulletFireData : public godot::RefCounted {
@@ -56,8 +56,8 @@ public:
     int    pos_y_type     = 0;   // ABS
     float  pos_y          = 0.0f;
     godot::String bullet_type;
-    godot::Object *bullet_emitter_act = nullptr; // GDScript ASTNode
-    godot::Object *bullet_act         = nullptr; // GDScript ASTNode
+    godot::Object *bullet_emitter_act = nullptr;
+    godot::Object *bullet_act         = nullptr;
     godot::Array   bullet_params;    // Array[String]
     godot::Array   bullet_args;      // Array (float | String | TamaRef | ...)
     bool           mvmt_x_set  = false;
@@ -66,7 +66,7 @@ public:
     bool           mvmt_y_set  = false;
     int            mvmt_y_type = 0;
     godot::String  mvmt_y_expr;
-    godot::Object *source_program = nullptr; // GDScript ProgramNode
+    godot::Object *source_program = nullptr;
 
     // Accessors (required by _bind_methods)
     int    get_dir_type()        const;
@@ -213,7 +213,7 @@ struct ExecFrame {
 };
 
 // ---------------------------------------------------------------------------
-// TamaInterpreter — C++ state-machine replacing the GDScript coroutine version
+// TamaInterpreter
 // ---------------------------------------------------------------------------
 
 class TamaInterpreter : public godot::Node {

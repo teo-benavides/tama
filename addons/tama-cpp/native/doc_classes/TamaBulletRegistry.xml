@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaBulletRegistry" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		A Resource that maps bullet type names to scenes and server configs.
+	</brief_description>
+	<description>
+		[b]TamaBulletRegistry[/b] holds the full set of bullet types known to Tama. It can be configured imperatively via [TamaManager] methods, or assembled as a [Resource] asset and assigned to [method TamaManager.set_registry].
+
+		[b]entries[/b] maps type name strings to [PackedScene] resources for scene-based bullets.
+
+		[b]server_configs[/b] maps type name strings to [TamaServerBulletConfig] resources for server (MultiMesh) bullets.
+
+		When a TamaScript fires a bullet whose type is not found in either dictionary, [member default_bullet] is used as a fallback.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="get_server_config">
+			<return type="TamaServerBulletConfig" />
+			<param index="0" name="type" type="String" />
+			<description>
+				Returns the [TamaServerBulletConfig] registered under [param type], or [code]null[/code] if none is found.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="entries" type="Dictionary" setter="set_entries" getter="get_entries" default="{}">
+			Maps bullet type names ([String]) to [PackedScene] resources. Used for scene-based bullets.
+		</member>
+		<member name="default_bullet" type="PackedScene" setter="set_default_bullet" getter="get_default_bullet">
+			Fallback scene used when a bullet type fired by a TamaScript is not found in [member entries].
+		</member>
+		<member name="server_configs" type="Dictionary" setter="set_server_configs" getter="get_server_configs" default="{}">
+			Maps bullet type names ([String]) to [TamaServerBulletConfig] resources. Used for server bullets.
+		</member>
+	</members>
+</class>

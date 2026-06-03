@@ -464,7 +464,7 @@ bool TamaExprRuntime::_compile_call(CompileState &cs, const std::string &name) {
         return true;
     }
 
-    // Context function (GDScript TamaContext method or user-registered)
+    // Context function (TamaContext method or user-registered)
     uint8_t name_idx = (uint8_t)cs.result.ctx_fn_names.size();
     cs.result.ctx_fn_names.push_back(name);
     TamaInstr instr(TamaOp::CALL_CONTEXT);
@@ -629,7 +629,7 @@ double TamaExprRuntime::_eval_chunk(
                 Variant r = uit->second.callv(call_args);
                 result = (double)r;
             } else if (context != nullptr) {
-                // Call on the TamaContext object (GDScript method)
+                // Call on the TamaContext object
                 Variant r = context->callv(StringName(fn_name.c_str()), call_args);
                 result = (double)r;
             }

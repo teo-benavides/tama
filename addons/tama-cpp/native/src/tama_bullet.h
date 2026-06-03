@@ -12,7 +12,6 @@ protected:
     static void _bind_methods();
 
 public:
-    // Set by TamaSpawnManager before add_child
     godot::Object *_runner        = nullptr;
     float          _angle         = 0.0f;
     float          _speed         = 0.0f;
@@ -31,14 +30,11 @@ public:
 
     bool rotates = true;
 
-    // Godot virtuals
     void _ready()                       override;
     void _physics_process(double delta) override;
 
-    // Public API
     virtual void destroy();
 
-    // Tween-accessible property accessors (required for NodePath tweening)
     float  get_angle()    const { return _angle; }
     void   set_angle(float v)   { _angle = v; }
     float  get_speed()    const { return _speed; }

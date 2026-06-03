@@ -1,0 +1,42 @@
+[gd_resource type="TamaBulletRegistry" format=3 uid="uid://5xrka8pvror3"]
+
+[ext_resource type="PackedScene" uid="uid://cppbullet001" path="res://addons/tama-cpp/example/bullets/example_bullet.tscn" id="1_0v7u8"]
+[ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama-cpp/example/bullets/small_bullet.png" id="2_pywna"]
+[ext_resource type="Texture2D" uid="uid://65p6f1ql1q4y" path="res://addons/tama-cpp/example/bullets/small_bullet_orange.png" id="3_wetqc"]
+[ext_resource type="Texture2D" uid="uid://5xunk2d2cj4n" path="res://addons/tama-cpp/example/bullets/small_bullet_blue.png" id="4_gulsf"]
+[ext_resource type="Texture2D" uid="uid://da1dadyp1bofm" path="res://addons/tama-cpp/example/bullets/small_bullet_green.png" id="5_n53vu"]
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_4uqhx"]
+texture = ExtResource("2_pywna")
+shape_radius = 1.0
+collision_layer = 2
+collision_mask = 1
+pool_size = 10000
+rect = Rect2(-7, -4, 14, 8)
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_d4i3m"]
+texture = ExtResource("3_wetqc")
+shape_radius = 1.0
+pool_size = 10000
+rect = Rect2(-7, -4, 14, 8)
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_qlh80"]
+texture = ExtResource("4_gulsf")
+shape_radius = 1.0
+pool_size = 10000
+rect = Rect2(-7, -4, 14, 8)
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_3xnr6"]
+texture = ExtResource("5_n53vu")
+shape_radius = 1.0
+pool_size = 10000
+rect = Rect2(-7, -4, 14, 8)
+
+[resource]
+default_bullet = ExtResource("1_0v7u8")
+server_configs = {
+"blue": SubResource("TamaServerBulletConfig_qlh80"),
+"fast": SubResource("TamaServerBulletConfig_4uqhx"),
+"green": SubResource("TamaServerBulletConfig_3xnr6"),
+"orange": SubResource("TamaServerBulletConfig_d4i3m")
+}

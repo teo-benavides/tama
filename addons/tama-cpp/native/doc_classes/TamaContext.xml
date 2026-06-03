@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaContext" inherits="RefCounted" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Base class for providing runtime context values to TamaScript expressions.
+	</brief_description>
+	<description>
+		[b]TamaContext[/b] is a [RefCounted] object that TamaScript expressions can call to read live game state. The built-in implementation provides [method time] and [method get_1_in]; extend this class in GDScript or C++ to expose additional values.
+
+		Assign a custom instance via [method TamaManager.set_context] before any emitters start.
+
+		[b]Example — custom context:[/b]
+		[codeblock]
+		class MyContext extends TamaContext:
+		    func time() -> float:
+		        return Time.get_ticks_msec() / 1000.0
+
+		func _ready():
+		    TamaManager.set_context(MyContext.new())
+		[/codeblock]
+
+		TamaScript can then use [code]time()[/code] inside expressions:
+		[codeblock]
+		dir abs sin(time()) * 90
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="time" qualifiers="virtual const">
+			<return type="float" />
+			<description>
+				Returns a time value (in seconds) available to TamaScript expressions as [code]time()[/code]. The default implementation returns 0; override in a subclass to provide [code]Time.get_ticks_msec() / 1000.0[/code] or any other clock.
+			</description>
+		</method>
+		<method name="get_1_in" qualifiers="virtual const">
+			<return type="int" />
+			<param index="0" name="n" type="int" />
+			<description>
+				Returns 1 with probability [code]1/n[/code], otherwise 0. Used in TamaScript expressions as [code]get_1_in(n)[/code] for random fire conditions. The default implementation uses a uniform random number.
+			</description>
+		</method>
+	</methods>
+</class>

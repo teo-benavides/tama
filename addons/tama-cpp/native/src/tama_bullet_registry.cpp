@@ -12,12 +12,14 @@ void TamaBulletRegistry::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_server_configs", "v"), &TamaBulletRegistry::set_server_configs);
     ClassDB::bind_method(D_METHOD("get_server_config","type"),&TamaBulletRegistry::get_server_config);
 
-    ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "entries"),
+    ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "entries",
+                              PROPERTY_HINT_DICTIONARY_TYPE, "String;PackedScene"),
                  "set_entries", "get_entries");
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "default_bullet",
                               PROPERTY_HINT_RESOURCE_TYPE, "PackedScene"),
                  "set_default_bullet", "get_default_bullet");
-    ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "server_configs"),
+    ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "server_configs",
+                              PROPERTY_HINT_DICTIONARY_TYPE, "String;TamaServerBulletConfig"),
                  "set_server_configs", "get_server_configs");
 }
 

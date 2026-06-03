@@ -33,7 +33,7 @@ void TamaSpawnManager::_bind_methods() {
 }
 
 void TamaSpawnManager::_exit_tree() {
-    TamaManagerBase *mgr = TamaManagerBase::get_instance();
+    TamaManager *mgr = TamaManager::get_instance();
     if (mgr) mgr->_on_scene_nodes_freed();
 }
 
@@ -240,10 +240,10 @@ Vector2 TamaSpawnManager::_resolve_position(Object *data, Node2D *spawner, float
 }
 
 Node *TamaSpawnManager::_get_spawn_parent() const {
+    if (!is_inside_tree()) return nullptr;
     if (!spawn_parent.is_empty()) {
         Node *n = get_node_or_null(spawn_parent);
         if (n) return n;
     }
-    if (get_tree()) return get_tree()->get_current_scene();
-    return nullptr;
+    return get_tree() ? get_tree()->get_current_scene() : nullptr;
 }
