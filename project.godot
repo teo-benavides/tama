@@ -11,13 +11,13 @@ config_version=5
 [application]
 
 config/name="Tama"
-run/main_scene="res://addons/tama-cpp/example/example.tscn"
+run/main_scene="uid://cppexample001"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="uid://2rof51lmjyrt"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/tama-cpp/plugin.cfg")
+enabled=PackedStringArray("res://addons/tama/plugin.cfg")
 
 [layer_names]
 
@@ -36,4 +36,4 @@ renderer/rendering_method.mobile="gl_compatibility"
 
 [tama]
 
-scripts_path="res://addons/tama-cpp/example/tamascripts"
+scripts_path="res://addons/tama/example/tamascripts"
