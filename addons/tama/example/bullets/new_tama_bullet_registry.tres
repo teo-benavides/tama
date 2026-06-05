@@ -1,6 +1,0 @@
-[gd_resource type="TamaBulletRegistry" format=3 uid="uid://xb265fjvuw1g"]
-
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_4dg5i"]
-
-[resource]
-default_server_bullet = SubResource("TamaServerBulletConfig_4dg5i")
