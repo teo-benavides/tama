@@ -30,6 +30,25 @@ enum class TamaNodeType : int {
 };
 
 // ---------------------------------------------------------------------------
+// Pure C++ event structs (no heap allocation, no Godot machinery)
+// ---------------------------------------------------------------------------
+
+struct TamaChdirEvent  { int dir_type; float dir_value; float over; };
+struct TamaChspdEvent  { int speed_type; float speed_value; float over; };
+struct TamaChposEvent  { bool has_x; int x_type; float x; bool has_y; int y_type; float y; float over; };
+struct TamaAccelEvent  { bool has_x; int x_type; float x; bool has_y; int y_type; float y; float over; };
+
+class TamaBulletEventHandler {
+public:
+    virtual void on_chdir    (const TamaChdirEvent  &) {}
+    virtual void on_chspd    (const TamaChspdEvent  &) {}
+    virtual void on_chpos    (const TamaChposEvent  &) {}
+    virtual void on_accel    (const TamaAccelEvent  &) {}
+    virtual void on_vanished ()                        {}
+    virtual ~TamaBulletEventHandler() = default;
+};
+
+// ---------------------------------------------------------------------------
 // Signal payload classes
 // ---------------------------------------------------------------------------
 
@@ -100,74 +119,6 @@ public:
     godot::Object *get_source_program()     const;
 };
 
-class _TamaChdirData : public godot::RefCounted {
-    GDCLASS(_TamaChdirData, godot::RefCounted)
-protected:
-    static void _bind_methods();
-public:
-    int   dir_type  = 0;
-    float dir_value = 0.0f;
-    float over      = 0.0f;
-    int   get_dir_type()  const;
-    float get_dir_value() const;
-    float get_over()      const;
-};
-
-class _TamaChspdData : public godot::RefCounted {
-    GDCLASS(_TamaChspdData, godot::RefCounted)
-protected:
-    static void _bind_methods();
-public:
-    int   speed_type  = 0;
-    float speed_value = 0.0f;
-    float over        = 0.0f;
-    int   get_speed_type()  const;
-    float get_speed_value() const;
-    float get_over()        const;
-};
-
-class _TamaChposData : public godot::RefCounted {
-    GDCLASS(_TamaChposData, godot::RefCounted)
-protected:
-    static void _bind_methods();
-public:
-    bool  has_x  = false;
-    int   x_type = 0;
-    float x      = 0.0f;
-    bool  has_y  = false;
-    int   y_type = 0;
-    float y      = 0.0f;
-    float over   = 0.0f;
-    bool  get_has_x()  const;
-    int   get_x_type() const;
-    float get_x()      const;
-    bool  get_has_y()  const;
-    int   get_y_type() const;
-    float get_y()      const;
-    float get_over()   const;
-};
-
-class _TamaAccelData : public godot::RefCounted {
-    GDCLASS(_TamaAccelData, godot::RefCounted)
-protected:
-    static void _bind_methods();
-public:
-    bool  has_x  = false;
-    int   x_type = 0;
-    float x      = 0.0f;
-    bool  has_y  = false;
-    int   y_type = 0;
-    float y      = 0.0f;
-    float over   = 0.0f;
-    bool  get_has_x()  const;
-    int   get_x_type() const;
-    float get_x()      const;
-    bool  get_has_y()  const;
-    int   get_y_type() const;
-    float get_y()      const;
-    float get_over()   const;
-};
-
 // First-class value stored in scope — wraps a definition name + pre-bound args.
 class _TamaRef : public godot::RefCounted {
     GDCLASS(_TamaRef, godot::RefCounted)
@@ -223,8 +174,9 @@ class _TamaInterpreter : public godot::Node {
     // State
     // -----------------------------------------------------------------------
 
-    godot::Object *_program = nullptr;
-    godot::Object *_context = nullptr;
+    godot::Object         *_program       = nullptr;
+    godot::Object         *_context       = nullptr;
+    TamaBulletEventHandler *_event_handler = nullptr;
     bool           _running  = false;
     bool           _breaking = false;
 
@@ -301,13 +253,8 @@ class _TamaInterpreter : public godot::Node {
     // Run an async child act
     void _run_async_act(godot::Object *act_node, const godot::Dictionary &scope_copy);
 
-    // Signal forwarders used to relay async-child signals to this interpreter's own signals
-    void _fwd_bullet_fired(godot::Variant data)   { emit_signal("bullet_fired", data); }
-    void _fwd_vanished()                           { emit_signal("vanished"); }
-    void _fwd_changed_direction(godot::Variant d)  { emit_signal("changed_direction", d); }
-    void _fwd_changed_speed(godot::Variant d)      { emit_signal("changed_speed", d); }
-    void _fwd_changed_position(godot::Variant d)   { emit_signal("changed_position", d); }
-    void _fwd_accelerated(godot::Variant d)        { emit_signal("accelerated", d); }
+    // Signal forwarder: relay async-child bullet_fired to this interpreter's own signal
+    void _fwd_bullet_fired(godot::Variant data) { emit_signal("bullet_fired", data); }
 
     // Populate mvmt fields on a BulletFireData
     void _populate_mvmt(_TamaBulletFireData *data, godot::Object *mvmt_node);
@@ -336,6 +283,9 @@ public:
 
     // Evaluate an expression with a given scope — used by TamaBullet for mvmt expressions.
     float eval_expr(const godot::String &expr, const godot::Dictionary &scope);
+
+    // Event handler (C++ only — no Godot signal overhead)
+    void set_event_handler(TamaBulletEventHandler *h) { _event_handler = h; }
 
     // Property
     void           set_context(godot::Object *ctx) { _context = ctx; }

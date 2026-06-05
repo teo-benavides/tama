@@ -33,10 +33,6 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     ClassDB::register_internal_class<_TamaSpawnManager>();
     ClassDB::register_internal_class<_TamaExprRuntime>();
     ClassDB::register_internal_class<_TamaBulletFireData>();
-    ClassDB::register_internal_class<_TamaChdirData>();
-    ClassDB::register_internal_class<_TamaChspdData>();
-    ClassDB::register_internal_class<_TamaChposData>();
-    ClassDB::register_internal_class<_TamaAccelData>();
     ClassDB::register_internal_class<_TamaRef>();
     ClassDB::register_internal_class<_TamaInterpreter>();
     ClassDB::register_internal_class<TamaServerBulletPool>();

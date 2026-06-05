@@ -7,7 +7,7 @@
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
-class TamaBullet : public godot::CharacterBody2D {
+class TamaBullet : public godot::CharacterBody2D, public TamaBulletEventHandler {
     GDCLASS(TamaBullet, godot::CharacterBody2D)
 protected:
     static void _bind_methods();
@@ -64,11 +64,11 @@ private:
     godot::Ref<godot::Tween> _pos_tween;
     godot::Ref<godot::Tween> _accel_tween;
 
-    void _on_changed_direction(godot::Variant data);
-    void _on_changed_speed(godot::Variant data);
-    void _on_changed_position(godot::Variant data);
-    void _on_accelerated(godot::Variant data);
-    void _on_vanished();
+    void on_chdir    (const TamaChdirEvent  &e) override;
+    void on_chspd    (const TamaChspdEvent  &e) override;
+    void on_chpos    (const TamaChposEvent  &e) override;
+    void on_accel    (const TamaAccelEvent  &e) override;
+    void on_vanished ()                         override;
 
     float _dir_to_angle(int dir_type, float value) const;
     float _spd_to_value(int speed_type, float value) const;

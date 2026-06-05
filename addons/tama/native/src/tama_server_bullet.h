@@ -1,5 +1,6 @@
 #pragma once
 #include "tama_expr.h"
+#include "tama_interpreter.h"
 
 #include <cstdint>
 #include <string>
@@ -102,7 +103,7 @@ struct BulletState {
 
 class TamaServerBulletPool; // forward declaration
 
-class TamaServerBullet : public godot::Object {
+class TamaServerBullet : public godot::Object, public TamaBulletEventHandler {
     GDCLASS(TamaServerBullet, godot::Object)
 
     // Pointer back to the owning pool and this bullet's slot index.
@@ -131,4 +132,10 @@ public:
     bool           get_active()    const;
     float          get_speed_x()   const;
     float          get_speed_y()   const;
+
+    void on_chdir    (const TamaChdirEvent  &e) override;
+    void on_chspd    (const TamaChspdEvent  &e) override;
+    void on_chpos    (const TamaChposEvent  &e) override;
+    void on_accel    (const TamaAccelEvent  &e) override;
+    void on_vanished ()                         override;
 };

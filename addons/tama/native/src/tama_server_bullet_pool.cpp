@@ -427,18 +427,9 @@ Object *TamaServerBulletPool::spawn(
         act_scope["spawn_x"] = position.x;
         act_scope["spawn_y"] = position.y;
 
-        // Connect runner signals — bind wrapper Object* for state resolution
-        Object *wrapper_obj = b.wrapper;
-        runner->connect("changed_direction",
-            callable_mp(this, &TamaServerBulletPool::_on_changed_direction).bind(wrapper_obj));
-        runner->connect("changed_speed",
-            callable_mp(this, &TamaServerBulletPool::_on_changed_speed).bind(wrapper_obj));
-        runner->connect("changed_position",
-            callable_mp(this, &TamaServerBulletPool::_on_changed_position).bind(wrapper_obj));
-        runner->connect("accelerated",
-            callable_mp(this, &TamaServerBulletPool::_on_accelerated).bind(wrapper_obj));
-        runner->connect("vanished",
-            callable_mp(this, &TamaServerBulletPool::recycle).bind(wrapper_obj));
+        // Register C++ event handler — no signal/allocation overhead
+        TamaServerBullet *wrapper_bullet = Object::cast_to<TamaServerBullet>(b.wrapper);
+        runner->set_event_handler(wrapper_bullet);
 
         // Allow server bullets to fire child bullets by connecting bullet_fired to the spawn manager.
         TamaManager *mgr = TamaManager::get_instance();
@@ -741,104 +732,87 @@ float TamaServerBulletPool::_accel_axis_end(int axis_type, float value, float cu
     return value;
 }
 
-// NOTE: signal handlers take (signal_data, wrapper_object) because Callable::bind()
-// appends the bound args after the signal args.
-// We resolve BulletState via the wrapper's public _state pointer.
-
-#define RESOLVE_BULLET(wrapper_param)                                    \
-    TamaServerBullet *w_ = Object::cast_to<TamaServerBullet>(wrapper_param); \
-    if (!w_ || !w_->_state) return;                                      \
-    BulletState &b = *w_->_state;
-
-void TamaServerBulletPool::_on_changed_direction(Object *p_data, Object *p_wrapper) {
-    RESOLVE_BULLET(p_wrapper)
-    int   dir_type  = (int)p_data->get("dir_type");
-    float dir_value = (float)p_data->get("dir_value");
-    float over      = (float)p_data->get("over");
-    float target    = _dir_to_angle(b, dir_type, dir_value);
-    b.last_angle    = b.angle;
-    if (over <= 0.0f) {
+void TamaServerBulletPool::_apply_chdir(BulletState &b, const TamaChdirEvent &e) {
+    float target = _dir_to_angle(b, e.dir_type, e.dir_value);
+    b.last_angle = b.angle;
+    if (e.over <= 0.0f) {
         b.angle = target;
         b.angle_tween.active = false;
         b.vel_dirty = true;
     } else {
-        b.angle_tween = { true, b.angle, target, 0.0f, over };
+        b.angle_tween = { true, b.angle, target, 0.0f, e.over };
     }
 }
 
-void TamaServerBulletPool::_on_changed_speed(Object *p_data, Object *p_wrapper) {
-    RESOLVE_BULLET(p_wrapper)
-    int   speed_type  = (int)p_data->get("speed_type");
-    float speed_value = (float)p_data->get("speed_value");
-    float over        = (float)p_data->get("over");
-    float target      = _spd_to_value(b, speed_type, speed_value);
-    b.last_speed      = b.speed;
-    if (over <= 0.0f) {
+void TamaServerBulletPool::_apply_chspd(BulletState &b, const TamaChspdEvent &e) {
+    float target = _spd_to_value(b, e.speed_type, e.speed_value);
+    b.last_speed = b.speed;
+    if (e.over <= 0.0f) {
         b.speed = target;
         b.speed_tween.active = false;
         b.vel_dirty = true;
     } else {
-        b.speed_tween = { true, b.speed, target, 0.0f, over };
+        b.speed_tween = { true, b.speed, target, 0.0f, e.over };
     }
 }
 
-void TamaServerBulletPool::_on_changed_position(Object *p_data, Object *p_wrapper) {
-    RESOLVE_BULLET(p_wrapper)
-    bool    has_x  = (bool)p_data->get("has_x");
-    bool    has_y  = (bool)p_data->get("has_y");
-    float   over   = (float)p_data->get("over");
+void TamaServerBulletPool::_apply_chpos(BulletState &b, const TamaChposEvent &e) {
     Vector2 target = b.position;
-    if (has_x) {
-        int   x_type = (int)p_data->get("x_type");
-        float x      = (float)p_data->get("x");
-        switch (x_type) {
-        case 0: case 2: target.x  = x; break;   // ABS, SEQ
-        case 1:         target.x += x; break;    // REL
+    if (e.has_x) {
+        switch (e.x_type) {
+        case 0: case 2: target.x  = e.x; break;  // ABS, SEQ
+        case 1:         target.x += e.x; break;   // REL
         }
     }
-    if (has_y) {
-        int   y_type = (int)p_data->get("y_type");
-        float y      = (float)p_data->get("y");
-        switch (y_type) {
-        case 0: case 2: target.y  = y; break;
-        case 1:         target.y += y; break;
+    if (e.has_y) {
+        switch (e.y_type) {
+        case 0: case 2: target.y  = e.y; break;
+        case 1:         target.y += e.y; break;
         }
     }
-    if (over <= 0.0f) {
+    if (e.over <= 0.0f) {
         b.position = target;
         b.pos_tween.active = false;
     } else {
-        b.pos_tween = { true, b.position, target, 0.0f, over };
+        b.pos_tween = { true, b.position, target, 0.0f, e.over };
     }
 }
 
-void TamaServerBulletPool::_on_accelerated(Object *p_data, Object *p_wrapper) {
-    RESOLVE_BULLET(p_wrapper)
-    bool  has_x = (bool)p_data->get("has_x");
-    bool  has_y = (bool)p_data->get("has_y");
-    float over  = (float)p_data->get("over");
-    if (over <= 0.0f) {
-        if (has_x) {
-            int   x_type = (int)p_data->get("x_type");
-            float x      = (float)p_data->get("x");
-            if (x_type == 1) b.speed_x += x; else b.speed_x = x;
-        }
-        if (has_y) {
-            int   y_type = (int)p_data->get("y_type");
-            float y      = (float)p_data->get("y");
-            if (y_type == 1) b.speed_y += y; else b.speed_y = y;
-        }
+void TamaServerBulletPool::_apply_accel(BulletState &b, const TamaAccelEvent &e) {
+    if (e.over <= 0.0f) {
+        if (e.has_x) { if (e.x_type == 1) b.speed_x += e.x; else b.speed_x = e.x; }
+        if (e.has_y) { if (e.y_type == 1) b.speed_y += e.y; else b.speed_y = e.y; }
         b.vel_dirty = true;
     } else {
-        if (has_x) {
-            float end_x = _accel_axis_end((int)p_data->get("x_type"), (float)p_data->get("x"), b.speed_x, over);
-            b.sx_tween = { true, b.speed_x, end_x, 0.0f, over };
+        if (e.has_x) {
+            float end_x = _accel_axis_end(e.x_type, e.x, b.speed_x, e.over);
+            b.sx_tween = { true, b.speed_x, end_x, 0.0f, e.over };
         }
-        if (has_y) {
-            float end_y = _accel_axis_end((int)p_data->get("y_type"), (float)p_data->get("y"), b.speed_y, over);
-            b.sy_tween = { true, b.speed_y, end_y, 0.0f, over };
+        if (e.has_y) {
+            float end_y = _accel_axis_end(e.y_type, e.y, b.speed_y, e.over);
+            b.sy_tween = { true, b.speed_y, end_y, 0.0f, e.over };
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// TamaServerBullet event handler implementations
+// ---------------------------------------------------------------------------
+
+void TamaServerBullet::on_chdir(const TamaChdirEvent &e) {
+    if (_state && _pool) _pool->_apply_chdir(*_state, e);
+}
+void TamaServerBullet::on_chspd(const TamaChspdEvent &e) {
+    if (_state && _pool) _pool->_apply_chspd(*_state, e);
+}
+void TamaServerBullet::on_chpos(const TamaChposEvent &e) {
+    if (_state && _pool) _pool->_apply_chpos(*_state, e);
+}
+void TamaServerBullet::on_accel(const TamaAccelEvent &e) {
+    if (_state && _pool) _pool->_apply_accel(*_state, e);
+}
+void TamaServerBullet::on_vanished() {
+    if (_pool) _pool->recycle(this);
 }
 
 // ---------------------------------------------------------------------------

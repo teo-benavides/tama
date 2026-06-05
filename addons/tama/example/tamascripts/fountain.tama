@@ -9,6 +9,6 @@ main
 bullet falling
     type rainbow
     act
-        repeatf 120
+        repeatf 60
             accel
                 y rel 10

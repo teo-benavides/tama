@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cppbullet001"]
 
-[ext_resource type="Script" uid="uid://d3s2b5wwu1egu" path="res://addons/tama-cpp/example/bullets/example_bullet.gd" id="1_v5ve1"]
-[ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama-cpp/example/bullets/example_bullet.png" id="2_idp5l"]
+[ext_resource type="Script" uid="uid://d3s2b5wwu1egu" path="res://addons/tama/example/bullets/example_bullet.gd" id="1_v5ve1"]
+[ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama/example/bullets/example_bullet.png" id="2_idp5l"]
 
 [node name="ExampleBullet" type="TamaBullet" unique_id=561976428]
 script = ExtResource("1_v5ve1")

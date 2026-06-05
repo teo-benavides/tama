@@ -113,78 +113,6 @@ int    _TamaBulletFireData::get_mvmt_y_type()     const { return mvmt_y_type; }
 String _TamaBulletFireData::get_mvmt_y_expr()     const { return mvmt_y_expr; }
 Object*_TamaBulletFireData::get_source_program()  const { return source_program; }
 
-void _TamaChdirData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_dir_type"),  &_TamaChdirData::get_dir_type);
-    ClassDB::bind_method(D_METHOD("get_dir_value"), &_TamaChdirData::get_dir_value);
-    ClassDB::bind_method(D_METHOD("get_over"),      &_TamaChdirData::get_over);
-    ADD_PROPERTY(PropertyInfo(Variant::INT,   "dir_type"),  "", "get_dir_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "dir_value"), "", "get_dir_value");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),      "", "get_over");
-}
-int   _TamaChdirData::get_dir_type()  const { return dir_type; }
-float _TamaChdirData::get_dir_value() const { return dir_value; }
-float _TamaChdirData::get_over()      const { return over; }
-
-void _TamaChspdData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_speed_type"),  &_TamaChspdData::get_speed_type);
-    ClassDB::bind_method(D_METHOD("get_speed_value"), &_TamaChspdData::get_speed_value);
-    ClassDB::bind_method(D_METHOD("get_over"),        &_TamaChspdData::get_over);
-    ADD_PROPERTY(PropertyInfo(Variant::INT,   "speed_type"),  "", "get_speed_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "speed_value"), "", "get_speed_value");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),        "", "get_over");
-}
-int   _TamaChspdData::get_speed_type()  const { return speed_type; }
-float _TamaChspdData::get_speed_value() const { return speed_value; }
-float _TamaChspdData::get_over()        const { return over; }
-
-void _TamaChposData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_has_x"),  &_TamaChposData::get_has_x);
-    ClassDB::bind_method(D_METHOD("get_x_type"), &_TamaChposData::get_x_type);
-    ClassDB::bind_method(D_METHOD("get_x"),      &_TamaChposData::get_x);
-    ClassDB::bind_method(D_METHOD("get_has_y"),  &_TamaChposData::get_has_y);
-    ClassDB::bind_method(D_METHOD("get_y_type"), &_TamaChposData::get_y_type);
-    ClassDB::bind_method(D_METHOD("get_y"),      &_TamaChposData::get_y);
-    ClassDB::bind_method(D_METHOD("get_over"),   &_TamaChposData::get_over);
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,  "has_x"),  "", "get_has_x");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,   "x_type"), "", "get_x_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "x"),      "", "get_x");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,  "has_y"),  "", "get_has_y");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,   "y_type"), "", "get_y_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "y"),      "", "get_y");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),   "", "get_over");
-}
-bool  _TamaChposData::get_has_x()  const { return has_x; }
-int   _TamaChposData::get_x_type() const { return x_type; }
-float _TamaChposData::get_x()      const { return x; }
-bool  _TamaChposData::get_has_y()  const { return has_y; }
-int   _TamaChposData::get_y_type() const { return y_type; }
-float _TamaChposData::get_y()      const { return y; }
-float _TamaChposData::get_over()   const { return over; }
-
-void _TamaAccelData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_has_x"),  &_TamaAccelData::get_has_x);
-    ClassDB::bind_method(D_METHOD("get_x_type"), &_TamaAccelData::get_x_type);
-    ClassDB::bind_method(D_METHOD("get_x"),      &_TamaAccelData::get_x);
-    ClassDB::bind_method(D_METHOD("get_has_y"),  &_TamaAccelData::get_has_y);
-    ClassDB::bind_method(D_METHOD("get_y_type"), &_TamaAccelData::get_y_type);
-    ClassDB::bind_method(D_METHOD("get_y"),      &_TamaAccelData::get_y);
-    ClassDB::bind_method(D_METHOD("get_over"),   &_TamaAccelData::get_over);
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,  "has_x"),  "", "get_has_x");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,   "x_type"), "", "get_x_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "x"),      "", "get_x");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,  "has_y"),  "", "get_has_y");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,   "y_type"), "", "get_y_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "y"),      "", "get_y");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "over"),   "", "get_over");
-}
-bool  _TamaAccelData::get_has_x()  const { return has_x; }
-int   _TamaAccelData::get_x_type() const { return x_type; }
-float _TamaAccelData::get_x()      const { return x; }
-bool  _TamaAccelData::get_has_y()  const { return has_y; }
-int   _TamaAccelData::get_y_type() const { return y_type; }
-float _TamaAccelData::get_y()      const { return y; }
-float _TamaAccelData::get_over()   const { return over; }
-
 void _TamaRef::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_name"),       &_TamaRef::get_ref_name);
     ClassDB::bind_method(D_METHOD("get_bound_args"), &_TamaRef::get_bound_args);
@@ -210,12 +138,7 @@ void _TamaInterpreter::_bind_methods() {
 
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "context"), "set_context", "get_context");
 
-    ADD_SIGNAL(MethodInfo("bullet_fired",        PropertyInfo(Variant::OBJECT, "data")));
-    ADD_SIGNAL(MethodInfo("vanished"));
-    ADD_SIGNAL(MethodInfo("changed_direction",   PropertyInfo(Variant::OBJECT, "data")));
-    ADD_SIGNAL(MethodInfo("changed_speed",       PropertyInfo(Variant::OBJECT, "data")));
-    ADD_SIGNAL(MethodInfo("changed_position",    PropertyInfo(Variant::OBJECT, "data")));
-    ADD_SIGNAL(MethodInfo("accelerated",         PropertyInfo(Variant::OBJECT, "data")));
+    ADD_SIGNAL(MethodInfo("bullet_fired", PropertyInfo(Variant::OBJECT, "data")));
     ADD_SIGNAL(MethodInfo("finished"));
 }
 
@@ -588,7 +511,7 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
 
     case NT::VANISH:
         _running = false;
-        emit_signal("vanished");
+        if (_event_handler) _event_handler->on_vanished();
         return;
 
     case NT::VAR_DECL: {
@@ -846,13 +769,9 @@ void _TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_
     child->_acts_map   = _acts_map;
     child->_bullets_map = _bullets_map;
 
-    // Forward child signals to this interpreter's own signals via dedicated methods
-    child->connect("bullet_fired",      callable_mp(this, &_TamaInterpreter::_fwd_bullet_fired));
-    child->connect("vanished",          callable_mp(this, &_TamaInterpreter::_fwd_vanished));
-    child->connect("changed_direction", callable_mp(this, &_TamaInterpreter::_fwd_changed_direction));
-    child->connect("changed_speed",     callable_mp(this, &_TamaInterpreter::_fwd_changed_speed));
-    child->connect("changed_position",  callable_mp(this, &_TamaInterpreter::_fwd_changed_position));
-    child->connect("accelerated",       callable_mp(this, &_TamaInterpreter::_fwd_accelerated));
+    // Forward child bullet_fired signal; other events route via shared handler
+    child->connect("bullet_fired", callable_mp(this, &_TamaInterpreter::_fwd_bullet_fired));
+    child->_event_handler = _event_handler;
 
     child->_scope    = scope_copy;
     child->_running  = true;
@@ -1042,48 +961,52 @@ void _TamaInterpreter::_populate_mvmt(_TamaBulletFireData *data, Object *mvmt_no
 // ---------------------------------------------------------------------------
 
 void _TamaInterpreter::_emit_chdir(Object *node) {
+    if (!_event_handler) return;
     Object *dir_node = Object::cast_to<Object>(node->get("dir"));
     if (!dir_node) return;
-    Ref<_TamaChdirData> d = memnew(_TamaChdirData);
-    d->dir_type  = _get_dir_type(dir_node);
-    d->dir_value = _eval_float((String)dir_node->get("expr"));
     Object *over = Object::cast_to<Object>(node->get("over"));
-    d->over = over ? _eval_float((String)over->get("expr")) : 0.0f;
-    emit_signal("changed_direction", d);
+    TamaChdirEvent e;
+    e.dir_type  = _get_dir_type(dir_node);
+    e.dir_value = _eval_float((String)dir_node->get("expr"));
+    e.over      = over ? _eval_float((String)over->get("expr")) : 0.0f;
+    _event_handler->on_chdir(e);
 }
 
 void _TamaInterpreter::_emit_chspd(Object *node) {
+    if (!_event_handler) return;
     Object *spd_node = Object::cast_to<Object>(node->get("speed"));
     if (!spd_node) return;
-    Ref<_TamaChspdData> d = memnew(_TamaChspdData);
-    d->speed_type  = _get_speed_type(spd_node);
-    d->speed_value = _eval_float((String)spd_node->get("expr"));
     Object *over = Object::cast_to<Object>(node->get("over"));
-    d->over = over ? _eval_float((String)over->get("expr")) : 0.0f;
-    emit_signal("changed_speed", d);
+    TamaChspdEvent e;
+    e.speed_type  = _get_speed_type(spd_node);
+    e.speed_value = _eval_float((String)spd_node->get("expr"));
+    e.over        = over ? _eval_float((String)over->get("expr")) : 0.0f;
+    _event_handler->on_chspd(e);
 }
 
 void _TamaInterpreter::_emit_chpos(Object *node) {
-    Ref<_TamaChposData> d = memnew(_TamaChposData);
+    if (!_event_handler) return;
     Object *xn = Object::cast_to<Object>(node->get("x"));
     Object *yn = Object::cast_to<Object>(node->get("y"));
     Object *ov = Object::cast_to<Object>(node->get("over"));
-    if (xn) { d->has_x = true; d->x_type = _get_axis_type(xn); d->x = _eval_float((String)xn->get("expr")); }
-    if (yn) { d->has_y = true; d->y_type = _get_axis_type(yn); d->y = _eval_float((String)yn->get("expr")); }
-    d->over = ov ? _eval_float((String)ov->get("expr")) : 0.0f;
-    emit_signal("changed_position", d);
+    TamaChposEvent e{};
+    if (xn) { e.has_x = true; e.x_type = _get_axis_type(xn); e.x = _eval_float((String)xn->get("expr")); }
+    if (yn) { e.has_y = true; e.y_type = _get_axis_type(yn); e.y = _eval_float((String)yn->get("expr")); }
+    e.over = ov ? _eval_float((String)ov->get("expr")) : 0.0f;
+    _event_handler->on_chpos(e);
 }
 
 void _TamaInterpreter::_emit_accel(Object *node) {
+    if (!_event_handler) return;
     Object *xn = Object::cast_to<Object>(node->get("x"));
     Object *yn = Object::cast_to<Object>(node->get("y"));
     if (!xn && !yn) return;
-    Ref<_TamaAccelData> d = memnew(_TamaAccelData);
     Object *ov = Object::cast_to<Object>(node->get("over"));
-    if (xn) { d->has_x = true; d->x_type = _get_axis_type(xn); d->x = _eval_float((String)xn->get("expr")); }
-    if (yn) { d->has_y = true; d->y_type = _get_axis_type(yn); d->y = _eval_float((String)yn->get("expr")); }
-    d->over = ov ? _eval_float((String)ov->get("expr")) : 0.0f;
-    emit_signal("accelerated", d);
+    TamaAccelEvent e{};
+    if (xn) { e.has_x = true; e.x_type = _get_axis_type(xn); e.x = _eval_float((String)xn->get("expr")); }
+    if (yn) { e.has_y = true; e.y_type = _get_axis_type(yn); e.y = _eval_float((String)yn->get("expr")); }
+    e.over = ov ? _eval_float((String)ov->get("expr")) : 0.0f;
+    _event_handler->on_accel(e);
 }
 
 // ---------------------------------------------------------------------------
