@@ -18,3 +18,5 @@ linux.template_release.x86_64   = "res://addons/tama/bin/libtama.linux.template_
 macos.editor              = "res://addons/tama/bin/libtama.macos.template_debug.universal.dylib"
 macos.template_debug      = "res://addons/tama/bin/libtama.macos.template_debug.universal.dylib"
 macos.template_release    = "res://addons/tama/bin/libtama.macos.template_release.universal.dylib"
+web.template_debug.wasm32   = "res://addons/tama/bin/libtama.web.template_debug.wasm32.wasm"
+web.template_release.wasm32 = "res://addons/tama/bin/libtama.web.template_release.wasm32.wasm"
