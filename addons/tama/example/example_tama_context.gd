@@ -31,3 +31,6 @@ func group_target_dir(ofs: float, pent_angle: float, circ_r: float, inner_r: flo
 	var dx := inner_r * cos(gc_angle) - circ_r * cos(b_angle)
 	var dy := inner_r * sin(gc_angle) - circ_r * sin(b_angle)
 	return rad_to_deg(atan2(dy, dx))
+
+func f2s(frames: int) -> float:
+	return float(frames) / float(Engine.physics_ticks_per_second)

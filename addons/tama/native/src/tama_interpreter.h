@@ -209,7 +209,7 @@ struct ExecFrame {
     int           loop_i = 0;
     godot::String loop_index_var;
     godot::String while_cond;
-    bool          between_iters = false; // REPEATF only: wait one frame between iterations
+    bool          between_iters = false; // unused — kept for ABI stability
 };
 
 // ---------------------------------------------------------------------------

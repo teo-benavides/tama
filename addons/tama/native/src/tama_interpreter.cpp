@@ -526,13 +526,6 @@ void _TamaInterpreter::_step_body(ExecFrame &f, bool &yielded) {
 void _TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
     bool is_repeatf = (f.kind == ExecFrame::Kind::REPEATF_CTRL);
 
-    // Between-iteration wait (REPEATF only)
-    if (is_repeatf && f.between_iters) {
-        f.between_iters = false;
-        yielded = true;
-        return;
-    }
-
     // Check termination
     bool done = false;
     if (f.kind == ExecFrame::Kind::WHILE_CTRL) {
@@ -564,10 +557,9 @@ void _TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
                 _scope.erase(cur[i]);
         }
         f.loop_i++;
-        // Wait one frame between iterations (unless this was the last)
+        // Yield after each iteration except the last, so each body runs once per frame.
         bool more = (f.loop_n < 0 || f.loop_i < f.loop_n);
-        f.between_iters = more;
-        if (f.between_iters) yielded = true;
+        if (more) yielded = true;
         if (!_running || _breaking) {
             _breaking = false;
             _exec_stack.pop_back();

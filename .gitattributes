@@ -5,3 +5,7 @@
 /**        export-ignore
 /addons    !export-ignore
 /addons/** !export-ignore
+
+# Exclude C++ source, build scripts, godot-cpp submodule, and doc XML —
+# users only need the compiled binaries in bin/.
+/addons/tama/native export-ignore

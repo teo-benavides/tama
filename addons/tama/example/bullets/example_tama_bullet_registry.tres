@@ -1,11 +1,11 @@
 [gd_resource type="TamaBulletRegistry" format=3 uid="uid://5xrka8pvror3"]
 
-[ext_resource type="PackedScene" uid="uid://cppbullet001" path="res://addons/tama-cpp/example/bullets/example_bullet.tscn" id="1_0v7u8"]
-[ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama-cpp/example/bullets/small_bullet.png" id="2_wetqc"]
-[ext_resource type="Texture2D" uid="uid://5xunk2d2cj4n" path="res://addons/tama-cpp/example/bullets/small_bullet_blue.png" id="3_gulsf"]
-[ext_resource type="Texture2D" uid="uid://da1dadyp1bofm" path="res://addons/tama-cpp/example/bullets/small_bullet_green.png" id="4_n53vu"]
-[ext_resource type="Texture2D" uid="uid://65p6f1ql1q4y" path="res://addons/tama-cpp/example/bullets/small_bullet_orange.png" id="5_d4i3m"]
-[ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama-cpp/example/bullets/example_bullet.png" id="6_gulsf"]
+[ext_resource type="PackedScene" uid="uid://cppbullet001" path="res://addons/tama/example/bullets/example_bullet.tscn" id="1_0v7u8"]
+[ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama/example/bullets/small_bullet.png" id="2_wetqc"]
+[ext_resource type="Texture2D" uid="uid://5xunk2d2cj4n" path="res://addons/tama/example/bullets/small_bullet_blue.png" id="3_gulsf"]
+[ext_resource type="Texture2D" uid="uid://da1dadyp1bofm" path="res://addons/tama/example/bullets/small_bullet_green.png" id="4_n53vu"]
+[ext_resource type="Texture2D" uid="uid://65p6f1ql1q4y" path="res://addons/tama/example/bullets/small_bullet_orange.png" id="5_d4i3m"]
+[ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama/example/bullets/example_bullet.png" id="6_gulsf"]
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_gulsf"]
 frames = Array[Texture2D]([ExtResource("2_wetqc")])
