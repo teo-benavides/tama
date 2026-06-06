@@ -1,4 +1,5 @@
 #include "tama_interpreter.h"
+#include "tama_ast_nodes.h"
 
 #include <algorithm>
 #include <cmath>
@@ -10,6 +11,17 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
+
+// ---------------------------------------------------------------------------
+// Inline helper: cast Variant/Object* to _TamaASTNode*
+// ---------------------------------------------------------------------------
+
+static inline _TamaASTNode *astn(Object *o) {
+    return Object::cast_to<_TamaASTNode>(o);
+}
+static inline _TamaASTNode *astn(const Variant &v) {
+    return Object::cast_to<_TamaASTNode>(v.operator Object *());
+}
 
 // ===========================================================================
 // Payload class bindings
@@ -49,7 +61,7 @@ void _TamaInterpreter::_physics_process(double delta) {
 // ---------------------------------------------------------------------------
 
 void _TamaInterpreter::start(Object *program, Dictionary scope) {
-    _program = program;
+    _program = astn(program);
     _scope   = scope;
     _exec_stack.clear();
     _scope_saves.clear();
@@ -60,20 +72,19 @@ void _TamaInterpreter::start(Object *program, Dictionary scope) {
     if (!_program) { _running = false; return; }
     _build_lookup_tables();
 
-    Object *main_node = Object::cast_to<Object>(_program->get("main"));
+    _TamaASTNode *main_node = _program->main.ptr();
     if (!main_node) {
         UtilityFunctions::push_error("_TamaInterpreter: program has no main block");
         _running = false;
         return;
     }
-    Array main_body = (Array)main_node->get("body");
-    _push_body(main_body);
+    _push_body(main_node->body);
 
     if (is_inside_tree()) set_physics_process(true);
 }
 
 void _TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope) {
-    _program = program;
+    _program = astn(program);
     _scope   = scope;
     _exec_stack.clear();
     _scope_saves.clear();
@@ -84,20 +95,21 @@ void _TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope)
     if (!_program || !act) { _running = false; return; }
     _build_lookup_tables();
 
-    int type_id = (int)act->get("type_id");
-    if (type_id == (int)TamaNodeType::INLINE_ACT) {
-        Array body = (Array)act->get("body");
-        _push_body(body);
-    } else if (type_id == (int)TamaNodeType::ACT_CALL) {
-        String name_str = (String)act->get("name");
+    _TamaASTNode *act_n = astn(act);
+    if (!act_n) { _running = false; return; }
+
+    if (act_n->type_id == (int)TamaNodeType::INLINE_ACT) {
+        _push_body(act_n->body);
+    } else if (act_n->type_id == (int)TamaNodeType::ACT_CALL) {
+        const String &name_str = act_n->name;
         std::string name = name_str.utf8().get_data();
 
         // Check if name resolves through scope (first-class acts / _TamaRef)
         Variant scope_val = _scope.get(name_str, Variant());
         if (scope_val.get_type() == Variant::OBJECT) {
-            Object *sv = scope_val.operator Object *();
-            if (sv && (int)sv->get("type_id") == (int)TamaNodeType::INLINE_ACT) {
-                _push_body((Array)sv->get("body"));
+            _TamaASTNode *sv = astn(scope_val);
+            if (sv && sv->type_id == (int)TamaNodeType::INLINE_ACT) {
+                _push_body(sv->body);
                 goto start_act_done;
             }
         }
@@ -109,20 +121,18 @@ void _TamaInterpreter::start_act(Object *program, Object *act, Dictionary scope)
                 ref_name  = tref->name.utf8().get_data();
                 pre_bound = tref->bound_args;
             }
-            Object *act_def = _find_act(ref_name);
+            _TamaASTNode *act_def = _find_act(ref_name);
             if (!act_def) {
                 UtilityFunctions::push_error(String("_TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
                 _running = false;
                 return;
             }
-            Array params = (Array)act_def->get("params");
-            Array body   = (Array)act_def->get("body");
             if (!pre_bound.is_empty()) {
                 _scope_saves.push_back(_scope);
-                _scope = _scope_snapshot_plus_params(params, pre_bound);
-                _push_body(body, false, true);
+                _scope = _scope_snapshot_plus_params(act_def->params, pre_bound);
+                _push_body(act_def->body, false, true);
             } else {
-                _push_body(body);
+                _push_body(act_def->body);
             }
         }
         start_act_done:;
@@ -215,21 +225,17 @@ void _TamaInterpreter::_build_lookup_tables() {
     _bullets_map.clear();
     if (!_program) return;
 
-    Array fires   = (Array)_program->get("fires");
-    Array acts    = (Array)_program->get("acts");
-    Array bullets = (Array)_program->get("bullets");
-
-    for (int i = 0; i < fires.size(); ++i) {
-        Object *f = fires[i].operator Object *();
-        if (f) _fires_map[((String)f->get("name")).utf8().get_data()] = f;
+    for (int i = 0; i < _program->fires.size(); ++i) {
+        _TamaASTNode *f = astn(_program->fires[i]);
+        if (f) _fires_map[f->name.utf8().get_data()] = f;
     }
-    for (int i = 0; i < acts.size(); ++i) {
-        Object *a = acts[i].operator Object *();
-        if (a) _acts_map[((String)a->get("name")).utf8().get_data()] = a;
+    for (int i = 0; i < _program->acts.size(); ++i) {
+        _TamaASTNode *a = astn(_program->acts[i]);
+        if (a) _acts_map[a->name.utf8().get_data()] = a;
     }
-    for (int i = 0; i < bullets.size(); ++i) {
-        Object *b = bullets[i].operator Object *();
-        if (b) _bullets_map[((String)b->get("name")).utf8().get_data()] = b;
+    for (int i = 0; i < _program->bullets.size(); ++i) {
+        _TamaASTNode *b = astn(_program->bullets[i]);
+        if (b) _bullets_map[b->name.utf8().get_data()] = b;
     }
 }
 
@@ -241,7 +247,24 @@ std::vector<std::string> _TamaInterpreter::_snapshot_scope_keys() const {
     return keys;
 }
 
+static void _fill_body(std::vector<_TamaASTNode*> &dst, const Array &src) {
+    dst.reserve(src.size());
+    for (int i = 0; i < src.size(); ++i)
+        dst.push_back(astn(src[i].operator Object*()));
+}
+
 void _TamaInterpreter::_push_body(const Array &body, bool sync_only, bool pops_scope) {
+    ExecFrame f;
+    f.kind       = ExecFrame::Kind::BODY;
+    f.pc         = 0;
+    f.sync_only  = sync_only;
+    f.pops_scope = pops_scope;
+    f.pre_keys   = _snapshot_scope_keys();
+    _fill_body(f.body, body);
+    _exec_stack.push_back(std::move(f));
+}
+
+void _TamaInterpreter::_push_body(const std::vector<_TamaASTNode*> &body, bool sync_only, bool pops_scope) {
     ExecFrame f;
     f.kind       = ExecFrame::Kind::BODY;
     f.body       = body;
@@ -254,33 +277,33 @@ void _TamaInterpreter::_push_body(const Array &body, bool sync_only, bool pops_s
 
 void _TamaInterpreter::_push_repeat_ctrl(const Array &body, int n, const String &idx_var) {
     ExecFrame f;
-    f.kind             = ExecFrame::Kind::REPEAT_CTRL;
-    f.loop_body        = body;
-    f.loop_n           = n;
-    f.loop_i           = 0;
-    f.loop_index_var   = idx_var;
-    f.between_iters    = false;
+    f.kind           = ExecFrame::Kind::REPEAT_CTRL;
+    f.loop_n         = n;
+    f.loop_i         = 0;
+    f.loop_index_var = idx_var;
+    f.between_iters  = false;
+    _fill_body(f.loop_body, body);
     _exec_stack.push_back(std::move(f));
 }
 
 void _TamaInterpreter::_push_while_ctrl(const Array &body, const String &cond) {
     ExecFrame f;
     f.kind       = ExecFrame::Kind::WHILE_CTRL;
-    f.loop_body  = body;
     f.while_cond = cond;
     f.loop_n     = -1;
     f.loop_i     = 0;
+    _fill_body(f.loop_body, body);
     _exec_stack.push_back(std::move(f));
 }
 
 void _TamaInterpreter::_push_repeatf_ctrl(const Array &body, int n, const String &idx_var) {
     ExecFrame f;
     f.kind           = ExecFrame::Kind::REPEATF_CTRL;
-    f.loop_body      = body;
     f.loop_n         = n;
     f.loop_i         = 0;
     f.loop_index_var = idx_var;
     f.between_iters  = false;
+    _fill_body(f.loop_body, body);
     _exec_stack.push_back(std::move(f));
 }
 
@@ -319,16 +342,14 @@ float _TamaInterpreter::eval_expr(const String &expr, const Dictionary &scope) {
 // ---------------------------------------------------------------------------
 
 void _TamaInterpreter::_step_body(ExecFrame &f, bool &yielded) {
-    while (f.pc < f.body.size()) {
+    while (f.pc < (int)f.body.size()) {
         if (!_running) return;
 
-        Object *node = f.body[f.pc].operator Object *();
+        _TamaASTNode *n = f.body[f.pc];
         f.pc++;
-        if (!node) continue;
+        if (!n) continue;
 
-        int type_id = (int)node->get("type_id");
-        bool pushed = false;
-        _exec_node(node, type_id, f.sync_only, yielded);
+        _exec_node(n, f.sync_only, yielded);
 
         // If a new frame was pushed, break — the outer loop will handle it
         if (!_exec_stack.empty() && &_exec_stack.back() != &f) return;
@@ -393,10 +414,10 @@ void _TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
 // Single node dispatch
 // ---------------------------------------------------------------------------
 
-void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, bool &yielded) {
+void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded) {
     using NT = TamaNodeType;
 
-    switch ((NT)type_id) {
+    switch ((NT)n->type_id) {
 
     case NT::BREAK:
         _breaking = true;
@@ -408,30 +429,27 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
         if (_event_handler) _event_handler->on_vanished();
         return;
 
-    case NT::VAR_DECL: {
-        String var_name = (String)node->get("var_name");
-        String expr     = (String)node->get("expr");
-        _scope[var_name] = _eval_arg(expr);
+    case NT::VAR_DECL:
+        _scope[n->var_name] = _eval_arg(n->expr);
         return;
-    }
 
     case NT::FIRE_CALL:
-        _exec_fire_call(node);
+        _exec_fire_call(n);
         return;
 
     case NT::INLINE_FIRE:
-        _exec_fire_node(node);
+        _exec_fire_node(n);
         return;
 
-    case NT::CHDIR:  _emit_chdir(node); return;
-    case NT::CHSPD:  _emit_chspd(node); return;
-    case NT::CHPOS:  _emit_chpos(node); return;
-    case NT::ACCEL:  _emit_accel(node); return;
+    case NT::CHDIR:  _emit_chdir(n); return;
+    case NT::CHSPD:  _emit_chspd(n); return;
+    case NT::CHPOS:  _emit_chpos(n); return;
+    case NT::ACCEL:  _emit_accel(n); return;
 
     case NT::IF: {
-        Array conditions = (Array)node->get("conditions");
-        Array bodies     = (Array)node->get("bodies");
-        Array else_body  = (Array)node->get("else_body");
+        const Array &conditions = n->conditions;
+        const Array &bodies     = n->bodies;
+        const Array &else_body  = n->else_body;
         bool taken = false;
         for (int i = 0; i < conditions.size() && !taken; ++i) {
             if (_eval_float((String)conditions[i]) != 0.0f) {
@@ -459,7 +477,7 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
 
     case NT::WAIT:
         if (!sync_only) {
-            float secs = _eval_float((String)node->get("expr"));
+            float secs = _eval_float(n->expr);
             if (secs > 0.0f && !_exec_stack.empty()) {
                 _exec_stack.back().suspend    = ExecFrame::Suspend::WAIT_TIME;
                 _exec_stack.back().wait_secs  = secs;
@@ -470,7 +488,7 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
 
     case NT::WAIT_FRAMES:
         if (!sync_only) {
-            int frames = (int)std::round(_eval_float((String)node->get("expr")));
+            int frames = (int)std::round(_eval_float(n->expr));
             if (frames > 0 && !_exec_stack.empty()) {
                 _exec_stack.back().suspend      = ExecFrame::Suspend::WAIT_FRAMES;
                 _exec_stack.back().wait_frames  = frames;
@@ -480,14 +498,14 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
         return;
 
     case NT::REPEAT: {
-        String count_str = ((String)node->get("count")).strip_edges();
-        int n = count_str.is_empty() ? -1 : (int)std::round(_eval_float(count_str));
-        String idx_var = (String)node->get("index_var");
-        Array  body    = (Array)node->get("body");
+        String count_str = n->count.strip_edges();
+        int count_n = count_str.is_empty() ? -1 : (int)std::round(_eval_float(count_str));
+        const String &idx_var = n->index_var;
+        const Array  &body    = n->body;
         if (sync_only) {
             // Run all iterations synchronously
             int i = 0;
-            while (!idx_var.is_empty() || n < 0 || i < n) {
+            while (!idx_var.is_empty() || count_n < 0 || i < count_n) {
                 if (!idx_var.is_empty()) _scope[idx_var] = Variant((float)i);
                 auto pre = _snapshot_scope_keys();
                 _exec_body_sync(body);
@@ -499,17 +517,17 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
                 }
                 if (_breaking) { _breaking = false; break; }
                 ++i;
-                if (n >= 0 && i >= n) break;
+                if (count_n >= 0 && i >= count_n) break;
             }
         } else {
-            _push_repeat_ctrl(body, n, idx_var);
+            _push_repeat_ctrl(body, count_n, idx_var);
         }
         return;
     }
 
     case NT::WHILE: {
-        String cond = (String)node->get("condition");
-        Array  body = (Array)node->get("body");
+        const String &cond = n->condition;
+        const Array  &body = n->body;
         if (sync_only) {
             while (_eval_float(cond) != 0.0f) {
                 auto pre = _snapshot_scope_keys();
@@ -529,9 +547,9 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
     }
 
     case NT::REPEAT_FRAME: {
-        String count_str = ((String)node->get("count")).strip_edges();
-        String idx_var   = (String)node->get("index_var");
-        Array  body      = (Array)node->get("body");
+        String count_str = n->count.strip_edges();
+        const String &idx_var = n->index_var;
+        const Array  &body    = n->body;
 
         if (count_str.is_empty()) {
             // Infinite repeatf: run every frame forever (push a REPEATF_CTRL with n=-1)
@@ -540,12 +558,12 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
             }
             // In sync context: no-op (can't run infinite loop)
         } else {
-            int n = (int)std::round(_eval_float(count_str));
+            int rf_n = (int)std::round(_eval_float(count_str));
             if (!sync_only) {
-                _push_repeatf_ctrl(body, n, idx_var);
+                _push_repeatf_ctrl(body, rf_n, idx_var);
             } else {
                 // Sync context: run N times with no frame yield
-                for (int i = 0; i < n && _running; ++i) {
+                for (int i = 0; i < rf_n && _running; ++i) {
                     if (!idx_var.is_empty()) _scope[idx_var] = Variant((float)i);
                     auto pre = _snapshot_scope_keys();
                     _exec_body_sync(body);
@@ -564,25 +582,21 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
 
     case NT::ACT_CALL: {
         if (sync_only) return; // no-op in sync context
-        String name     = (String)node->get("name");
-        bool   is_async = (bool)node->get("is_async");
-        Array  args     = (Array)node->get("args");
+        const String &name = n->name;
+        bool   is_async    = n->is_async;
+        const Array &args  = n->args;
 
         // Resolve through scope for first-class refs or inline acts
         Variant scope_val = _scope.get(name, Variant());
         if (scope_val.get_type() == Variant::OBJECT) {
-            Object *sv = scope_val.operator Object *();
-            if (sv) {
-                int sv_tid = (int)sv->get("type_id");
-                if (sv_tid == (int)TamaNodeType::INLINE_ACT) {
-                    Array body = (Array)sv->get("body");
-                    if (is_async) {
-                        _run_async_act(sv, _scope.duplicate());
-                    } else {
-                        _push_body(body);
-                    }
-                    return;
+            _TamaASTNode *sv = astn(scope_val);
+            if (sv && sv->type_id == (int)TamaNodeType::INLINE_ACT) {
+                if (is_async) {
+                    _run_async_act(sv, _scope.duplicate());
+                } else {
+                    _push_body(sv->body);
                 }
+                return;
             }
         }
         // _TamaRef in scope?
@@ -595,13 +609,11 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
             pre_bound = tref->bound_args;
         }
 
-        Object *act_def = _find_act(ref_name);
+        _TamaASTNode *act_def = _find_act(ref_name);
         if (!act_def) {
             UtilityFunctions::push_warning(String("_TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
             return;
         }
-        Array params = (Array)act_def->get("params");
-        Array body   = (Array)act_def->get("body");
 
         // Evaluate args
         Array eval_args;
@@ -609,25 +621,24 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
         for (int i = 0; i < args.size(); ++i)      eval_args.push_back(_eval_arg(args[i]));
 
         if (is_async) {
-            Dictionary scope_copy = _scope_snapshot_plus_params(params, eval_args);
-            _run_async_act(act_def, scope_copy); // passes act_def as stand-in (body read inside)
+            Dictionary scope_copy = _scope_snapshot_plus_params(act_def->params, eval_args);
+            _run_async_act(act_def, scope_copy);
         } else {
             // Isolated scope: save current, set up new scope = current + params
             _scope_saves.push_back(_scope);
-            _scope = _scope_snapshot_plus_params(params, eval_args);
-            _push_body(body, false, true); // pops_scope=true
+            _scope = _scope_snapshot_plus_params(act_def->params, eval_args);
+            _push_body(act_def->body, false, true); // pops_scope=true
         }
         return;
     }
 
     case NT::INLINE_ACT: {
         if (sync_only) return;
-        Array body     = (Array)node->get("body");
-        bool is_async  = (bool)node->get("is_async");
+        bool is_async = n->is_async;
         if (is_async) {
-            _run_async_act(node, _scope.duplicate());
+            _run_async_act(n, _scope.duplicate());
         } else {
-            _push_body(body);
+            _push_body(n->body);
         }
         return;
     }
@@ -644,10 +655,19 @@ void _TamaInterpreter::_exec_node(Object *node, int type_id, bool sync_only, boo
 void _TamaInterpreter::_exec_body_sync(const Array &body) {
     for (int i = 0; i < body.size(); ++i) {
         if (!_running || _breaking) return;
-        Object *node = body[i].operator Object *();
-        if (!node) continue;
-        bool unused_yielded = false;
-        _exec_node(node, (int)node->get("type_id"), true, unused_yielded);
+        _TamaASTNode *n = astn(body[i].operator Object*());
+        if (!n) continue;
+        bool unused = false;
+        _exec_node(n, true, unused);
+    }
+}
+
+void _TamaInterpreter::_exec_body_sync(const std::vector<_TamaASTNode*> &body) {
+    for (_TamaASTNode *n : body) {
+        if (!_running || _breaking) return;
+        if (!n) continue;
+        bool unused = false;
+        _exec_node(n, true, unused);
     }
 }
 
@@ -655,25 +675,23 @@ void _TamaInterpreter::_exec_body_sync(const Array &body) {
 // Async acts
 // ---------------------------------------------------------------------------
 
-void _TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_copy) {
+void _TamaInterpreter::_run_async_act(_TamaASTNode *act_n, const Dictionary &scope_copy) {
     _TamaInterpreter *child = memnew(_TamaInterpreter);
-    child->_context  = _context;
-    child->_program  = _program;
-    child->_fires_map  = _fires_map;
-    child->_acts_map   = _acts_map;
+    child->_context     = _context;
+    child->_program     = _program;
+    child->_fires_map   = _fires_map;
+    child->_acts_map    = _acts_map;
     child->_bullets_map = _bullets_map;
 
     child->_fire_cb       = _fire_cb;
     child->_event_handler = _event_handler;
 
-    child->_scope    = scope_copy;
-    child->_running  = true;
+    child->_scope   = scope_copy;
+    child->_running = true;
 
-    int type_id = (int)act_node->get("type_id");
-    if (type_id == (int)TamaNodeType::INLINE_ACT) {
-        child->_push_body((Array)act_node->get("body"));
-    } else if (type_id == (int)TamaNodeType::ACT_DEF) {
-        child->_push_body((Array)act_node->get("body"));
+    if (act_n && (act_n->type_id == (int)TamaNodeType::INLINE_ACT ||
+                  act_n->type_id == (int)TamaNodeType::ACT_DEF)) {
+        child->_push_body(act_n->body);
     }
     // ACT_CALL: already resolved by caller
 
@@ -684,15 +702,15 @@ void _TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_
 // Fire emission
 // ---------------------------------------------------------------------------
 
-void _TamaInterpreter::_exec_fire_call(Object *node) {
-    String name  = (String)node->get("name");
-    Array  args  = (Array)node->get("args");
+void _TamaInterpreter::_exec_fire_call(_TamaASTNode *n) {
+    const String &name = n->name;
+    const Array  &args = n->args;
 
     // Scope may hold an InlineFireNode or _TamaRef for this name
     Variant scope_val = _scope.get(name, Variant());
     if (scope_val.get_type() == Variant::OBJECT) {
-        Object *sv = scope_val.operator Object *();
-        if (sv && (int)sv->get("type_id") == (int)TamaNodeType::INLINE_FIRE) {
+        _TamaASTNode *sv = astn(scope_val);
+        if (sv && sv->type_id == (int)TamaNodeType::INLINE_FIRE) {
             _exec_fire_node(sv);
             return;
         }
@@ -706,124 +724,120 @@ void _TamaInterpreter::_exec_fire_call(Object *node) {
         pre_bound = tref->bound_args;
     }
 
-    Object *fire_def = _find_fire(ref_name);
+    _TamaASTNode *fire_def = _find_fire(ref_name);
     if (!fire_def) {
         UtilityFunctions::push_warning(String("_TamaInterpreter: unknown fire '") + String(ref_name.c_str()) + "'");
         return;
     }
 
-    Array params = (Array)fire_def->get("params");
     Array eval_args;
     for (int i = 0; i < pre_bound.size(); ++i) eval_args.push_back(pre_bound[i]);
     for (int i = 0; i < args.size(); ++i)      eval_args.push_back(_eval_arg(args[i]));
 
     // Build a temporary scope for the fire def
     Dictionary saved = _scope;
-    _scope = _scope_snapshot_plus_params(params, eval_args);
+    _scope = _scope_snapshot_plus_params(fire_def->params, eval_args);
     _exec_fire_node(fire_def);
     _scope = saved;
 }
 
-void _TamaInterpreter::_exec_fire_node(Object *node) {
+void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
     TamaBulletFireData data;
 
     // Direction
-    Object *dir_node = Object::cast_to<Object>(node->get("dir"));
+    _TamaASTNode *dir_node = node->dir.ptr();
     if (dir_node) {
         data.dir_type  = _get_dir_type(dir_node);
-        data.dir_value = _eval_float((String)dir_node->get("expr"));
+        data.dir_value = _eval_float(dir_node->expr);
     }
 
     // Speed
-    Object *spd_node = Object::cast_to<Object>(node->get("speed"));
+    _TamaASTNode *spd_node = node->speed.ptr();
     if (spd_node) {
         data.speed_type  = _get_speed_type(spd_node);
-        data.speed_value = _eval_float((String)spd_node->get("expr"));
+        data.speed_value = _eval_float(spd_node->expr);
     }
 
     // Offset
-    Object *off_node = Object::cast_to<Object>(node->get("offset"));
+    _TamaASTNode *off_node = node->offset.ptr();
     if (off_node) {
-        int off_tid = (int)off_node->get("type_id");
-        if (off_tid == (int)TamaNodeType::OFFSET_INLINE) {
+        if (off_node->type_id == (int)TamaNodeType::OFFSET_INLINE) {
             data.offset_mode  = 1; // INLINE
-            data.offset_value = _eval_float((String)off_node->get("expr"));
-        } else if (off_tid == (int)TamaNodeType::OFFSET) {
+            data.offset_value = _eval_float(off_node->expr);
+        } else if (off_node->type_id == (int)TamaNodeType::OFFSET) {
             data.offset_mode = 2; // BLOCK
-            Object *ox = Object::cast_to<Object>(off_node->get("x"));
-            Object *oy = Object::cast_to<Object>(off_node->get("y"));
-            if (ox) { data.offset_x_type = _get_axis_type(ox); data.offset_x = _eval_float((String)ox->get("expr")); }
-            if (oy) { data.offset_y_type = _get_axis_type(oy); data.offset_y = _eval_float((String)oy->get("expr")); }
+            _TamaASTNode *ox = off_node->x.ptr();
+            _TamaASTNode *oy = off_node->y.ptr();
+            if (ox) { data.offset_x_type = _get_axis_type(ox); data.offset_x = _eval_float(ox->expr); }
+            if (oy) { data.offset_y_type = _get_axis_type(oy); data.offset_y = _eval_float(oy->expr); }
         }
     }
 
     // Pos
-    Object *pos_node = Object::cast_to<Object>(node->get("pos"));
-    if (pos_node && (int)pos_node->get("type_id") == (int)TamaNodeType::POS) {
+    _TamaASTNode *pos_node = node->pos.ptr();
+    if (pos_node && pos_node->type_id == (int)TamaNodeType::POS) {
         data.has_pos = true;
-        Object *px = Object::cast_to<Object>(pos_node->get("x"));
-        Object *py = Object::cast_to<Object>(pos_node->get("y"));
-        if (px) { data.pos_x_set = true; data.pos_x_type = _get_axis_type(px); data.pos_x = _eval_float((String)px->get("expr")); }
-        if (py) { data.pos_y_set = true; data.pos_y_type = _get_axis_type(py); data.pos_y = _eval_float((String)py->get("expr")); }
+        _TamaASTNode *px = pos_node->x.ptr();
+        _TamaASTNode *py = pos_node->y.ptr();
+        if (px) { data.pos_x_set = true; data.pos_x_type = _get_axis_type(px); data.pos_x = _eval_float(px->expr); }
+        if (py) { data.pos_y_set = true; data.pos_y_type = _get_axis_type(py); data.pos_y = _eval_float(py->expr); }
     }
 
     // Bullet
-    Object *bul_node = Object::cast_to<Object>(node->get("bullet"));
+    _TamaASTNode *bul_node = node->bullet.ptr();
     if (bul_node) {
-        int bul_tid = (int)bul_node->get("type_id");
-        if (bul_tid == (int)TamaNodeType::INLINE_BULLET) {
-            String btype = (String)bul_node->get("bullet_type");
+        if (bul_node->type_id == (int)TamaNodeType::INLINE_BULLET) {
+            const String &btype = bul_node->bullet_type;
             // Resolve bullet_type through scope if it's a variable name
             Variant sv = _scope.get(btype, Variant());
             data.bullet_type        = (sv.get_type() == Variant::STRING) ? (String)sv : btype;
-            data.bullet_emitter_act = Object::cast_to<Object>(bul_node->get("emitter_act"));
-            data.bullet_act         = Object::cast_to<Object>(bul_node->get("act"));
-            Object *mvmt = Object::cast_to<Object>(bul_node->get("mvmt"));
+            data.bullet_emitter_act = bul_node->emitter_act.ptr();
+            data.bullet_act         = bul_node->act.ptr();
+            _TamaASTNode *mvmt = bul_node->mvmt.ptr();
             if (mvmt) _populate_mvmt(&data, mvmt);
-        } else if (bul_tid == (int)TamaNodeType::BULLET_CALL) {
-            std::string bul_name = ((String)bul_node->get("name")).utf8().get_data();
-            Array       bul_args = (Array)bul_node->get("args");
-            Array       pre_bound;
+        } else if (bul_node->type_id == (int)TamaNodeType::BULLET_CALL) {
+            std::string bul_name = bul_node->name.utf8().get_data();
+            const Array &bul_args = bul_node->args;
+            Array pre_bound;
 
             // Scope override?
             Variant sv = _scope.get(String(bul_name.c_str()), Variant());
             if (sv.get_type() == Variant::OBJECT) {
-                Object *svo = sv.operator Object *();
-                if (svo && (int)svo->get("type_id") == (int)TamaNodeType::INLINE_BULLET) {
-                    String btype = (String)svo->get("bullet_type");
+                _TamaASTNode *svo = astn(sv);
+                if (svo && svo->type_id == (int)TamaNodeType::INLINE_BULLET) {
+                    const String &btype = svo->bullet_type;
                     Variant btsv = _scope.get(btype, Variant());
                     data.bullet_type        = (btsv.get_type() == Variant::STRING) ? (String)btsv : btype;
-                    data.bullet_emitter_act = Object::cast_to<Object>(svo->get("emitter_act"));
-                    data.bullet_act         = Object::cast_to<Object>(svo->get("act"));
-                    Object *mvmt = Object::cast_to<Object>(svo->get("mvmt"));
+                    data.bullet_emitter_act = svo->emitter_act.ptr();
+                    data.bullet_act         = svo->act.ptr();
+                    _TamaASTNode *mvmt = svo->mvmt.ptr();
                     if (mvmt) _populate_mvmt(&data, mvmt);
                     goto bullet_done;
                 }
-                Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(svo);
+                Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(sv.operator Object *());
                 if (tref.is_valid()) {
                     pre_bound = tref->bound_args;
                     bul_name  = tref->name.utf8().get_data();
                 }
             }
             {
-                Object *bullet_def = _find_bullet(bul_name);
+                _TamaASTNode *bullet_def = _find_bullet(bul_name);
                 if (!bullet_def) {
                     UtilityFunctions::push_warning(String("_TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
                     goto bullet_done;
                 }
-                Array params = (Array)bullet_def->get("params");
                 Array eval_args;
                 for (int i = 0; i < pre_bound.size(); ++i) eval_args.push_back(pre_bound[i]);
                 for (int i = 0; i < bul_args.size(); ++i)  eval_args.push_back(_eval_arg(bul_args[i]));
 
-                String btype = (String)bullet_def->get("bullet_type");
+                const String &btype = bullet_def->bullet_type;
                 Variant btsv = _scope.get(btype, Variant());
                 data.bullet_type        = (btsv.get_type() == Variant::STRING) ? (String)btsv : btype;
-                data.bullet_emitter_act = Object::cast_to<Object>(bullet_def->get("emitter_act"));
-                data.bullet_act         = Object::cast_to<Object>(bullet_def->get("act"));
-                data.bullet_params      = params;
+                data.bullet_emitter_act = bullet_def->emitter_act.ptr();
+                data.bullet_act         = bullet_def->act.ptr();
+                data.bullet_params      = bullet_def->params;
                 data.bullet_args        = eval_args;
-                Object *mvmt = Object::cast_to<Object>(bullet_def->get("mvmt"));
+                _TamaASTNode *mvmt = bullet_def->mvmt.ptr();
                 if (mvmt) _populate_mvmt(&data, mvmt);
             }
         }
@@ -834,18 +848,18 @@ void _TamaInterpreter::_exec_fire_node(Object *node) {
     if (_fire_cb) _fire_cb(data);
 }
 
-void _TamaInterpreter::_populate_mvmt(TamaBulletFireData *data, Object *mvmt_node) {
-    Object *mx = Object::cast_to<Object>(mvmt_node->get("x"));
-    Object *my = Object::cast_to<Object>(mvmt_node->get("y"));
+void _TamaInterpreter::_populate_mvmt(TamaBulletFireData *data, _TamaASTNode *mvmt_node) {
+    _TamaASTNode *mx = mvmt_node->x.ptr();
+    _TamaASTNode *my = mvmt_node->y.ptr();
     if (mx) {
         data->mvmt_x_set  = true;
         data->mvmt_x_type = _get_axis_type(mx);
-        data->mvmt_x_expr = (String)mx->get("expr");
+        data->mvmt_x_expr = mx->expr;
     }
     if (my) {
         data->mvmt_y_set  = true;
         data->mvmt_y_type = _get_axis_type(my);
-        data->mvmt_y_expr = (String)my->get("expr");
+        data->mvmt_y_expr = my->expr;
     }
 }
 
@@ -853,52 +867,52 @@ void _TamaInterpreter::_populate_mvmt(TamaBulletFireData *data, Object *mvmt_nod
 // Signal emission helpers
 // ---------------------------------------------------------------------------
 
-void _TamaInterpreter::_emit_chdir(Object *node) {
+void _TamaInterpreter::_emit_chdir(_TamaASTNode *n) {
     if (!_event_handler) return;
-    Object *dir_node = Object::cast_to<Object>(node->get("dir"));
+    _TamaASTNode *dir_node = n->dir.ptr();
     if (!dir_node) return;
-    Object *over = Object::cast_to<Object>(node->get("over"));
+    _TamaASTNode *over = n->over.ptr();
     TamaChdirEvent e;
     e.dir_type  = _get_dir_type(dir_node);
-    e.dir_value = _eval_float((String)dir_node->get("expr"));
-    e.over      = over ? _eval_float((String)over->get("expr")) : 0.0f;
+    e.dir_value = _eval_float(dir_node->expr);
+    e.over      = over ? _eval_float(over->expr) : 0.0f;
     _event_handler->on_chdir(e);
 }
 
-void _TamaInterpreter::_emit_chspd(Object *node) {
+void _TamaInterpreter::_emit_chspd(_TamaASTNode *n) {
     if (!_event_handler) return;
-    Object *spd_node = Object::cast_to<Object>(node->get("speed"));
+    _TamaASTNode *spd_node = n->speed.ptr();
     if (!spd_node) return;
-    Object *over = Object::cast_to<Object>(node->get("over"));
+    _TamaASTNode *over = n->over.ptr();
     TamaChspdEvent e;
     e.speed_type  = _get_speed_type(spd_node);
-    e.speed_value = _eval_float((String)spd_node->get("expr"));
-    e.over        = over ? _eval_float((String)over->get("expr")) : 0.0f;
+    e.speed_value = _eval_float(spd_node->expr);
+    e.over        = over ? _eval_float(over->expr) : 0.0f;
     _event_handler->on_chspd(e);
 }
 
-void _TamaInterpreter::_emit_chpos(Object *node) {
+void _TamaInterpreter::_emit_chpos(_TamaASTNode *n) {
     if (!_event_handler) return;
-    Object *xn = Object::cast_to<Object>(node->get("x"));
-    Object *yn = Object::cast_to<Object>(node->get("y"));
-    Object *ov = Object::cast_to<Object>(node->get("over"));
+    _TamaASTNode *xn = n->x.ptr();
+    _TamaASTNode *yn = n->y.ptr();
+    _TamaASTNode *ov = n->over.ptr();
     TamaChposEvent e{};
-    if (xn) { e.has_x = true; e.x_type = _get_axis_type(xn); e.x = _eval_float((String)xn->get("expr")); }
-    if (yn) { e.has_y = true; e.y_type = _get_axis_type(yn); e.y = _eval_float((String)yn->get("expr")); }
-    e.over = ov ? _eval_float((String)ov->get("expr")) : 0.0f;
+    if (xn) { e.has_x = true; e.x_type = _get_axis_type(xn); e.x = _eval_float(xn->expr); }
+    if (yn) { e.has_y = true; e.y_type = _get_axis_type(yn); e.y = _eval_float(yn->expr); }
+    e.over = ov ? _eval_float(ov->expr) : 0.0f;
     _event_handler->on_chpos(e);
 }
 
-void _TamaInterpreter::_emit_accel(Object *node) {
+void _TamaInterpreter::_emit_accel(_TamaASTNode *n) {
     if (!_event_handler) return;
-    Object *xn = Object::cast_to<Object>(node->get("x"));
-    Object *yn = Object::cast_to<Object>(node->get("y"));
+    _TamaASTNode *xn = n->x.ptr();
+    _TamaASTNode *yn = n->y.ptr();
     if (!xn && !yn) return;
-    Object *ov = Object::cast_to<Object>(node->get("over"));
+    _TamaASTNode *ov = n->over.ptr();
     TamaAccelEvent e{};
-    if (xn) { e.has_x = true; e.x_type = _get_axis_type(xn); e.x = _eval_float((String)xn->get("expr")); }
-    if (yn) { e.has_y = true; e.y_type = _get_axis_type(yn); e.y = _eval_float((String)yn->get("expr")); }
-    e.over = ov ? _eval_float((String)ov->get("expr")) : 0.0f;
+    if (xn) { e.has_x = true; e.x_type = _get_axis_type(xn); e.x = _eval_float(xn->expr); }
+    if (yn) { e.has_y = true; e.y_type = _get_axis_type(yn); e.y = _eval_float(yn->expr); }
+    e.over = ov ? _eval_float(ov->expr) : 0.0f;
     _event_handler->on_accel(e);
 }
 
@@ -908,13 +922,12 @@ void _TamaInterpreter::_emit_accel(Object *node) {
 
 Variant _TamaInterpreter::_eval_arg(const Variant &arg) {
     if (arg.get_type() == Variant::OBJECT) {
-        Object *obj = arg.operator Object *();
+        _TamaASTNode *obj = astn(arg.operator Object *());
         if (!obj) return Variant(0.0f);
-        int tid = (int)obj->get("type_id");
-        if (tid == (int)TamaNodeType::REF_CALL_ARG) {
+        if (obj->type_id == (int)TamaNodeType::REF_CALL_ARG) {
             // Build a _TamaRef
-            String ref_name = (String)obj->get("name");
-            Array  sub_args = (Array)obj->get("args");
+            const String &ref_name = obj->name;
+            const Array  &sub_args = obj->args;
             Ref<_TamaRef> tr = memnew(_TamaRef);
             tr->name = ref_name;
             for (int i = 0; i < sub_args.size(); ++i)
@@ -1006,10 +1019,9 @@ float _TamaInterpreter::_eval_arg_as_float(const Variant &arg) {
 // Qualifier resolution
 // ---------------------------------------------------------------------------
 
-int _TamaInterpreter::_get_dir_type(Object *dir_node) const {
-    String type_var = (String)dir_node->get("dir_type_var");
-    if (type_var.is_empty()) return (int)dir_node->get("dir_type");
-    Variant sv = _scope.get(type_var, Variant());
+int _TamaInterpreter::_get_dir_type(_TamaASTNode *dir_node) const {
+    if (dir_node->dir_type_var.is_empty()) return dir_node->dir_type;
+    Variant sv = _scope.get(dir_node->dir_type_var, Variant());
     if (sv.get_type() == Variant::STRING) {
         String s = (String)sv;
         if (s == "aim") return 0; if (s == "abs") return 1;
@@ -1018,10 +1030,9 @@ int _TamaInterpreter::_get_dir_type(Object *dir_node) const {
     return 0; // AIM
 }
 
-int _TamaInterpreter::_get_speed_type(Object *spd_node) const {
-    String type_var = (String)spd_node->get("speed_type_var");
-    if (type_var.is_empty()) return (int)spd_node->get("speed_type");
-    Variant sv = _scope.get(type_var, Variant());
+int _TamaInterpreter::_get_speed_type(_TamaASTNode *spd_node) const {
+    if (spd_node->speed_type_var.is_empty()) return spd_node->speed_type;
+    Variant sv = _scope.get(spd_node->speed_type_var, Variant());
     if (sv.get_type() == Variant::STRING) {
         String s = (String)sv;
         if (s == "abs") return 0; if (s == "rel") return 1; if (s == "seq") return 2;
@@ -1029,10 +1040,9 @@ int _TamaInterpreter::_get_speed_type(Object *spd_node) const {
     return 0; // ABS
 }
 
-int _TamaInterpreter::_get_axis_type(Object *axis_node) const {
-    String type_var = (String)axis_node->get("axis_type_var");
-    if (type_var.is_empty()) return (int)axis_node->get("axis_type");
-    Variant sv = _scope.get(type_var, Variant());
+int _TamaInterpreter::_get_axis_type(_TamaASTNode *axis_node) const {
+    if (axis_node->axis_type_var.is_empty()) return axis_node->axis_type;
+    Variant sv = _scope.get(axis_node->axis_type_var, Variant());
     if (sv.get_type() == Variant::STRING) {
         String s = (String)sv;
         if (s == "abs") return 0; if (s == "rel") return 1; if (s == "seq") return 2;
@@ -1044,17 +1054,17 @@ int _TamaInterpreter::_get_axis_type(Object *axis_node) const {
 // Definition lookups
 // ---------------------------------------------------------------------------
 
-Object *_TamaInterpreter::_find_fire(const std::string &name) const {
+_TamaASTNode *_TamaInterpreter::_find_fire(const std::string &name) const {
     auto it = _fires_map.find(name);
     return it != _fires_map.end() ? it->second : nullptr;
 }
 
-Object *_TamaInterpreter::_find_act(const std::string &name) const {
+_TamaASTNode *_TamaInterpreter::_find_act(const std::string &name) const {
     auto it = _acts_map.find(name);
     return it != _acts_map.end() ? it->second : nullptr;
 }
 
-Object *_TamaInterpreter::_find_bullet(const std::string &name) const {
+_TamaASTNode *_TamaInterpreter::_find_bullet(const std::string &name) const {
     auto it = _bullets_map.find(name);
     return it != _bullets_map.end() ? it->second : nullptr;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "tama_expr.h"
+#include "tama_ast_nodes.h"
 
 #include <cstdint>
 #include <functional>
@@ -71,18 +72,18 @@ struct TamaBulletFireData {
     bool   pos_y_set      = false;
     int    pos_y_type     = 0;   // ABS
     float  pos_y          = 0.0f;
-    godot::String  bullet_type;
-    godot::Object *bullet_emitter_act = nullptr;
-    godot::Object *bullet_act         = nullptr;
-    godot::Array   bullet_params;
-    godot::Array   bullet_args;
-    bool           mvmt_x_set  = false;
-    int            mvmt_x_type = 0;
-    godot::String  mvmt_x_expr;
-    bool           mvmt_y_set  = false;
-    int            mvmt_y_type = 0;
-    godot::String  mvmt_y_expr;
-    godot::Object *source_program = nullptr;
+    godot::String   bullet_type;
+    _TamaASTNode   *bullet_emitter_act = nullptr;
+    _TamaASTNode   *bullet_act         = nullptr;
+    godot::Array    bullet_params;
+    godot::Array    bullet_args;
+    bool            mvmt_x_set  = false;
+    int             mvmt_x_type = 0;
+    godot::String   mvmt_x_expr;
+    bool            mvmt_y_set  = false;
+    int             mvmt_y_type = 0;
+    godot::String   mvmt_y_expr;
+    _TamaASTNode   *source_program = nullptr;
 };
 
 // First-class value stored in scope — wraps a definition name + pre-bound args.
@@ -104,7 +105,7 @@ struct ExecFrame {
     Kind kind = Kind::BODY;
 
     // -- BODY --
-    godot::Array body;
+    std::vector<_TamaASTNode*> body; // raw ptrs; kept alive by source node's godot::Array
     int pc          = 0;
     bool sync_only  = false;  // if true, skip suspension-inducing nodes
     bool pops_scope = false;  // true if this frame should restore the scope save on pop
@@ -119,7 +120,7 @@ struct ExecFrame {
     int     wait_frames = 0;
 
     // -- Loop control (REPEAT_CTRL / WHILE_CTRL / REPEATF_CTRL) --
-    godot::Array  loop_body;
+    std::vector<_TamaASTNode*> loop_body;
     int           loop_n = -1;  // -1 = infinite
     int           loop_i = 0;
     godot::String loop_index_var;
@@ -138,7 +139,7 @@ class _TamaInterpreter : public godot::Node {
     // State
     // -----------------------------------------------------------------------
 
-    godot::Object         *_program       = nullptr;
+    _TamaASTNode           *_program       = nullptr;
     godot::Object         *_context       = nullptr;
     TamaBulletEventHandler *_event_handler = nullptr;
     bool           _running  = false;
@@ -156,9 +157,9 @@ class _TamaInterpreter : public godot::Node {
     std::vector<_TamaInterpreter *> _async_children;
 
     // Definition lookup tables (built once from program)
-    std::unordered_map<std::string, godot::Object *> _fires_map;
-    std::unordered_map<std::string, godot::Object *> _acts_map;
-    std::unordered_map<std::string, godot::Object *> _bullets_map;
+    std::unordered_map<std::string, _TamaASTNode *> _fires_map;
+    std::unordered_map<std::string, _TamaASTNode *> _acts_map;
+    std::unordered_map<std::string, _TamaASTNode *> _bullets_map;
 
     // -----------------------------------------------------------------------
     // Internal helpers
@@ -168,6 +169,7 @@ class _TamaInterpreter : public godot::Node {
 
     // Push frames
     void _push_body(const godot::Array &body, bool sync_only = false, bool pops_scope = false);
+    void _push_body(const std::vector<_TamaASTNode*> &body, bool sync_only = false, bool pops_scope = false);
     void _push_repeat_ctrl(const godot::Array &body, int n, const godot::String &idx_var);
     void _push_while_ctrl(const godot::Array &body, const godot::String &cond);
     void _push_repeatf_ctrl(const godot::Array &body, int n, const godot::String &idx_var);
@@ -182,18 +184,18 @@ class _TamaInterpreter : public godot::Node {
     void _step_body(ExecFrame &f, bool &yielded);
     void _step_loop_ctrl(ExecFrame &f, bool &yielded);
 
-    // Execute a single node. Returns true if a new frame was pushed or suspension was set.
-    void _exec_node(godot::Object *node, int type_id, bool sync_only, bool &yielded);
+    // Execute a single node.
+    void _exec_node(_TamaASTNode *n, bool sync_only, bool &yielded);
 
     // Fire node execution (InlineFireNode or FireDefNode)
-    void _exec_fire_node(godot::Object *node);
-    void _exec_fire_call(godot::Object *node);
+    void _exec_fire_node(_TamaASTNode *node);
+    void _exec_fire_call(_TamaASTNode *n);
 
     // Signal emission helpers
-    void _emit_chdir(godot::Object *node);
-    void _emit_chspd(godot::Object *node);
-    void _emit_chpos(godot::Object *node);
-    void _emit_accel(godot::Object *node);
+    void _emit_chdir(_TamaASTNode *n);
+    void _emit_chspd(_TamaASTNode *n);
+    void _emit_chpos(_TamaASTNode *n);
+    void _emit_accel(_TamaASTNode *n);
 
     // Scope helpers
     godot::Dictionary _scope_snapshot_plus_params(
@@ -205,23 +207,24 @@ class _TamaInterpreter : public godot::Node {
     float          _eval_arg_as_float(const godot::Variant &arg);
 
     // Qualifier resolution (reads dir_type_var / speed_type_var / axis_type_var from scope)
-    int _get_dir_type(godot::Object *dir_node) const;
-    int _get_speed_type(godot::Object *spd_node) const;
-    int _get_axis_type(godot::Object *axis_node) const;
+    int _get_dir_type(_TamaASTNode *dir_node) const;
+    int _get_speed_type(_TamaASTNode *spd_node) const;
+    int _get_axis_type(_TamaASTNode *axis_node) const;
 
     // Definition lookups
-    godot::Object *_find_fire(const std::string &name) const;
-    godot::Object *_find_act(const std::string &name) const;
-    godot::Object *_find_bullet(const std::string &name) const;
+    _TamaASTNode *_find_fire(const std::string &name) const;
+    _TamaASTNode *_find_act(const std::string &name) const;
+    _TamaASTNode *_find_bullet(const std::string &name) const;
 
     // Run an async child act
-    void _run_async_act(godot::Object *act_node, const godot::Dictionary &scope_copy);
+    void _run_async_act(_TamaASTNode *act_node, const godot::Dictionary &scope_copy);
 
     // Populate mvmt fields on fire data
-    void _populate_mvmt(TamaBulletFireData *data, godot::Object *mvmt_node);
+    void _populate_mvmt(TamaBulletFireData *data, _TamaASTNode *mvmt_node);
 
     // Sync body execution (for repeatf body — no suspension allowed)
     void _exec_body_sync(const godot::Array &body);
+    void _exec_body_sync(const std::vector<_TamaASTNode*> &body);
 
 protected:
     static void _bind_methods();

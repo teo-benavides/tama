@@ -4,17 +4,7 @@
 using namespace godot;
 
 void _TamaASTNode::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_type_id"), &_TamaASTNode::get_type_id);
-    ADD_PROPERTY(PropertyInfo(Variant::INT, "type_id"), "", "get_type_id");
-}
-
-bool _TamaASTNode::_get(const StringName &p_name, Variant &r_ret) const {
-    String key(p_name);
-    if (_data.has(key)) {
-        r_ret = _data[key];
-        return true;
-    }
-    return false;
+    // GDCLASS required for Array storage — no properties exposed.
 }
 
 Ref<_TamaASTNode> tama_make_node(int type_id) {

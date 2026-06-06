@@ -1,4 +1,5 @@
 #include "tama_emitter.h"
+#include "tama_ast_nodes.h"
 #include "tama_manager.h"
 #include "tama_script_repository.h"
 
@@ -159,14 +160,15 @@ void TamaEmitter::stop() {
 // ---------------------------------------------------------------------------
 
 void TamaEmitter::_read_exports_from(Object *program) {
-    Array exports = (Array)program->get("exports");
-    for (int i = 0; i < exports.size(); ++i) {
-        Object *exp = Object::cast_to<Object>(exports[i].operator Object *());
+    _TamaASTNode *prog = Object::cast_to<_TamaASTNode>(program);
+    if (!prog) return;
+    for (int i = 0; i < prog->exports.size(); ++i) {
+        _TamaASTNode *exp = Object::cast_to<_TamaASTNode>(prog->exports[i].operator Object *());
         if (!exp) continue;
         ExportDef def;
-        def.name          = (String)exp->get("name");
-        def.type          = (String)exp->get("export_type");
-        def.default_value = exp->get("default_value");
+        def.name          = exp->name;
+        def.type          = exp->export_type;
+        def.default_value = exp->default_value;
         _cached_export_defs.push_back(def);
         if (def.default_value.get_type() != Variant::NIL && !_export_values.has(def.name))
             _export_values[def.name] = def.default_value;
