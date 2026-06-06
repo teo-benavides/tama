@@ -273,7 +273,7 @@ Object *TamaServerBulletPool::spawn(
 {
     if (!p_config) return nullptr;
 
-    std::string key = p_data.bullet_type.utf8().get_data();
+    const std::string &key = p_data.bullet_type;
 
     auto it = _types.find(key);
     if (it == _types.end()) {
@@ -376,7 +376,7 @@ Object *TamaServerBulletPool::spawn(
         b.mvmt_values.reserve(n_args + 2);
 
         for (int i = 0; i < n_args; ++i) {
-            var_names.push_back(params[i].utf8().get_data());
+            var_names.push_back(params[i]);
             b.mvmt_values.push_back(args[i].is_node ? 0.0 : (double)(float)args[i].var);
         }
         var_names.push_back("spawn_x");
@@ -397,11 +397,11 @@ Object *TamaServerBulletPool::spawn(
         _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
         if (er) {
             if (b.mvmt_x_set) {
-                std::string expr = p_data.mvmt_x_expr.utf8().get_data();
+                const std::string &expr = p_data.mvmt_x_expr;
                 b.mvmt_x_chunk   = er->get_chunk(expr, var_names, make_key(expr));
             }
             if (b.mvmt_y_set) {
-                std::string expr = p_data.mvmt_y_expr.utf8().get_data();
+                const std::string &expr = p_data.mvmt_y_expr;
                 b.mvmt_y_chunk   = er->get_chunk(expr, var_names, make_key(expr));
             }
         }
@@ -431,7 +431,7 @@ Object *TamaServerBulletPool::spawn(
         TamaScope act_scope;
         int na = (int)std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
         for (int i = 0; i < na; ++i)
-            act_scope[p_data.bullet_params[i].utf8().get_data()] = TamaScopeVal(p_data.bullet_args[i]);
+            act_scope[p_data.bullet_params[i]] = TamaScopeVal(p_data.bullet_args[i]);
         act_scope["spawn_x"] = TamaScopeVal(Variant(position.x));
         act_scope["spawn_y"] = TamaScopeVal(Variant(position.y));
 

@@ -108,13 +108,13 @@ static float spawner_get_angle(godot::Object *s) {
 
 void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object *spawner) {
     // Resolve bullet_type (substitute from params if it matches a param name)
-    String bullet_type = data.bullet_type;
-    const std::vector<godot::String> &bullet_params = data.bullet_params;
-    const std::vector<TamaArgVal>    &bullet_args   = data.bullet_args;
+    String bullet_type = String(data.bullet_type.c_str());
+    const std::vector<std::string> &bullet_params = data.bullet_params;
+    const std::vector<TamaArgVal>  &bullet_args   = data.bullet_args;
     if (!bullet_type.is_empty() && bullet_params.size() > 0) {
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i) {
             const TamaArgVal &av = bullet_args[i];
-            if (bullet_params[i] == bullet_type) {
+            if (String(bullet_params[i].c_str()) == bullet_type) {
                 if (!av.is_node && av.var.get_type() == Variant::STRING)
                     bullet_type = (String)av.var;
                 break;
@@ -187,7 +187,7 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         Dictionary mvmt_scope;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i) {
             const TamaArgVal &av = bullet_args[i];
-            if (!av.is_node) mvmt_scope[bullet_params[i]] = av.var;
+            if (!av.is_node) mvmt_scope[String(bullet_params[i].c_str())] = av.var;
         }
         mvmt_scope["spawn_x"] = bullet->_initial_position.x;
         mvmt_scope["spawn_y"] = bullet->_initial_position.y;
@@ -209,7 +209,7 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
     if (bullet_act) {
         TamaScope act_scope;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
-            act_scope[bullet_params[i].utf8().get_data()] = TamaScopeVal(bullet_args[i]);
+            act_scope[bullet_params[i]] = TamaScopeVal(bullet_args[i]);
         act_scope["spawn_x"] = TamaScopeVal(Variant(bullet->_initial_position.x));
         act_scope["spawn_y"] = TamaScopeVal(Variant(bullet->_initial_position.y));
         connect_interpreter(bullet_runner, bullet);
@@ -233,7 +233,7 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         connect_interpreter(spawner_runner, bullet);
         TamaScope emt_scope;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
-            emt_scope[bullet_params[i].utf8().get_data()] = TamaScopeVal(bullet_args[i]);
+            emt_scope[bullet_params[i]] = TamaScopeVal(bullet_args[i]);
         emt_scope["spawn_x"] = TamaScopeVal(Variant(bullet->_initial_position.x));
         emt_scope["spawn_y"] = TamaScopeVal(Variant(bullet->_initial_position.y));
         _TamaInterpreter *sr = spawner_runner;

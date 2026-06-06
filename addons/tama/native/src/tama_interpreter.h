@@ -11,7 +11,6 @@
 
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/object.hpp>
-#include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/variant.hpp>
@@ -55,18 +54,19 @@ public:
 // Scope types
 // ---------------------------------------------------------------------------
 
-// Scope value — either a Godot Variant (numerics, strings, _TamaRef objects) or an AST node.
 struct TamaScopeVal {
     bool is_node = false;
     godot::Variant var;
     _TamaASTNode *node = nullptr;
-    std::shared_ptr<_TamaASTNode> _owner; // propagated from TamaArgVal when needed
+    std::shared_ptr<_TamaASTNode> _owner;
+    std::shared_ptr<TamaRef> ref;
 
     TamaScopeVal() = default;
     TamaScopeVal(const godot::Variant &v) : var(v) {}
     TamaScopeVal(_TamaASTNode *n) : is_node(true), node(n) {}
     TamaScopeVal(const TamaArgVal &av) {
-        if (av.is_node) { is_node = true; node = av.node; _owner = av._owner; }
+        if (av.ref) { ref = av.ref; }
+        else if (av.is_node) { is_node = true; node = av.node; _owner = av._owner; }
         else { var = av.var; }
     }
 };
@@ -94,30 +94,18 @@ struct TamaBulletFireData {
     bool   pos_y_set      = false;
     int    pos_y_type     = 0;   // ABS
     float  pos_y          = 0.0f;
-    godot::String   bullet_type;
+    std::string     bullet_type;
     _TamaASTNode   *bullet_emitter_act = nullptr;
     _TamaASTNode   *bullet_act         = nullptr;
-    std::vector<godot::String> bullet_params;
-    std::vector<TamaArgVal>    bullet_args;
+    std::vector<std::string>  bullet_params;
+    std::vector<TamaArgVal>   bullet_args;
     bool            mvmt_x_set  = false;
     int             mvmt_x_type = 0;
-    godot::String   mvmt_x_expr;
+    std::string     mvmt_x_expr;
     bool            mvmt_y_set  = false;
     int             mvmt_y_type = 0;
-    godot::String   mvmt_y_expr;
+    std::string     mvmt_y_expr;
     _TamaASTNode   *source_program = nullptr;
-};
-
-// ---------------------------------------------------------------------------
-// First-class value stored in scope — wraps a definition name + pre-bound args.
-// ---------------------------------------------------------------------------
-class _TamaRef : public godot::RefCounted {
-    GDCLASS(_TamaRef, godot::RefCounted)
-protected:
-    static void _bind_methods();
-public:
-    godot::String name;
-    std::vector<TamaArgVal> bound_args;
 };
 
 // ---------------------------------------------------------------------------
@@ -131,8 +119,8 @@ struct ExecFrame {
     // -- BODY --
     std::vector<_TamaASTNode*> body; // raw ptrs; kept alive by shared_ptr in AST
     int pc          = 0;
-    bool sync_only  = false;  // if true, skip suspension-inducing nodes
-    bool pops_scope = false;  // true if this frame should restore the scope save on pop
+    bool sync_only  = false;
+    bool pops_scope = false;
 
     // Pre-existing scope keys at frame entry — new keys are removed on pop.
     std::vector<std::string> pre_keys;
@@ -145,11 +133,11 @@ struct ExecFrame {
 
     // -- Loop control (REPEAT_CTRL / WHILE_CTRL / REPEATF_CTRL) --
     std::vector<_TamaASTNode*> loop_body;
-    int           loop_n = -1;  // -1 = infinite
-    int           loop_i = 0;
-    godot::String loop_index_var;
-    godot::String while_cond;
-    bool          between_iters = false; // unused — kept for ABI stability
+    int         loop_n = -1;  // -1 = infinite
+    int         loop_i = 0;
+    std::string loop_index_var;
+    std::string while_cond;
+    bool        between_iters = false;
 };
 
 // ---------------------------------------------------------------------------
@@ -173,7 +161,6 @@ class _TamaInterpreter : public godot::Node {
     std::vector<ExecFrame> _exec_stack;
 
     // Flat scope shared across all frames in this execution context.
-    // Saved/restored for isolated named-act scopes.
     TamaScope _scope;
     std::vector<TamaScope> _scope_saves;
 
@@ -194,9 +181,9 @@ class _TamaInterpreter : public godot::Node {
     // Push frames
     void _push_body(const std::vector<std::shared_ptr<_TamaASTNode>> &body, bool sync_only = false, bool pops_scope = false);
     void _push_body(const std::vector<_TamaASTNode*> &body, bool sync_only = false, bool pops_scope = false);
-    void _push_repeat_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body, int n, const godot::String &idx_var);
-    void _push_while_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body, const godot::String &cond);
-    void _push_repeatf_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body, int n, const godot::String &idx_var);
+    void _push_repeat_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body, int n, const std::string &idx_var);
+    void _push_while_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body, const std::string &cond);
+    void _push_repeatf_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body, int n, const std::string &idx_var);
 
     // Snapshot current scope keys into pre_keys for a frame
     std::vector<std::string> _snapshot_scope_keys() const;
@@ -223,12 +210,12 @@ class _TamaInterpreter : public godot::Node {
 
     // Scope helpers
     TamaScope _scope_snapshot_plus_params(
-        const std::vector<godot::String> &params,
+        const std::vector<std::string> &params,
         const std::vector<TamaArgVal> &args) const;
 
     // Arg/expr evaluation
     TamaArgVal _eval_arg(const TamaArgVal &arg);
-    float      _eval_float(const godot::String &expr);
+    float      _eval_float(const std::string &expr);
     float      _eval_arg_float(const TamaArgVal &arg);
 
     // Qualifier resolution (reads dir_type_var / speed_type_var / axis_type_var from scope)

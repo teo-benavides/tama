@@ -73,11 +73,11 @@ void TamaParserCpp::pre_scan_definitions() {
                         _resolved_includes[inc_name] = included;
                         if (included) {
                             for (const auto &sp : included->fires)
-                                if (sp) _defined_fires[sp->name.utf8().get_data()] = true;
+                                if (sp) _defined_fires[sp->name] = true;
                             for (const auto &sp : included->acts)
-                                if (sp) _defined_acts[sp->name.utf8().get_data()] = true;
+                                if (sp) _defined_acts[sp->name] = true;
                             for (const auto &sp : included->bullets)
-                                if (sp) _defined_bullets[sp->name.utf8().get_data()] = true;
+                                if (sp) _defined_bullets[sp->name] = true;
                         }
                     }
                 }
@@ -194,7 +194,7 @@ TamaArgVal TamaParserCpp::parse_single_arg(const TamaToken &open_tok) {
         if (is_def && (at_term || at_call)) {
             TamaToken ref_tok = consume(TT::WORD);
             auto ref = tama_make_node((int)NT::REF_CALL_ARG);
-            ref->name = String(ref_tok.value.c_str());
+            ref->name = ref_tok.value;
             if (at_call) ref->args = parse_call_args(ref_tok);
             return TamaArgVal(std::move(ref)); // owning constructor keeps node alive
         }
@@ -212,13 +212,13 @@ std::string TamaParserCpp::parse_identifier() {
     return "";
 }
 
-std::vector<godot::String> TamaParserCpp::parse_param_list() {
-    std::vector<godot::String> params;
+std::vector<std::string> TamaParserCpp::parse_param_list() {
+    std::vector<std::string> params;
     if (peek_type() != TT::LPAREN) return params;
     TamaToken lp = consume(TT::LPAREN);
     while (peek_type() != TT::RPAREN && peek_type() != TT::EOF_) {
         if (peek_type() == TT::WORD) {
-            params.push_back(String(_tokens[_pos].value.c_str()));
+            params.push_back(_tokens[_pos].value);
             _pos++;
         } else if (peek_type() == TT::COMMA) {
             _pos++;
@@ -293,10 +293,10 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_axis_node(int default_qt) {
     std::string expr = collect_to_eol();
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::OFFSET_AXIS);
-    n->axis          = String(axis.c_str());
+    n->axis          = axis;
     n->axis_type     = qt;
-    n->axis_type_var = String(qt_var.c_str());
-    n->expr          = String(expr.c_str());
+    n->axis_type_var = qt_var;
+    n->expr          = expr;
     return n;
 }
 
@@ -317,8 +317,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_dir() {
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::DIR);
     n->dir_type     = qt;
-    n->dir_type_var = String(qt_var.c_str());
-    n->expr         = String(expr.c_str());
+    n->dir_type_var = qt_var;
+    n->expr         = expr;
     return n;
 }
 
@@ -335,8 +335,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_speed() {
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::SPEED);
     n->speed_type     = qt;
-    n->speed_type_var = String(qt_var.c_str());
-    n->expr           = String(expr.c_str());
+    n->speed_type_var = qt_var;
+    n->expr           = expr;
     return n;
 }
 
@@ -346,7 +346,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_wait() {
     if (expr.empty()) error_at(peek(), "Expected expression after wait");
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::WAIT);
-    n->expr = String(expr.c_str());
+    n->expr = expr;
     return n;
 }
 
@@ -356,7 +356,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_waitf() {
     if (expr.empty()) error_at(peek(), "Expected expression after waitf");
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::WAIT_FRAMES);
-    n->expr = String(expr.c_str());
+    n->expr = expr;
     return n;
 }
 
@@ -378,7 +378,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_over() {
     if (expr.empty()) error_at(peek(), "Expected expression after over");
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::OVER);
-    n->expr = String(expr.c_str());
+    n->expr = expr;
     return n;
 }
 
@@ -407,7 +407,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_offset() {
         if (expr.empty()) error_at(peek(), "Expected expression after offset");
         consume(TT::NEWLINE);
         auto n = tama_make_node((int)NT::OFFSET_INLINE);
-        n->expr = String(expr.c_str());
+        n->expr = expr;
         return n;
     }
 }
@@ -555,8 +555,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_repeatf() {
     }
     consume(TT::NEWLINE);
     auto node = tama_make_node((int)NT::REPEAT_FRAME);
-    node->count     = String(count_str.c_str());
-    node->index_var = String(idx_var.c_str());
+    node->count     = count_str;
+    node->index_var = idx_var;
     node->body = parse_block([&]() -> std::shared_ptr<_TamaASTNode> {
         auto s = parse_action_statement();
         try_consume(TT::NEWLINE);
@@ -587,8 +587,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_repeat() {
     }
     consume(TT::NEWLINE);
     auto node = tama_make_node((int)NT::REPEAT);
-    node->count     = String(count_str.c_str());
-    node->index_var = String(idx_var.c_str());
+    node->count     = count_str;
+    node->index_var = idx_var;
     node->body = parse_block([this]() { return parse_action_statement(); });
     return node;
 }
@@ -599,7 +599,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_while() {
     if (cond.empty()) error_at(peek(), "Expected condition after 'while'");
     consume(TT::NEWLINE);
     auto node = tama_make_node((int)NT::WHILE);
-    node->condition = String(cond.c_str());
+    node->condition = cond;
     node->body = parse_block([this]() { return parse_action_statement(); });
     return node;
 }
@@ -610,14 +610,14 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_if() {
     if (cond.empty()) error_at(peek(), "Expected condition after 'if'");
     consume(TT::NEWLINE);
     auto node = tama_make_node((int)NT::IF);
-    node->conditions.push_back(String(cond.c_str()));
+    node->conditions.push_back(cond);
     node->bodies.push_back(parse_block([this]() { return parse_action_statement(); }));
     skip_newlines();
     while (peek_type() == TT::KW_ELIF) {
         consume(TT::KW_ELIF);
         cond = collect_to_eol();
         consume(TT::NEWLINE);
-        node->conditions.push_back(String(cond.c_str()));
+        node->conditions.push_back(cond);
         node->bodies.push_back(parse_block([this]() { return parse_action_statement(); }));
         skip_newlines();
     }
@@ -637,8 +637,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_var_decl() {
     if (expr.empty()) error_at(peek(), "Expected expression after var name");
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::VAR_DECL);
-    n->var_name = String(name.c_str());
-    n->expr     = String(expr.c_str());
+    n->var_name = name;
+    n->expr     = expr;
     return n;
 }
 
@@ -648,8 +648,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_var_assign() {
     if (expr.empty()) error_at(peek(), "Expected expression after variable name");
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::VAR_DECL);
-    n->var_name = String(tok.value.c_str());
-    n->expr     = String(expr.c_str());
+    n->var_name = tok.value;
+    n->expr     = expr;
     return n;
 }
 
@@ -689,7 +689,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_fire_call() {
         _fire_refs.push_back({name, name_tok.line, name_tok.col});
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::FIRE_CALL);
-    n->name = String(name.c_str());
+    n->name = name;
     n->args = std::move(args);
     return n;
 }
@@ -704,7 +704,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_act_call() {
         _act_refs.push_back({name, name_tok.line, name_tok.col});
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::ACT_CALL);
-    n->name     = String(name.c_str());
+    n->name     = name;
     n->args     = std::move(args);
     n->is_async = false;
     return n;
@@ -736,7 +736,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_bullet_call() {
         _bullet_refs.push_back({name, name_tok.line, name_tok.col});
     consume(TT::NEWLINE);
     auto n = tama_make_node((int)NT::BULLET_CALL);
-    n->name = String(name.c_str());
+    n->name = name;
     n->args = std::move(args);
     return n;
 }
@@ -751,7 +751,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_inline_bullet() {
             case TT::KW_TYPE:
                 consume(TT::KW_TYPE);
                 if (peek_type() == TT::WORD) {
-                    node->bullet_type = String(_tokens[_pos].value.c_str());
+                    node->bullet_type = _tokens[_pos].value;
                     _pos++;
                 } else {
                     error_at(peek(), "Expected bullet type name after 'type'");
@@ -771,7 +771,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_inline_bullet() {
                         std::vector<TamaArgVal> emt_args;
                         if (peek_type() == TT::LPAREN) emt_args = parse_call_args(emt_tok);
                         auto ac = tama_make_node((int)NT::ACT_CALL);
-                        ac->name     = String(emt_name.c_str());
+                        ac->name     = emt_name;
                         ac->args     = std::move(emt_args);
                         ac->is_async = false;
                         node->emitter_act = ac;
@@ -929,8 +929,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_export() {
     consume(TT::NEWLINE);
 
     auto n = tama_make_node((int)NT::EXPORT_VAR);
-    n->name          = String(name.c_str());
-    n->export_type   = String(export_type.c_str());
+    n->name          = name;
+    n->export_type   = export_type;
     n->default_value = default_value;
     return n;
 }
@@ -952,10 +952,10 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_fire_def() {
     auto params = parse_param_list();
     _current_params.clear();
     for (const auto &p : params)
-        _current_params.insert(p.utf8().get_data());
+        _current_params.insert(p);
     consume(TT::NEWLINE);
     auto node = tama_make_node((int)NT::FIRE_DEF);
-    node->name   = String(name.c_str());
+    node->name   = name;
     node->params = params;
     parse_fire_block(node, name_tok);
     _current_params.clear();
@@ -970,10 +970,10 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_act_def() {
     auto params = parse_param_list();
     _current_params.clear();
     for (const auto &p : params)
-        _current_params.insert(p.utf8().get_data());
+        _current_params.insert(p);
     consume(TT::NEWLINE);
     auto node = tama_make_node((int)NT::ACT_DEF);
-    node->name   = String(name.c_str());
+    node->name   = name;
     node->params = params;
     node->body   = parse_block([this]() { return parse_action_statement(); });
     _current_params.clear();
@@ -988,10 +988,10 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_bullet_def() {
     auto params = parse_param_list();
     _current_params.clear();
     for (const auto &p : params)
-        _current_params.insert(p.utf8().get_data());
+        _current_params.insert(p);
     consume(TT::NEWLINE);
     auto node = tama_make_node((int)NT::BULLET_DEF);
-    node->name   = String(name.c_str());
+    node->name   = name;
     node->params = params;
     parse_block([&]() -> std::shared_ptr<_TamaASTNode> {
         TamaToken &t = peek();
@@ -999,7 +999,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_bullet_def() {
             case TT::KW_TYPE:
                 consume(TT::KW_TYPE);
                 if (peek_type() == TT::WORD) {
-                    node->bullet_type = String(_tokens[_pos].value.c_str());
+                    node->bullet_type = _tokens[_pos].value;
                     _pos++;
                 } else {
                     error_at(peek(), "Expected bullet type name after 'type'");
@@ -1019,7 +1019,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_bullet_def() {
                         std::vector<TamaArgVal> emt_args;
                         if (peek_type() == TT::LPAREN) emt_args = parse_call_args(emt_tok);
                         auto ac = tama_make_node((int)NT::ACT_CALL);
-                        ac->name     = String(emt_name.c_str());
+                        ac->name     = emt_name;
                         ac->args     = std::move(emt_args);
                         ac->is_async = false;
                         node->emitter_act = ac;

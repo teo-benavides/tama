@@ -1,0 +1,40 @@
+main
+    repeat
+        repeat 30
+            repeat 16 i
+                fire
+                    dir abs (360.0/16)*i
+                    spd abs 300
+                    bul blue
+                fire
+                    dir abs (360.0/16)*i
+                    spd abs 300
+                    bul green
+            waitf 5
+        wait 2.0
+
+bullet blue
+    type blue
+    act
+        chdir
+            dir rel -360
+            over 2.0
+        wait 1.0
+        chspd
+            spd abs 200
+        wait 1.0
+        chdir
+            dir rel randf_range(-5.0, 5.0)
+
+bullet green
+    type green
+    act
+        chdir
+            dir rel 360
+            over 2.0
+        wait 1.0
+        chspd
+            spd abs 200
+        wait 1.0
+        chdir
+            dir rel randf_range(-5.0, 5.0)

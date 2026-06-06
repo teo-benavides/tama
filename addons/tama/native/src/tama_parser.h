@@ -9,8 +9,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <godot_cpp/variant/string.hpp>
-
 // Called by the parser to resolve 'include' directives.
 using TamaResolver = std::function<std::shared_ptr<_TamaASTNode>(const std::string &)>;
 
@@ -78,7 +76,7 @@ private:
     std::vector<TamaArgVal>    parse_call_args(const TamaToken &caller_tok);
     TamaArgVal                 parse_single_arg(const TamaToken &open_tok);
     std::string                parse_identifier();
-    std::vector<godot::String> parse_param_list();
+    std::vector<std::string>   parse_param_list();
 
     // -----------------------------------------------------------------------
     // Qualifier helpers

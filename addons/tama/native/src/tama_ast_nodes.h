@@ -1,24 +1,23 @@
 #pragma once
+#include <cctype>
 #include <memory>
 #include <string>
 #include <vector>
-#include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/variant.hpp>
 
-// ---------------------------------------------------------------------------
-// _TamaASTNode — plain C++ struct, no Godot machinery.
-// ---------------------------------------------------------------------------
-
+// Forward declarations — TamaArgVal and TamaRef are mutually recursive.
+struct TamaRef;
 struct _TamaASTNode;
 
-// Evaluated argument value — either a Godot Variant or an AST node pointer.
+// ---------------------------------------------------------------------------
+// TamaArgVal — evaluated argument value
+// ---------------------------------------------------------------------------
 struct TamaArgVal {
     bool is_node = false;
     godot::Variant var;
     _TamaASTNode *node = nullptr;
-    // Owns the node when created from a shared_ptr (parser inline nodes).
-    // Null when node is a raw ptr into a body already owned by the AST.
-    std::shared_ptr<_TamaASTNode> _owner;
+    std::shared_ptr<_TamaASTNode> _owner; // keeps inline parser-created nodes alive
+    std::shared_ptr<TamaRef> ref;         // non-null when this is a first-class ref
 
     TamaArgVal() = default;
     TamaArgVal(const godot::Variant &v) : var(v) {}
@@ -26,46 +25,45 @@ struct TamaArgVal {
     TamaArgVal(_TamaASTNode *n) : is_node(true), node(n) {}
     // Owning constructor: takes ownership (inline parser-created nodes).
     TamaArgVal(std::shared_ptr<_TamaASTNode> n) : is_node(true), node(n.get()), _owner(std::move(n)) {}
+    // First-class ref constructor.
+    TamaArgVal(std::shared_ptr<TamaRef> r) : ref(std::move(r)) {}
 };
 
+// ---------------------------------------------------------------------------
+// _TamaASTNode — plain C++ struct, no Godot machinery.
+// ---------------------------------------------------------------------------
 struct _TamaASTNode {
     int type_id = 0;
 
-    // Shared scalar fields
-    godot::String name;
-    godot::String expr;
-    godot::String var_name;
-    godot::String count;
-    godot::String index_var;
-    godot::String condition;
-    godot::String bullet_type;
-    godot::String export_type;
-    godot::String axis;          // "x" or "y" — OFFSET_AXIS nodes
-    godot::String dir_type_var;
-    godot::String speed_type_var;
-    godot::String axis_type_var;
+    std::string name, expr, var_name, count, index_var, condition;
+    std::string bullet_type, export_type, axis;
+    std::string dir_type_var, speed_type_var, axis_type_var;
     int  dir_type   = 0;
     int  speed_type = 0;
-    int  axis_type  = 1;   // REL default
+    int  axis_type  = 1;
     bool is_async   = false;
-    godot::Variant default_value;
+    godot::Variant default_value; // export var defaults — keep as Variant
 
-    // Body/block fields (now vectors of shared_ptr)
     std::vector<std::shared_ptr<_TamaASTNode>> body, else_body;
     std::vector<std::shared_ptr<_TamaASTNode>> fires, acts, bullets, exports;
 
-    // IF-chain fields
-    std::vector<godot::String>                               conditions;
+    std::vector<std::string>                               conditions;
     std::vector<std::vector<std::shared_ptr<_TamaASTNode>>> bodies;
 
-    // Params/args
-    std::vector<godot::String> params;
-    std::vector<TamaArgVal>    args;
+    std::vector<std::string> params;
+    std::vector<TamaArgVal>  args;
 
-    // Child node fields
     std::shared_ptr<_TamaASTNode> dir, speed, over, offset, pos, bullet;
     std::shared_ptr<_TamaASTNode> x, y, emitter_act, act, mvmt, main;
 };
 
-// Convenience factory used by the parser.
+// ---------------------------------------------------------------------------
+// TamaRef — first-class act/fire/bullet reference with pre-bound args.
+// Plain C++ struct, no Godot machinery.
+// ---------------------------------------------------------------------------
+struct TamaRef {
+    std::string name;
+    std::vector<TamaArgVal> bound_args;
+};
+
 std::shared_ptr<_TamaASTNode> tama_make_node(int type_id);

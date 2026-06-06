@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
@@ -11,14 +12,6 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
-
-// ===========================================================================
-// Payload class bindings
-// ===========================================================================
-
-void _TamaRef::_bind_methods() {
-    // Internal class — no GDScript-accessible properties needed.
-}
 
 // ===========================================================================
 // _TamaInterpreter
@@ -85,10 +78,8 @@ void _TamaInterpreter::start_act(_TamaASTNode *program, _TamaASTNode *act_n, Tam
     if (act_n->type_id == (int)TamaNodeType::INLINE_ACT) {
         _push_body(act_n->body);
     } else if (act_n->type_id == (int)TamaNodeType::ACT_CALL) {
-        const String &name_str = act_n->name;
-        std::string name = name_str.utf8().get_data();
+        const std::string &name = act_n->name;
 
-        // Check if name resolves through scope
         auto sit = _scope.find(name);
         if (sit != _scope.end()) {
             if (sit->second.is_node) {
@@ -97,25 +88,22 @@ void _TamaInterpreter::start_act(_TamaASTNode *program, _TamaASTNode *act_n, Tam
                     _push_body(sv->body);
                     goto start_act_done;
                 }
-            } else {
-                Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(sit->second.var.operator Object *());
-                if (tref.is_valid()) {
-                    std::string ref_name = tref->name.utf8().get_data();
-                    _TamaASTNode *act_def = _find_act(ref_name);
-                    if (!act_def) {
-                        UtilityFunctions::push_error(String("_TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
-                        _running = false;
-                        return;
-                    }
-                    if (!tref->bound_args.empty()) {
-                        _scope_saves.push_back(_scope);
-                        _scope = _scope_snapshot_plus_params(act_def->params, tref->bound_args);
-                        _push_body(act_def->body, false, true);
-                    } else {
-                        _push_body(act_def->body);
-                    }
-                    goto start_act_done;
+            } else if (sit->second.ref) {
+                const auto &tref = sit->second.ref;
+                _TamaASTNode *act_def = _find_act(tref->name);
+                if (!act_def) {
+                    UtilityFunctions::push_error(String("_TamaInterpreter: unknown act '") + String(tref->name.c_str()) + "'");
+                    _running = false;
+                    return;
                 }
+                if (!tref->bound_args.empty()) {
+                    _scope_saves.push_back(_scope);
+                    _scope = _scope_snapshot_plus_params(act_def->params, tref->bound_args);
+                    _push_body(act_def->body, false, true);
+                } else {
+                    _push_body(act_def->body);
+                }
+                goto start_act_done;
             }
         }
         {
@@ -212,11 +200,11 @@ void _TamaInterpreter::_build_lookup_tables() {
     if (!_program) return;
 
     for (const auto &sp : _program->fires)
-        if (sp) _fires_map[sp->name.utf8().get_data()] = sp.get();
+        if (sp) _fires_map[sp->name] = sp.get();
     for (const auto &sp : _program->acts)
-        if (sp) _acts_map[sp->name.utf8().get_data()] = sp.get();
+        if (sp) _acts_map[sp->name] = sp.get();
     for (const auto &sp : _program->bullets)
-        if (sp) _bullets_map[sp->name.utf8().get_data()] = sp.get();
+        if (sp) _bullets_map[sp->name] = sp.get();
 }
 
 std::vector<std::string> _TamaInterpreter::_snapshot_scope_keys() const {
@@ -257,7 +245,7 @@ void _TamaInterpreter::_push_body(const std::vector<_TamaASTNode*> &body,
 }
 
 void _TamaInterpreter::_push_repeat_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body,
-                                          int n, const String &idx_var) {
+                                          int n, const std::string &idx_var) {
     ExecFrame f;
     f.kind           = ExecFrame::Kind::REPEAT_CTRL;
     f.loop_n         = n;
@@ -269,7 +257,7 @@ void _TamaInterpreter::_push_repeat_ctrl(const std::vector<std::shared_ptr<_Tama
 }
 
 void _TamaInterpreter::_push_while_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body,
-                                         const String &cond) {
+                                         const std::string &cond) {
     ExecFrame f;
     f.kind       = ExecFrame::Kind::WHILE_CTRL;
     f.while_cond = cond;
@@ -280,7 +268,7 @@ void _TamaInterpreter::_push_while_ctrl(const std::vector<std::shared_ptr<_TamaA
 }
 
 void _TamaInterpreter::_push_repeatf_ctrl(const std::vector<std::shared_ptr<_TamaASTNode>> &body,
-                                           int n, const String &idx_var) {
+                                           int n, const std::string &idx_var) {
     ExecFrame f;
     f.kind           = ExecFrame::Kind::REPEATF_CTRL;
     f.loop_n         = n;
@@ -319,7 +307,7 @@ float _TamaInterpreter::eval_expr(const String &expr, const Dictionary &scope) {
         std::string k = ((String)keys[i]).utf8().get_data();
         _scope[k] = TamaScopeVal(scope[keys[i]]);
     }
-    float result = _eval_float(expr);
+    float result = _eval_float(std::string(expr.utf8().get_data()));
     _scope = std::move(saved);
     return result;
 }
@@ -362,8 +350,8 @@ void _TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
         return;
     }
 
-    if (!f.loop_index_var.is_empty())
-        _scope[f.loop_index_var.utf8().get_data()] = TamaScopeVal(Variant((float)f.loop_i));
+    if (!f.loop_index_var.empty())
+        _scope[f.loop_index_var] = TamaScopeVal(Variant((float)f.loop_i));
 
     if (is_repeatf) {
         auto pre = _snapshot_scope_keys();
@@ -407,8 +395,8 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
         return;
 
     case NT::VAR_DECL:
-        _scope[n->var_name.utf8().get_data()] = TamaScopeVal(
-            _eval_arg(TamaArgVal(Variant(n->expr))));
+        _scope[n->var_name] = TamaScopeVal(
+            _eval_arg(TamaArgVal(Variant(String(n->expr.c_str())))));
         return;
 
     case NT::FIRE_CALL:
@@ -463,14 +451,14 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
         return;
 
     case NT::REPEAT: {
-        String count_str = n->count.strip_edges();
-        int count_n = count_str.is_empty() ? -1 : (int)std::round(_eval_float(count_str));
-        const String &idx_var = n->index_var;
+        const std::string &count_str = n->count;
+        int count_n = count_str.empty() ? -1 : (int)std::round(_eval_float(count_str));
+        const std::string &idx_var = n->index_var;
         if (sync_only) {
             int i = 0;
             while (count_n < 0 || i < count_n) {
-                if (!idx_var.is_empty())
-                    _scope[idx_var.utf8().get_data()] = TamaScopeVal(Variant((float)i));
+                if (!idx_var.empty())
+                    _scope[idx_var] = TamaScopeVal(Variant((float)i));
                 auto pre = _snapshot_scope_keys();
                 _exec_body_sync(n->body);
                 for (auto it = _scope.begin(); it != _scope.end(); ) {
@@ -489,7 +477,7 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
     }
 
     case NT::WHILE: {
-        const String &cond = n->condition;
+        const std::string &cond = n->condition;
         if (sync_only) {
             while (_eval_float(cond) != 0.0f) {
                 auto pre = _snapshot_scope_keys();
@@ -508,9 +496,9 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
     }
 
     case NT::REPEAT_FRAME: {
-        String count_str = n->count.strip_edges();
-        const String &idx_var = n->index_var;
-        if (count_str.is_empty()) {
+        const std::string &count_str = n->count;
+        const std::string &idx_var   = n->index_var;
+        if (count_str.empty()) {
             if (!sync_only) _push_repeatf_ctrl(n->body, -1, idx_var);
         } else {
             int rf_n = (int)std::round(_eval_float(count_str));
@@ -518,8 +506,8 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
                 _push_repeatf_ctrl(n->body, rf_n, idx_var);
             } else {
                 for (int i = 0; i < rf_n && _running; ++i) {
-                    if (!idx_var.is_empty())
-                        _scope[idx_var.utf8().get_data()] = TamaScopeVal(Variant((float)i));
+                    if (!idx_var.empty())
+                        _scope[idx_var] = TamaScopeVal(Variant((float)i));
                     auto pre = _snapshot_scope_keys();
                     _exec_body_sync(n->body);
                     for (auto it = _scope.begin(); it != _scope.end(); ) {
@@ -536,11 +524,10 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
 
     case NT::ACT_CALL: {
         if (sync_only) return;
-        const String &name = n->name;
-        bool   is_async    = n->is_async;
-        std::string name_s = name.utf8().get_data();
+        const std::string &name = n->name;
+        bool is_async = n->is_async;
 
-        auto sit = _scope.find(name_s);
+        auto sit = _scope.find(name);
         if (sit != _scope.end()) {
             if (sit->second.is_node) {
                 _TamaASTNode *sv = sit->second.node;
@@ -549,34 +536,31 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
                     else          _push_body(sv->body);
                     return;
                 }
-            } else {
-                Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(sit->second.var.operator Object *());
-                if (tref.is_valid()) {
-                    std::string ref_name = tref->name.utf8().get_data();
-                    _TamaASTNode *act_def = _find_act(ref_name);
-                    if (!act_def) {
-                        UtilityFunctions::push_warning(String("_TamaInterpreter: unknown act '") + String(ref_name.c_str()) + "'");
-                        return;
-                    }
-                    std::vector<TamaArgVal> eval_args;
-                    for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
-                    for (const TamaArgVal &a : n->args)           eval_args.push_back(_eval_arg(a));
-                    if (is_async) {
-                        TamaScope sc = _scope_snapshot_plus_params(act_def->params, eval_args);
-                        _run_async_act(act_def, std::move(sc));
-                    } else {
-                        _scope_saves.push_back(_scope);
-                        _scope = _scope_snapshot_plus_params(act_def->params, eval_args);
-                        _push_body(act_def->body, false, true);
-                    }
+            } else if (sit->second.ref) {
+                const auto &tref = sit->second.ref;
+                _TamaASTNode *act_def = _find_act(tref->name);
+                if (!act_def) {
+                    UtilityFunctions::push_warning(String("_TamaInterpreter: unknown act '") + String(tref->name.c_str()) + "'");
                     return;
                 }
+                std::vector<TamaArgVal> eval_args;
+                for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
+                for (const TamaArgVal &a : n->args)           eval_args.push_back(_eval_arg(a));
+                if (is_async) {
+                    TamaScope sc = _scope_snapshot_plus_params(act_def->params, eval_args);
+                    _run_async_act(act_def, std::move(sc));
+                } else {
+                    _scope_saves.push_back(_scope);
+                    _scope = _scope_snapshot_plus_params(act_def->params, eval_args);
+                    _push_body(act_def->body, false, true);
+                }
+                return;
             }
         }
 
-        _TamaASTNode *act_def = _find_act(name_s);
+        _TamaASTNode *act_def = _find_act(name);
         if (!act_def) {
-            UtilityFunctions::push_warning(String("_TamaInterpreter: unknown act '") + name + "'");
+            UtilityFunctions::push_warning(String("_TamaInterpreter: unknown act '") + String(name.c_str()) + "'");
             return;
         }
         std::vector<TamaArgVal> eval_args;
@@ -656,10 +640,9 @@ void _TamaInterpreter::_run_async_act(_TamaASTNode *act_n, TamaScope scope_copy)
 // ---------------------------------------------------------------------------
 
 void _TamaInterpreter::_exec_fire_call(_TamaASTNode *n) {
-    const String &name = n->name;
-    std::string name_s = name.utf8().get_data();
+    const std::string &name = n->name;
 
-    auto sit = _scope.find(name_s);
+    auto sit = _scope.find(name);
     if (sit != _scope.end()) {
         if (sit->second.is_node) {
             _TamaASTNode *sv = sit->second.node;
@@ -667,30 +650,27 @@ void _TamaInterpreter::_exec_fire_call(_TamaASTNode *n) {
                 _exec_fire_node(sv);
                 return;
             }
-        } else {
-            Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(sit->second.var.operator Object *());
-            if (tref.is_valid()) {
-                std::string ref_name = tref->name.utf8().get_data();
-                _TamaASTNode *fire_def = _find_fire(ref_name);
-                if (!fire_def) {
-                    UtilityFunctions::push_warning(String("_TamaInterpreter: unknown fire '") + String(ref_name.c_str()) + "'");
-                    return;
-                }
-                std::vector<TamaArgVal> eval_args;
-                for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
-                for (const TamaArgVal &a : n->args)           eval_args.push_back(_eval_arg(a));
-                TamaScope saved = _scope;
-                _scope = _scope_snapshot_plus_params(fire_def->params, eval_args);
-                _exec_fire_node(fire_def);
-                _scope = std::move(saved);
+        } else if (sit->second.ref) {
+            const auto &tref = sit->second.ref;
+            _TamaASTNode *fire_def = _find_fire(tref->name);
+            if (!fire_def) {
+                UtilityFunctions::push_warning(String("_TamaInterpreter: unknown fire '") + String(tref->name.c_str()) + "'");
                 return;
             }
+            std::vector<TamaArgVal> eval_args;
+            for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
+            for (const TamaArgVal &a : n->args)           eval_args.push_back(_eval_arg(a));
+            TamaScope saved = _scope;
+            _scope = _scope_snapshot_plus_params(fire_def->params, eval_args);
+            _exec_fire_node(fire_def);
+            _scope = std::move(saved);
+            return;
         }
     }
 
-    _TamaASTNode *fire_def = _find_fire(name_s);
+    _TamaASTNode *fire_def = _find_fire(name);
     if (!fire_def) {
-        UtilityFunctions::push_warning(String("_TamaInterpreter: unknown fire '") + name + "'");
+        UtilityFunctions::push_warning(String("_TamaInterpreter: unknown fire '") + String(name.c_str()) + "'");
         return;
     }
     std::vector<TamaArgVal> eval_args;
@@ -742,11 +722,11 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
     _TamaASTNode *bul_node = node->bullet.get();
     if (bul_node) {
         if (bul_node->type_id == (int)TamaNodeType::INLINE_BULLET) {
-            const String &btype = bul_node->bullet_type;
-            auto bsit = _scope.find(btype.utf8().get_data());
+            const std::string &btype = bul_node->bullet_type;
+            auto bsit = _scope.find(btype);
             if (bsit != _scope.end() && !bsit->second.is_node &&
                 bsit->second.var.get_type() == Variant::STRING)
-                data.bullet_type = (String)bsit->second.var;
+                data.bullet_type = std::string(((String)bsit->second.var).utf8().get_data());
             else
                 data.bullet_type = btype;
             data.bullet_emitter_act = bul_node->emitter_act.get();
@@ -754,18 +734,18 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
             _TamaASTNode *mvmt = bul_node->mvmt.get();
             if (mvmt) _populate_mvmt(&data, mvmt);
         } else if (bul_node->type_id == (int)TamaNodeType::BULLET_CALL) {
-            std::string bul_name = bul_node->name.utf8().get_data();
+            std::string bul_name = bul_node->name;
 
             auto bsit = _scope.find(bul_name);
             if (bsit != _scope.end()) {
                 if (bsit->second.is_node) {
                     _TamaASTNode *svo = bsit->second.node;
                     if (svo && svo->type_id == (int)TamaNodeType::INLINE_BULLET) {
-                        const String &btype = svo->bullet_type;
-                        auto btsit = _scope.find(btype.utf8().get_data());
+                        const std::string &btype = svo->bullet_type;
+                        auto btsit = _scope.find(btype);
                         if (btsit != _scope.end() && !btsit->second.is_node &&
                             btsit->second.var.get_type() == Variant::STRING)
-                            data.bullet_type = (String)btsit->second.var;
+                            data.bullet_type = std::string(((String)btsit->second.var).utf8().get_data());
                         else
                             data.bullet_type = btype;
                         data.bullet_emitter_act = svo->emitter_act.get();
@@ -774,33 +754,31 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                         if (mvmt) _populate_mvmt(&data, mvmt);
                         goto bullet_done;
                     }
-                } else {
-                    Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(bsit->second.var.operator Object *());
-                    if (tref.is_valid()) {
-                        bul_name = tref->name.utf8().get_data();
-                        _TamaASTNode *bullet_def = _find_bullet(bul_name);
-                        if (!bullet_def) {
-                            UtilityFunctions::push_warning(String("_TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
-                            goto bullet_done;
-                        }
-                        std::vector<TamaArgVal> eval_args;
-                        for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
-                        for (const TamaArgVal &a : bul_node->args)    eval_args.push_back(_eval_arg(a));
-                        const String &btype = bullet_def->bullet_type;
-                        auto btsit = _scope.find(btype.utf8().get_data());
-                        if (btsit != _scope.end() && !btsit->second.is_node &&
-                            btsit->second.var.get_type() == Variant::STRING)
-                            data.bullet_type = (String)btsit->second.var;
-                        else
-                            data.bullet_type = btype;
-                        data.bullet_emitter_act = bullet_def->emitter_act.get();
-                        data.bullet_act         = bullet_def->act.get();
-                        data.bullet_params      = bullet_def->params;
-                        data.bullet_args        = eval_args;
-                        _TamaASTNode *mvmt = bullet_def->mvmt.get();
-                        if (mvmt) _populate_mvmt(&data, mvmt);
+                } else if (bsit->second.ref) {
+                    const auto &tref = bsit->second.ref;
+                    bul_name = tref->name;
+                    _TamaASTNode *bullet_def = _find_bullet(bul_name);
+                    if (!bullet_def) {
+                        UtilityFunctions::push_warning(String("_TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
                         goto bullet_done;
                     }
+                    std::vector<TamaArgVal> eval_args;
+                    for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
+                    for (const TamaArgVal &a : bul_node->args)    eval_args.push_back(_eval_arg(a));
+                    const std::string &btype = bullet_def->bullet_type;
+                    auto btsit = _scope.find(btype);
+                    if (btsit != _scope.end() && !btsit->second.is_node &&
+                        btsit->second.var.get_type() == Variant::STRING)
+                        data.bullet_type = std::string(((String)btsit->second.var).utf8().get_data());
+                    else
+                        data.bullet_type = btype;
+                    data.bullet_emitter_act = bullet_def->emitter_act.get();
+                    data.bullet_act         = bullet_def->act.get();
+                    data.bullet_params      = bullet_def->params;
+                    data.bullet_args        = eval_args;
+                    _TamaASTNode *mvmt = bullet_def->mvmt.get();
+                    if (mvmt) _populate_mvmt(&data, mvmt);
+                    goto bullet_done;
                 }
             }
             {
@@ -811,11 +789,11 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                 }
                 std::vector<TamaArgVal> eval_args;
                 for (const TamaArgVal &a : bul_node->args) eval_args.push_back(_eval_arg(a));
-                const String &btype = bullet_def->bullet_type;
-                auto btsit = _scope.find(btype.utf8().get_data());
+                const std::string &btype = bullet_def->bullet_type;
+                auto btsit = _scope.find(btype);
                 if (btsit != _scope.end() && !btsit->second.is_node &&
                     btsit->second.var.get_type() == Variant::STRING)
-                    data.bullet_type = (String)btsit->second.var;
+                    data.bullet_type = std::string(((String)btsit->second.var).utf8().get_data());
                 else
                     data.bullet_type = btype;
                 data.bullet_emitter_act = bullet_def->emitter_act.get();
@@ -906,26 +884,26 @@ void _TamaInterpreter::_emit_accel(_TamaASTNode *n) {
 // ---------------------------------------------------------------------------
 
 TamaArgVal _TamaInterpreter::_eval_arg(const TamaArgVal &arg) {
+    if (arg.ref) return arg;
+
     if (arg.is_node) {
         _TamaASTNode *obj = arg.node;
         if (!obj) return TamaArgVal(Variant(0.0f));
         if (obj->type_id == (int)TamaNodeType::REF_CALL_ARG) {
-            Ref<_TamaRef> tr = memnew(_TamaRef);
+            auto tr = std::make_shared<TamaRef>();
             tr->name = obj->name;
             for (const TamaArgVal &sa : obj->args)
                 tr->bound_args.push_back(_eval_arg(sa));
-            auto sit = _scope.find(obj->name.utf8().get_data());
-            if (sit != _scope.end() && !sit->second.is_node) {
-                Ref<_TamaRef> existing = Object::cast_to<_TamaRef>(sit->second.var.operator Object *());
-                if (existing.is_valid()) {
-                    Ref<_TamaRef> merged = memnew(_TamaRef);
-                    merged->name = existing->name;
-                    merged->bound_args = existing->bound_args;
-                    for (const TamaArgVal &ba : tr->bound_args) merged->bound_args.push_back(ba);
-                    return TamaArgVal(Variant(merged.ptr()));
-                }
+            // Merge with existing ref in scope if present
+            auto sit = _scope.find(obj->name);
+            if (sit != _scope.end() && sit->second.ref) {
+                auto merged = std::make_shared<TamaRef>();
+                merged->name = sit->second.ref->name;
+                merged->bound_args = sit->second.ref->bound_args;
+                for (const TamaArgVal &ba : tr->bound_args) merged->bound_args.push_back(ba);
+                return TamaArgVal(merged);
             }
-            return TamaArgVal(Variant(tr.ptr()));
+            return TamaArgVal(tr);
         }
         return arg;
     }
@@ -938,8 +916,9 @@ TamaArgVal _TamaInterpreter::_eval_arg(const TamaArgVal &arg) {
     if (stripped.is_valid_float()) return TamaArgVal(Variant(stripped.to_float()));
 
     if (stripped.is_valid_identifier()) {
-        auto sit = _scope.find(stripped.utf8().get_data());
+        auto sit = _scope.find(std::string(stripped.utf8().get_data()));
         if (sit != _scope.end()) {
+            if (sit->second.ref)    return TamaArgVal(sit->second.ref);
             if (sit->second.is_node) return TamaArgVal(sit->second.node);
             const Variant &sv = sit->second.var;
             if (sv.get_type() == Variant::FLOAT || sv.get_type() == Variant::INT || sv.get_type() == Variant::BOOL)
@@ -953,28 +932,45 @@ TamaArgVal _TamaInterpreter::_eval_arg(const TamaArgVal &arg) {
         return TamaArgVal(Variant(stripped));
     }
 
-    return TamaArgVal(Variant(_eval_float(expr)));
+    return TamaArgVal(Variant(_eval_float(std::string(expr.utf8().get_data()))));
 }
 
-float _TamaInterpreter::_eval_float(const String &expr) {
-    String s = expr.strip_edges();
-    if (s.is_empty()) return 0.0f;
-    if (s.is_valid_float()) return s.to_float();
+float _TamaInterpreter::_eval_float(const std::string &expr) {
+    // Trim whitespace
+    size_t beg = expr.find_first_not_of(" \t");
+    if (beg == std::string::npos) return 0.0f;
+    size_t end = expr.find_last_not_of(" \t");
+    const std::string s = (beg == 0 && end == expr.size() - 1) ? expr : expr.substr(beg, end - beg + 1);
 
-    auto sit = _scope.find(s.utf8().get_data());
-    if (sit != _scope.end() && !sit->second.is_node) {
-        const Variant &sv = sit->second.var;
-        if (sv.get_type() == Variant::FLOAT || sv.get_type() == Variant::INT || sv.get_type() == Variant::BOOL)
-            return (float)sv;
+    // Fast numeric path
+    char *endp;
+    float fv = std::strtof(s.c_str(), &endp);
+    if (endp == s.c_str() + s.size()) return fv;
+
+    // Identifier path — direct scope lookup
+    bool is_ident = !s.empty() && (std::isalpha((unsigned char)s[0]) || s[0] == '_');
+    if (is_ident) {
+        for (size_t i = 1; i < s.size(); ++i) {
+            if (!std::isalnum((unsigned char)s[i]) && s[i] != '_') { is_ident = false; break; }
+        }
+    }
+    if (is_ident) {
+        auto sit = _scope.find(s);
+        if (sit != _scope.end() && !sit->second.is_node && !sit->second.ref) {
+            const Variant &sv = sit->second.var;
+            if (sv.get_type() == Variant::FLOAT || sv.get_type() == Variant::INT || sv.get_type() == Variant::BOOL)
+                return (float)sv;
+        }
     }
 
+    // Full expression evaluator
     _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
     if (!er) return 0.0f;
 
     PackedStringArray var_names;
     PackedFloat64Array var_values;
     for (const auto &kv : _scope) {
-        if (!kv.second.is_node) {
+        if (!kv.second.is_node && !kv.second.ref) {
             const Variant &val = kv.second.var;
             if (val.get_type() == Variant::FLOAT || val.get_type() == Variant::INT || val.get_type() == Variant::BOOL) {
                 var_names.push_back(String(kv.first.c_str()));
@@ -983,7 +979,7 @@ float _TamaInterpreter::_eval_float(const String &expr) {
         }
     }
 
-    return (float)(double)er->eval(s, var_names, var_values, _context);
+    return (float)(double)er->eval(String(s.c_str()), var_names, var_values, _context);
 }
 
 float _TamaInterpreter::_eval_arg_float(const TamaArgVal &arg) {
@@ -998,8 +994,8 @@ float _TamaInterpreter::_eval_arg_float(const TamaArgVal &arg) {
 // ---------------------------------------------------------------------------
 
 int _TamaInterpreter::_get_dir_type(_TamaASTNode *dir_node) const {
-    if (dir_node->dir_type_var.is_empty()) return dir_node->dir_type;
-    auto sit = _scope.find(dir_node->dir_type_var.utf8().get_data());
+    if (dir_node->dir_type_var.empty()) return dir_node->dir_type;
+    auto sit = _scope.find(dir_node->dir_type_var);
     if (sit != _scope.end() && !sit->second.is_node && sit->second.var.get_type() == Variant::STRING) {
         String s = (String)sit->second.var;
         if (s == "aim") return 0; if (s == "abs") return 1;
@@ -1009,8 +1005,8 @@ int _TamaInterpreter::_get_dir_type(_TamaASTNode *dir_node) const {
 }
 
 int _TamaInterpreter::_get_speed_type(_TamaASTNode *spd_node) const {
-    if (spd_node->speed_type_var.is_empty()) return spd_node->speed_type;
-    auto sit = _scope.find(spd_node->speed_type_var.utf8().get_data());
+    if (spd_node->speed_type_var.empty()) return spd_node->speed_type;
+    auto sit = _scope.find(spd_node->speed_type_var);
     if (sit != _scope.end() && !sit->second.is_node && sit->second.var.get_type() == Variant::STRING) {
         String s = (String)sit->second.var;
         if (s == "abs") return 0; if (s == "rel") return 1; if (s == "seq") return 2;
@@ -1019,8 +1015,8 @@ int _TamaInterpreter::_get_speed_type(_TamaASTNode *spd_node) const {
 }
 
 int _TamaInterpreter::_get_axis_type(_TamaASTNode *axis_node) const {
-    if (axis_node->axis_type_var.is_empty()) return axis_node->axis_type;
-    auto sit = _scope.find(axis_node->axis_type_var.utf8().get_data());
+    if (axis_node->axis_type_var.empty()) return axis_node->axis_type;
+    auto sit = _scope.find(axis_node->axis_type_var);
     if (sit != _scope.end() && !sit->second.is_node && sit->second.var.get_type() == Variant::STRING) {
         String s = (String)sit->second.var;
         if (s == "abs") return 0; if (s == "rel") return 1; if (s == "seq") return 2;
@@ -1052,11 +1048,11 @@ _TamaASTNode *_TamaInterpreter::_find_bullet(const std::string &name) const {
 // ---------------------------------------------------------------------------
 
 TamaScope _TamaInterpreter::_scope_snapshot_plus_params(
-        const std::vector<godot::String> &params,
+        const std::vector<std::string> &params,
         const std::vector<TamaArgVal> &args) const {
     TamaScope scope = _scope;
     int n = (int)std::min(params.size(), args.size());
     for (int i = 0; i < n; ++i)
-        scope[params[i].utf8().get_data()] = TamaScopeVal(args[i]);
+        scope[params[i]] = TamaScopeVal(args[i]);
     return scope;
 }

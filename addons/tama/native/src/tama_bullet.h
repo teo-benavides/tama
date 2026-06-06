@@ -24,10 +24,10 @@ public:
     float          _last_speed    = 0.0f;
     bool           _mvmt_x_set    = false;
     int            _mvmt_x_type   = 0;
-    godot::String  _mvmt_x_expr;
+    std::string    _mvmt_x_expr;
     bool           _mvmt_y_set    = false;
     int            _mvmt_y_type   = 0;
-    godot::String  _mvmt_y_expr;
+    std::string    _mvmt_y_expr;
     godot::Dictionary _mvmt_scope;
     godot::Vector2 _initial_position;
 

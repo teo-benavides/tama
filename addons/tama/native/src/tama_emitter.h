@@ -51,7 +51,7 @@ public:
     float _last_speed = 0.0f;
 
 private:
-    struct ExportDef { godot::String name, type; godot::Variant default_value; };
+    struct ExportDef { std::string name, type; godot::Variant default_value; };
 
     godot::String _script_filename;
     bool          _excluded_from_group = false;

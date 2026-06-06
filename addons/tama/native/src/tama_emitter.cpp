@@ -55,7 +55,7 @@ bool TamaEmitter::_property_can_revert(const StringName &p_name) const {
     if (!name.begins_with("tama_export_")) return false;
     String key = name.substr(12);
     for (const ExportDef &def : _cached_export_defs) {
-        if (def.name == key) return def.default_value.get_type() != Variant::NIL;
+        if (String(def.name.c_str()) == key) return def.default_value.get_type() != Variant::NIL;
     }
     return false;
 }
@@ -65,7 +65,7 @@ bool TamaEmitter::_property_get_revert(const StringName &p_name, Variant &r_ret)
     if (!name.begins_with("tama_export_")) return false;
     String key = name.substr(12);
     for (const ExportDef &def : _cached_export_defs) {
-        if (def.name == key) { r_ret = def.default_value; return true; }
+        if (String(def.name.c_str()) == key) { r_ret = def.default_value; return true; }
     }
     return false;
 }
@@ -81,7 +81,7 @@ void TamaEmitter::_get_property_list(List<PropertyInfo> *p_list) const {
         if      (def.type == "num")  vtype = Variant::FLOAT;
         else if (def.type == "bool") vtype = Variant::BOOL;
         else                         vtype = Variant::STRING;
-        p_list->push_back(PropertyInfo(vtype, String("tama_export_") + def.name,
+        p_list->push_back(PropertyInfo(vtype, String("tama_export_") + String(def.name.c_str()),
             PROPERTY_HINT_NONE, "",
             PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_SCRIPT_VARIABLE));
     }
@@ -176,8 +176,8 @@ void TamaEmitter::_read_exports_from(_TamaASTNode *prog) {
         def.type          = exp->export_type;
         def.default_value = exp->default_value;
         _cached_export_defs.push_back(def);
-        if (def.default_value.get_type() != Variant::NIL && !_export_values.has(def.name))
-            _export_values[def.name] = def.default_value;
+        if (def.default_value.get_type() != Variant::NIL && !_export_values.has(String(def.name.c_str())))
+            _export_values[String(def.name.c_str())] = def.default_value;
     }
 }
 
@@ -210,7 +210,7 @@ String TamaEmitter::_exports_signature() const {
     String sig;
     for (const ExportDef &def : _cached_export_defs) {
         if (!sig.is_empty()) sig += ",";
-        sig += def.name + String(":") + def.type;
+        sig += String(def.name.c_str()) + ":" + String(def.type.c_str());
     }
     return sig;
 }

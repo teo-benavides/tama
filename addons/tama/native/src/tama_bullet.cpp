@@ -97,11 +97,11 @@ void TamaBullet::_physics_process(double /*delta*/) {
         _TamaInterpreter *runner = Object::cast_to<_TamaInterpreter>(_runner);
         if (runner) {
             if (_mvmt_x_set) {
-                float vx = runner->eval_expr(_mvmt_x_expr, _mvmt_scope);
+                float vx = runner->eval_expr(String(_mvmt_x_expr.c_str()), _mvmt_scope);
                 pos.x = (_mvmt_x_type == 0) ? vx : _initial_position.x + vx; // 0=ABS
             }
             if (_mvmt_y_set) {
-                float vy = runner->eval_expr(_mvmt_y_expr, _mvmt_scope);
+                float vy = runner->eval_expr(String(_mvmt_y_expr.c_str()), _mvmt_scope);
                 pos.y = (_mvmt_y_type == 0) ? vy : _initial_position.y + vy;
             }
         }
