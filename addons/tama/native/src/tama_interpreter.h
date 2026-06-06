@@ -2,6 +2,7 @@
 #include "tama_expr.h"
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -49,14 +50,10 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// Signal payload classes
+// Fire event data — plain C++ struct, stack-allocated per bullet fired
 // ---------------------------------------------------------------------------
 
-class _TamaBulletFireData : public godot::RefCounted {
-    GDCLASS(_TamaBulletFireData, godot::RefCounted)
-protected:
-    static void _bind_methods();
-public:
+struct TamaBulletFireData {
     int    dir_type       = 0;   // DirType: AIM=0, ABS=1, REL=2, SEQ=3
     float  dir_value      = 0.0f;
     int    speed_type     = 0;   // ValueType: ABS=0, REL=1, SEQ=2
@@ -74,11 +71,11 @@ public:
     bool   pos_y_set      = false;
     int    pos_y_type     = 0;   // ABS
     float  pos_y          = 0.0f;
-    godot::String bullet_type;
+    godot::String  bullet_type;
     godot::Object *bullet_emitter_act = nullptr;
     godot::Object *bullet_act         = nullptr;
-    godot::Array   bullet_params;    // Array[String]
-    godot::Array   bullet_args;      // Array (float | String | _TamaRef | ...)
+    godot::Array   bullet_params;
+    godot::Array   bullet_args;
     bool           mvmt_x_set  = false;
     int            mvmt_x_type = 0;
     godot::String  mvmt_x_expr;
@@ -86,37 +83,6 @@ public:
     int            mvmt_y_type = 0;
     godot::String  mvmt_y_expr;
     godot::Object *source_program = nullptr;
-
-    // Accessors (required by _bind_methods)
-    int    get_dir_type()        const;
-    float  get_dir_value()       const;
-    int    get_speed_type()      const;
-    float  get_speed_value()     const;
-    int    get_offset_mode()     const;
-    float  get_offset_value()    const;
-    int    get_offset_x_type()   const;
-    float  get_offset_x()        const;
-    int    get_offset_y_type()   const;
-    float  get_offset_y()        const;
-    bool   get_has_pos()         const;
-    bool   get_pos_x_set()       const;
-    int    get_pos_x_type()      const;
-    float  get_pos_x()           const;
-    bool   get_pos_y_set()       const;
-    int    get_pos_y_type()      const;
-    float  get_pos_y()           const;
-    godot::String  get_bullet_type()        const;
-    godot::Object *get_bullet_emitter_act() const;
-    godot::Object *get_bullet_act()         const;
-    godot::Array   get_bullet_params()      const;
-    godot::Array   get_bullet_args()        const;
-    bool           get_mvmt_x_set()         const;
-    int            get_mvmt_x_type()        const;
-    godot::String  get_mvmt_x_expr()        const;
-    bool           get_mvmt_y_set()         const;
-    int            get_mvmt_y_type()        const;
-    godot::String  get_mvmt_y_expr()        const;
-    godot::Object *get_source_program()     const;
 };
 
 // First-class value stored in scope — wraps a definition name + pre-bound args.
@@ -127,8 +93,6 @@ protected:
 public:
     godot::String name;
     godot::Array  bound_args;
-    godot::String get_ref_name()   const;
-    godot::Array  get_bound_args() const;
 };
 
 // ---------------------------------------------------------------------------
@@ -253,11 +217,8 @@ class _TamaInterpreter : public godot::Node {
     // Run an async child act
     void _run_async_act(godot::Object *act_node, const godot::Dictionary &scope_copy);
 
-    // Signal forwarder: relay async-child bullet_fired to this interpreter's own signal
-    void _fwd_bullet_fired(godot::Variant data) { emit_signal("bullet_fired", data); }
-
-    // Populate mvmt fields on a BulletFireData
-    void _populate_mvmt(_TamaBulletFireData *data, godot::Object *mvmt_node);
+    // Populate mvmt fields on fire data
+    void _populate_mvmt(TamaBulletFireData *data, godot::Object *mvmt_node);
 
     // Sync body execution (for repeatf body — no suspension allowed)
     void _exec_body_sync(const godot::Array &body);
@@ -283,6 +244,10 @@ public:
 
     // Evaluate an expression with a given scope — used by TamaBullet for mvmt expressions.
     float eval_expr(const godot::String &expr, const godot::Dictionary &scope);
+
+    // C++ callbacks — set by spawn manager / emitter, no Godot signal overhead
+    std::function<void(const TamaBulletFireData &)> _fire_cb;
+    std::function<void()>                           _finished_cb;
 
     // Event handler (C++ only — no Godot signal overhead)
     void set_event_handler(TamaBulletEventHandler *h) { _event_handler = h; }

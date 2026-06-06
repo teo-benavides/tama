@@ -15,112 +15,9 @@ using namespace godot;
 // Payload class bindings
 // ===========================================================================
 
-#define BIND_PROP(cls, field, vtype) \
-    ClassDB::bind_method(D_METHOD("get_" #field), [](cls *s) { return s->field; }); \
-    ClassDB::bind_method(D_METHOD("set_" #field, "v"), [](cls *s, auto v) { s->field = v; }); \
-    ADD_PROPERTY(PropertyInfo(Variant::vtype, #field), "set_" #field, "get_" #field)
-
-void _TamaBulletFireData::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_dir_type"),        &_TamaBulletFireData::get_dir_type);
-    ClassDB::bind_method(D_METHOD("get_dir_value"),       &_TamaBulletFireData::get_dir_value);
-    ClassDB::bind_method(D_METHOD("get_speed_type"),      &_TamaBulletFireData::get_speed_type);
-    ClassDB::bind_method(D_METHOD("get_speed_value"),     &_TamaBulletFireData::get_speed_value);
-    ClassDB::bind_method(D_METHOD("get_offset_mode"),     &_TamaBulletFireData::get_offset_mode);
-    ClassDB::bind_method(D_METHOD("get_offset_value"),    &_TamaBulletFireData::get_offset_value);
-    ClassDB::bind_method(D_METHOD("get_offset_x_type"),   &_TamaBulletFireData::get_offset_x_type);
-    ClassDB::bind_method(D_METHOD("get_offset_x"),        &_TamaBulletFireData::get_offset_x);
-    ClassDB::bind_method(D_METHOD("get_offset_y_type"),   &_TamaBulletFireData::get_offset_y_type);
-    ClassDB::bind_method(D_METHOD("get_offset_y"),        &_TamaBulletFireData::get_offset_y);
-    ClassDB::bind_method(D_METHOD("get_has_pos"),         &_TamaBulletFireData::get_has_pos);
-    ClassDB::bind_method(D_METHOD("get_pos_x_set"),       &_TamaBulletFireData::get_pos_x_set);
-    ClassDB::bind_method(D_METHOD("get_pos_x_type"),      &_TamaBulletFireData::get_pos_x_type);
-    ClassDB::bind_method(D_METHOD("get_pos_x"),           &_TamaBulletFireData::get_pos_x);
-    ClassDB::bind_method(D_METHOD("get_pos_y_set"),       &_TamaBulletFireData::get_pos_y_set);
-    ClassDB::bind_method(D_METHOD("get_pos_y_type"),      &_TamaBulletFireData::get_pos_y_type);
-    ClassDB::bind_method(D_METHOD("get_pos_y"),           &_TamaBulletFireData::get_pos_y);
-    ClassDB::bind_method(D_METHOD("get_bullet_type"),     &_TamaBulletFireData::get_bullet_type);
-    ClassDB::bind_method(D_METHOD("get_bullet_emitter_act"), &_TamaBulletFireData::get_bullet_emitter_act);
-    ClassDB::bind_method(D_METHOD("get_bullet_act"),      &_TamaBulletFireData::get_bullet_act);
-    ClassDB::bind_method(D_METHOD("get_bullet_params"),   &_TamaBulletFireData::get_bullet_params);
-    ClassDB::bind_method(D_METHOD("get_bullet_args"),     &_TamaBulletFireData::get_bullet_args);
-    ClassDB::bind_method(D_METHOD("get_mvmt_x_set"),      &_TamaBulletFireData::get_mvmt_x_set);
-    ClassDB::bind_method(D_METHOD("get_mvmt_x_type"),     &_TamaBulletFireData::get_mvmt_x_type);
-    ClassDB::bind_method(D_METHOD("get_mvmt_x_expr"),     &_TamaBulletFireData::get_mvmt_x_expr);
-    ClassDB::bind_method(D_METHOD("get_mvmt_y_set"),      &_TamaBulletFireData::get_mvmt_y_set);
-    ClassDB::bind_method(D_METHOD("get_mvmt_y_type"),     &_TamaBulletFireData::get_mvmt_y_type);
-    ClassDB::bind_method(D_METHOD("get_mvmt_y_expr"),     &_TamaBulletFireData::get_mvmt_y_expr);
-    ClassDB::bind_method(D_METHOD("get_source_program"),  &_TamaBulletFireData::get_source_program);
-
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "dir_type"),        "", "get_dir_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "dir_value"),       "", "get_dir_value");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "speed_type"),      "", "get_speed_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "speed_value"),     "", "get_speed_value");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "offset_mode"),     "", "get_offset_mode");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "offset_value"),    "", "get_offset_value");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "offset_x_type"),   "", "get_offset_x_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "offset_x"),        "", "get_offset_x");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "offset_y_type"),   "", "get_offset_y_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "offset_y"),        "", "get_offset_y");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,   "has_pos"),         "", "get_has_pos");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,   "pos_x_set"),       "", "get_pos_x_set");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "pos_x_type"),      "", "get_pos_x_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "pos_x"),           "", "get_pos_x");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,   "pos_y_set"),       "", "get_pos_y_set");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "pos_y_type"),      "", "get_pos_y_type");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "pos_y"),           "", "get_pos_y");
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "bullet_type"),     "", "get_bullet_type");
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "bullet_emitter_act"), "", "get_bullet_emitter_act");
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "bullet_act"),     "", "get_bullet_act");
-    ADD_PROPERTY(PropertyInfo(Variant::ARRAY,  "bullet_params"),  "", "get_bullet_params");
-    ADD_PROPERTY(PropertyInfo(Variant::ARRAY,  "bullet_args"),    "", "get_bullet_args");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,   "mvmt_x_set"),     "", "get_mvmt_x_set");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "mvmt_x_type"),    "", "get_mvmt_x_type");
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "mvmt_x_expr"),    "", "get_mvmt_x_expr");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL,   "mvmt_y_set"),     "", "get_mvmt_y_set");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "mvmt_y_type"),    "", "get_mvmt_y_type");
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "mvmt_y_expr"),    "", "get_mvmt_y_expr");
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "source_program"), "", "get_source_program");
-}
-
-// Accessor definitions for _TamaBulletFireData
-int    _TamaBulletFireData::get_dir_type()        const { return dir_type; }
-float  _TamaBulletFireData::get_dir_value()       const { return dir_value; }
-int    _TamaBulletFireData::get_speed_type()      const { return speed_type; }
-float  _TamaBulletFireData::get_speed_value()     const { return speed_value; }
-int    _TamaBulletFireData::get_offset_mode()     const { return offset_mode; }
-float  _TamaBulletFireData::get_offset_value()    const { return offset_value; }
-int    _TamaBulletFireData::get_offset_x_type()   const { return offset_x_type; }
-float  _TamaBulletFireData::get_offset_x()        const { return offset_x; }
-int    _TamaBulletFireData::get_offset_y_type()   const { return offset_y_type; }
-float  _TamaBulletFireData::get_offset_y()        const { return offset_y; }
-bool   _TamaBulletFireData::get_has_pos()         const { return has_pos; }
-bool   _TamaBulletFireData::get_pos_x_set()       const { return pos_x_set; }
-int    _TamaBulletFireData::get_pos_x_type()      const { return pos_x_type; }
-float  _TamaBulletFireData::get_pos_x()           const { return pos_x; }
-bool   _TamaBulletFireData::get_pos_y_set()       const { return pos_y_set; }
-int    _TamaBulletFireData::get_pos_y_type()      const { return pos_y_type; }
-float  _TamaBulletFireData::get_pos_y()           const { return pos_y; }
-String _TamaBulletFireData::get_bullet_type()     const { return bullet_type; }
-Object*_TamaBulletFireData::get_bullet_emitter_act()const{ return bullet_emitter_act; }
-Object*_TamaBulletFireData::get_bullet_act()      const { return bullet_act; }
-Array  _TamaBulletFireData::get_bullet_params()   const { return bullet_params; }
-Array  _TamaBulletFireData::get_bullet_args()     const { return bullet_args; }
-bool   _TamaBulletFireData::get_mvmt_x_set()      const { return mvmt_x_set; }
-int    _TamaBulletFireData::get_mvmt_x_type()     const { return mvmt_x_type; }
-String _TamaBulletFireData::get_mvmt_x_expr()     const { return mvmt_x_expr; }
-bool   _TamaBulletFireData::get_mvmt_y_set()      const { return mvmt_y_set; }
-int    _TamaBulletFireData::get_mvmt_y_type()     const { return mvmt_y_type; }
-String _TamaBulletFireData::get_mvmt_y_expr()     const { return mvmt_y_expr; }
-Object*_TamaBulletFireData::get_source_program()  const { return source_program; }
-
 void _TamaRef::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_name"),       &_TamaRef::get_ref_name);
-    ClassDB::bind_method(D_METHOD("get_bound_args"), &_TamaRef::get_bound_args);
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "name"),       "", "get_name");
-    ADD_PROPERTY(PropertyInfo(Variant::ARRAY,  "bound_args"), "", "get_bound_args");
+    // Internal class — no GDScript-accessible properties needed.
 }
-String _TamaRef::get_ref_name()   const { return name; }
-Array  _TamaRef::get_bound_args() const { return bound_args; }
 
 // ===========================================================================
 // _TamaInterpreter
@@ -137,9 +34,6 @@ void _TamaInterpreter::_bind_methods() {
     ClassDB::bind_method(D_METHOD("eval_expr", "expr", "scope"),      &_TamaInterpreter::eval_expr);
 
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "context"), "set_context", "get_context");
-
-    ADD_SIGNAL(MethodInfo("bullet_fired", PropertyInfo(Variant::OBJECT, "data")));
-    ADD_SIGNAL(MethodInfo("finished"));
 }
 
 void _TamaInterpreter::_ready() {
@@ -269,10 +163,10 @@ void _TamaInterpreter::step(double p_delta) {
     }
 
     if (!_running) {
-        // If all async children are done and we were waiting, emit finished
+        // If all async children are done and we were waiting, fire finished callback
         if (_async_children.empty() && _exec_stack.empty()) {
             if (is_inside_tree()) set_physics_process(false);
-            emit_signal("finished");
+            if (_finished_cb) _finished_cb();
         }
         return;
     }
@@ -305,7 +199,7 @@ void _TamaInterpreter::step(double p_delta) {
         _running = false;
         if (_async_children.empty()) {
             if (is_inside_tree()) set_physics_process(false);
-            emit_signal("finished");
+            if (_finished_cb) _finished_cb();
         }
         // else wait for async children to finish (checked next step)
     }
@@ -769,8 +663,7 @@ void _TamaInterpreter::_run_async_act(Object *act_node, const Dictionary &scope_
     child->_acts_map   = _acts_map;
     child->_bullets_map = _bullets_map;
 
-    // Forward child bullet_fired signal; other events route via shared handler
-    child->connect("bullet_fired", callable_mp(this, &_TamaInterpreter::_fwd_bullet_fired));
+    child->_fire_cb       = _fire_cb;
     child->_event_handler = _event_handler;
 
     child->_scope    = scope_copy;
@@ -832,20 +725,20 @@ void _TamaInterpreter::_exec_fire_call(Object *node) {
 }
 
 void _TamaInterpreter::_exec_fire_node(Object *node) {
-    Ref<_TamaBulletFireData> data = memnew(_TamaBulletFireData);
+    TamaBulletFireData data;
 
     // Direction
     Object *dir_node = Object::cast_to<Object>(node->get("dir"));
     if (dir_node) {
-        data->dir_type  = _get_dir_type(dir_node);
-        data->dir_value = _eval_float((String)dir_node->get("expr"));
+        data.dir_type  = _get_dir_type(dir_node);
+        data.dir_value = _eval_float((String)dir_node->get("expr"));
     }
 
     // Speed
     Object *spd_node = Object::cast_to<Object>(node->get("speed"));
     if (spd_node) {
-        data->speed_type  = _get_speed_type(spd_node);
-        data->speed_value = _eval_float((String)spd_node->get("expr"));
+        data.speed_type  = _get_speed_type(spd_node);
+        data.speed_value = _eval_float((String)spd_node->get("expr"));
     }
 
     // Offset
@@ -853,25 +746,25 @@ void _TamaInterpreter::_exec_fire_node(Object *node) {
     if (off_node) {
         int off_tid = (int)off_node->get("type_id");
         if (off_tid == (int)TamaNodeType::OFFSET_INLINE) {
-            data->offset_mode  = 1; // INLINE
-            data->offset_value = _eval_float((String)off_node->get("expr"));
+            data.offset_mode  = 1; // INLINE
+            data.offset_value = _eval_float((String)off_node->get("expr"));
         } else if (off_tid == (int)TamaNodeType::OFFSET) {
-            data->offset_mode = 2; // BLOCK
+            data.offset_mode = 2; // BLOCK
             Object *ox = Object::cast_to<Object>(off_node->get("x"));
             Object *oy = Object::cast_to<Object>(off_node->get("y"));
-            if (ox) { data->offset_x_type = _get_axis_type(ox); data->offset_x = _eval_float((String)ox->get("expr")); }
-            if (oy) { data->offset_y_type = _get_axis_type(oy); data->offset_y = _eval_float((String)oy->get("expr")); }
+            if (ox) { data.offset_x_type = _get_axis_type(ox); data.offset_x = _eval_float((String)ox->get("expr")); }
+            if (oy) { data.offset_y_type = _get_axis_type(oy); data.offset_y = _eval_float((String)oy->get("expr")); }
         }
     }
 
     // Pos
     Object *pos_node = Object::cast_to<Object>(node->get("pos"));
     if (pos_node && (int)pos_node->get("type_id") == (int)TamaNodeType::POS) {
-        data->has_pos = true;
+        data.has_pos = true;
         Object *px = Object::cast_to<Object>(pos_node->get("x"));
         Object *py = Object::cast_to<Object>(pos_node->get("y"));
-        if (px) { data->pos_x_set = true; data->pos_x_type = _get_axis_type(px); data->pos_x = _eval_float((String)px->get("expr")); }
-        if (py) { data->pos_y_set = true; data->pos_y_type = _get_axis_type(py); data->pos_y = _eval_float((String)py->get("expr")); }
+        if (px) { data.pos_x_set = true; data.pos_x_type = _get_axis_type(px); data.pos_x = _eval_float((String)px->get("expr")); }
+        if (py) { data.pos_y_set = true; data.pos_y_type = _get_axis_type(py); data.pos_y = _eval_float((String)py->get("expr")); }
     }
 
     // Bullet
@@ -882,11 +775,11 @@ void _TamaInterpreter::_exec_fire_node(Object *node) {
             String btype = (String)bul_node->get("bullet_type");
             // Resolve bullet_type through scope if it's a variable name
             Variant sv = _scope.get(btype, Variant());
-            data->bullet_type       = (sv.get_type() == Variant::STRING) ? (String)sv : btype;
-            data->bullet_emitter_act = Object::cast_to<Object>(bul_node->get("emitter_act"));
-            data->bullet_act         = Object::cast_to<Object>(bul_node->get("act"));
+            data.bullet_type        = (sv.get_type() == Variant::STRING) ? (String)sv : btype;
+            data.bullet_emitter_act = Object::cast_to<Object>(bul_node->get("emitter_act"));
+            data.bullet_act         = Object::cast_to<Object>(bul_node->get("act"));
             Object *mvmt = Object::cast_to<Object>(bul_node->get("mvmt"));
-            if (mvmt) _populate_mvmt(data.ptr(), mvmt);
+            if (mvmt) _populate_mvmt(&data, mvmt);
         } else if (bul_tid == (int)TamaNodeType::BULLET_CALL) {
             std::string bul_name = ((String)bul_node->get("name")).utf8().get_data();
             Array       bul_args = (Array)bul_node->get("args");
@@ -899,11 +792,11 @@ void _TamaInterpreter::_exec_fire_node(Object *node) {
                 if (svo && (int)svo->get("type_id") == (int)TamaNodeType::INLINE_BULLET) {
                     String btype = (String)svo->get("bullet_type");
                     Variant btsv = _scope.get(btype, Variant());
-                    data->bullet_type        = (btsv.get_type() == Variant::STRING) ? (String)btsv : btype;
-                    data->bullet_emitter_act = Object::cast_to<Object>(svo->get("emitter_act"));
-                    data->bullet_act         = Object::cast_to<Object>(svo->get("act"));
+                    data.bullet_type        = (btsv.get_type() == Variant::STRING) ? (String)btsv : btype;
+                    data.bullet_emitter_act = Object::cast_to<Object>(svo->get("emitter_act"));
+                    data.bullet_act         = Object::cast_to<Object>(svo->get("act"));
                     Object *mvmt = Object::cast_to<Object>(svo->get("mvmt"));
-                    if (mvmt) _populate_mvmt(data.ptr(), mvmt);
+                    if (mvmt) _populate_mvmt(&data, mvmt);
                     goto bullet_done;
                 }
                 Ref<_TamaRef> tref = Object::cast_to<_TamaRef>(svo);
@@ -925,23 +818,23 @@ void _TamaInterpreter::_exec_fire_node(Object *node) {
 
                 String btype = (String)bullet_def->get("bullet_type");
                 Variant btsv = _scope.get(btype, Variant());
-                data->bullet_type        = (btsv.get_type() == Variant::STRING) ? (String)btsv : btype;
-                data->bullet_emitter_act = Object::cast_to<Object>(bullet_def->get("emitter_act"));
-                data->bullet_act         = Object::cast_to<Object>(bullet_def->get("act"));
-                data->bullet_params      = params;
-                data->bullet_args        = eval_args;
+                data.bullet_type        = (btsv.get_type() == Variant::STRING) ? (String)btsv : btype;
+                data.bullet_emitter_act = Object::cast_to<Object>(bullet_def->get("emitter_act"));
+                data.bullet_act         = Object::cast_to<Object>(bullet_def->get("act"));
+                data.bullet_params      = params;
+                data.bullet_args        = eval_args;
                 Object *mvmt = Object::cast_to<Object>(bullet_def->get("mvmt"));
-                if (mvmt) _populate_mvmt(data.ptr(), mvmt);
+                if (mvmt) _populate_mvmt(&data, mvmt);
             }
         }
     }
     bullet_done:
 
-    data->source_program = _program;
-    emit_signal("bullet_fired", data);
+    data.source_program = _program;
+    if (_fire_cb) _fire_cb(data);
 }
 
-void _TamaInterpreter::_populate_mvmt(_TamaBulletFireData *data, Object *mvmt_node) {
+void _TamaInterpreter::_populate_mvmt(TamaBulletFireData *data, Object *mvmt_node) {
     Object *mx = Object::cast_to<Object>(mvmt_node->get("x"));
     Object *my = Object::cast_to<Object>(mvmt_node->get("y"));
     if (mx) {

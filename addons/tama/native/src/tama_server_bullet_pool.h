@@ -157,7 +157,7 @@ public:
     int get_active_count() const { return (int)_active.size(); }
 
     // Returns the TamaServerBullet wrapper, or null if the pool is full.
-    godot::Object *spawn(godot::Object *data, godot::Object *config,
+    godot::Object *spawn(const TamaBulletFireData &data, godot::Object *config,
                          float angle, float speed, godot::Vector2 position,
                          godot::Object *context);
 

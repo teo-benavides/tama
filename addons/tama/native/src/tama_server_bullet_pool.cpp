@@ -61,8 +61,6 @@ float   TamaServerBullet::get_speed_y()  const { return _state ? _state->speed_y
 void TamaServerBulletPool::_bind_methods() {
     ClassDB::bind_method(D_METHOD("register_type", "key", "config"),
                          &TamaServerBulletPool::register_type);
-    ClassDB::bind_method(D_METHOD("spawn", "data", "config", "angle", "speed", "position", "context"),
-                         &TamaServerBulletPool::spawn);
     ClassDB::bind_method(D_METHOD("recycle", "bullet_wrapper"),
                          &TamaServerBulletPool::recycle);
     ClassDB::bind_method(D_METHOD("recycle_all"),
@@ -269,15 +267,13 @@ void TamaServerBulletPool::_recycle_batch(TypeData &td, BatchData *batch) {
 // ---------------------------------------------------------------------------
 
 Object *TamaServerBulletPool::spawn(
-        Object *p_data, Object *p_config,
+        const TamaBulletFireData &p_data, Object *p_config,
         float angle, float speed, Vector2 position,
         Object *p_context)
 {
-    if (!p_data || !p_config) return nullptr;
+    if (!p_config) return nullptr;
 
-    // Read bullet_type from BulletFireData
-    String bullet_type_str = (String)p_data->get("bullet_type");
-    std::string key        = bullet_type_str.utf8().get_data();
+    std::string key = p_data.bullet_type.utf8().get_data();
 
     auto it = _types.find(key);
     if (it == _types.end()) {
@@ -361,17 +357,17 @@ Object *TamaServerBulletPool::spawn(
     b.vel_dirty          = true;
 
     // mvmt
-    b.mvmt_x_set  = (bool)p_data->get("mvmt_x_set");
-    b.mvmt_y_set  = (bool)p_data->get("mvmt_y_set");
-    b.mvmt_x_type = (int)p_data->get("mvmt_x_type");
-    b.mvmt_y_type = (int)p_data->get("mvmt_y_type");
+    b.mvmt_x_set  = p_data.mvmt_x_set;
+    b.mvmt_y_set  = p_data.mvmt_y_set;
+    b.mvmt_x_type = p_data.mvmt_x_type;
+    b.mvmt_y_type = p_data.mvmt_y_type;
     b.mvmt_x_chunk = nullptr;
     b.mvmt_y_chunk = nullptr;
 
     if (b.mvmt_x_set || b.mvmt_y_set) {
         // Build mvmt scope from bullet_params/args + spawn_x/y
-        Array params = (Array)p_data->get("bullet_params");
-        Array args   = (Array)p_data->get("bullet_args");
+        Array params = p_data.bullet_params;
+        Array args   = p_data.bullet_args;
         int   n_args = std::min(params.size(), args.size());
 
         std::vector<std::string> var_names;
@@ -401,11 +397,11 @@ Object *TamaServerBulletPool::spawn(
         _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
         if (er) {
             if (b.mvmt_x_set) {
-                std::string expr = ((String)p_data->get("mvmt_x_expr")).utf8().get_data();
+                std::string expr = p_data.mvmt_x_expr.utf8().get_data();
                 b.mvmt_x_chunk   = er->get_chunk(expr, var_names, make_key(expr));
             }
             if (b.mvmt_y_set) {
-                std::string expr = ((String)p_data->get("mvmt_y_expr")).utf8().get_data();
+                std::string expr = p_data.mvmt_y_expr.utf8().get_data();
                 b.mvmt_y_chunk   = er->get_chunk(expr, var_names, make_key(expr));
             }
         }
@@ -424,29 +420,18 @@ Object *TamaServerBulletPool::spawn(
 
     // bullet_act runner — C++ _TamaInterpreter (stepped in _physics_process)
     b.runner = nullptr;
-    Variant bullet_act_v = p_data->get("bullet_act");
-    bool has_act = bullet_act_v.get_type() != Variant::NIL &&
-                   bullet_act_v.get_type() != Variant::OBJECT ||
-                   (bullet_act_v.get_type() == Variant::OBJECT &&
-                    bullet_act_v.operator Object *() != nullptr);
-    // Simplify: just check for non-null Object
-    Object *bullet_act_obj = nullptr;
-    if (bullet_act_v.get_type() == Variant::OBJECT)
-        bullet_act_obj = bullet_act_v.operator Object *();
-    has_act = (bullet_act_obj != nullptr);
+    Object *bullet_act_obj = p_data.bullet_act;
 
-    if (has_act) {
+    if (bullet_act_obj) {
         _TamaInterpreter *runner = memnew(_TamaInterpreter);
         runner->set_context(p_context);
         b.runner = runner;
 
         // Build act scope
         Dictionary act_scope;
-        Array params = (Array)p_data->get("bullet_params");
-        Array args   = (Array)p_data->get("bullet_args");
-        int   na     = std::min(params.size(), args.size());
+        int na = std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
         for (int i = 0; i < na; ++i)
-            act_scope[(String)params[i]] = args[i];
+            act_scope[(String)p_data.bullet_params[i]] = p_data.bullet_args[i];
         act_scope["spawn_x"] = position.x;
         act_scope["spawn_y"] = position.y;
 
@@ -454,13 +439,12 @@ Object *TamaServerBulletPool::spawn(
         TamaServerBullet *wrapper_bullet = Object::cast_to<TamaServerBullet>(b.wrapper);
         runner->set_event_handler(wrapper_bullet);
 
-        // Allow server bullets to fire child bullets by connecting bullet_fired to the spawn manager.
+        // Allow server bullets to fire child bullets
         TamaManager *mgr = TamaManager::get_instance();
         _TamaSpawnManager *sm = mgr ? mgr->_get_spawn_manager() : nullptr;
         if (sm) sm->connect_interpreter(runner, b.wrapper);
 
-        Object *source_program = Object::cast_to<Object>(p_data->get("source_program"));
-        runner->start_act(source_program, bullet_act_obj, act_scope);
+        runner->start_act(p_data.source_program, bullet_act_obj, act_scope);
     }
 
     return b.wrapper;

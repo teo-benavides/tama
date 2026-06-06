@@ -39,8 +39,11 @@ void _TamaSpawnManager::_exit_tree() {
 }
 
 void _TamaSpawnManager::connect_interpreter(Object *interpreter, Object *spawner) {
-    interpreter->connect("bullet_fired",
-        callable_mp(this, &_TamaSpawnManager::_on_bullet_fired).bind(Variant(spawner)));
+    _TamaInterpreter *interp = Object::cast_to<_TamaInterpreter>(interpreter);
+    if (!interp) return;
+    interp->_fire_cb = [this, spawner](const TamaBulletFireData &data) {
+        _on_bullet_fired(data, spawner);
+    };
 }
 
 Object *_TamaSpawnManager::get_tama_script(const String &filename) const {
@@ -103,14 +106,11 @@ static float spawner_get_angle(godot::Object *s) {
 // Bullet firing
 // ===========================================================================
 
-void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Object *spawner) {
-    Object *data = data_v.operator Object *();
-    if (!data) return;
-
+void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object *spawner) {
     // Resolve bullet_type (substitute from params if it matches a param name)
-    String bullet_type = (String)data->get("bullet_type");
-    Array bullet_params = (Array)data->get("bullet_params");
-    Array bullet_args   = (Array)data->get("bullet_args");
+    String bullet_type = data.bullet_type;
+    Array bullet_params = data.bullet_params;
+    Array bullet_args   = data.bullet_args;
     if (!bullet_type.is_empty() && bullet_params.size() > 0) {
         for (int i = 0; i < (int)UtilityFunctions::mini(bullet_params.size(), bullet_args.size()); ++i) {
             if (String(bullet_params[i]) == bullet_type) {
@@ -181,28 +181,26 @@ void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Object *spawner) {
     bullet->_speed            = speed;
     bullet->_initial_position = _resolve_position(data, spawner, angle);
 
-    bool mvmt_x_set = (bool)data->get("mvmt_x_set");
-    bool mvmt_y_set = (bool)data->get("mvmt_y_set");
-    if (mvmt_x_set || mvmt_y_set) {
+    if (data.mvmt_x_set || data.mvmt_y_set) {
         Dictionary mvmt_scope;
         for (int i = 0; i < (int)UtilityFunctions::mini(bullet_params.size(), bullet_args.size()); ++i)
             mvmt_scope[bullet_params[i]] = bullet_args[i];
         mvmt_scope["spawn_x"] = bullet->_initial_position.x;
         mvmt_scope["spawn_y"] = bullet->_initial_position.y;
-        bullet->_mvmt_x_set  = mvmt_x_set;
-        bullet->_mvmt_x_type = (int)data->get("mvmt_x_type");
-        bullet->_mvmt_x_expr = (String)data->get("mvmt_x_expr");
-        bullet->_mvmt_y_set  = mvmt_y_set;
-        bullet->_mvmt_y_type = (int)data->get("mvmt_y_type");
-        bullet->_mvmt_y_expr = (String)data->get("mvmt_y_expr");
+        bullet->_mvmt_x_set  = data.mvmt_x_set;
+        bullet->_mvmt_x_type = data.mvmt_x_type;
+        bullet->_mvmt_x_expr = data.mvmt_x_expr;
+        bullet->_mvmt_y_set  = data.mvmt_y_set;
+        bullet->_mvmt_y_type = data.mvmt_y_type;
+        bullet->_mvmt_y_expr = data.mvmt_y_expr;
         bullet->_mvmt_scope  = mvmt_scope;
     }
 
     spawn_parent->call_deferred("add_child", Variant(bullet));
 
-    Object *bullet_act         = Object::cast_to<Object>(data->get("bullet_act"));
-    Object *bullet_emitter_act = Object::cast_to<Object>(data->get("bullet_emitter_act"));
-    Object *source_program     = Object::cast_to<Object>(data->get("source_program"));
+    Object *bullet_act         = data.bullet_act;
+    Object *bullet_emitter_act = data.bullet_emitter_act;
+    Object *source_program     = data.source_program;
 
     if (bullet_act) {
         Dictionary act_scope;
@@ -243,55 +241,44 @@ void _TamaSpawnManager::_on_bullet_fired(Variant data_v, Object *spawner) {
 // Resolution helpers
 // ===========================================================================
 
-float _TamaSpawnManager::_resolve_angle(Object *data, Object *spawner) const {
+float _TamaSpawnManager::_resolve_angle(const TamaBulletFireData &data, Object *spawner) const {
     static const float DEG2RAD = 3.14159265f / 180.0f;
-    int   dir_type  = (int)  data->get("dir_type");
-    float dir_value = (float)data->get("dir_value");
-    switch (dir_type) {
-        case 0: return (player_position - spawner_get_global_position(spawner)).angle() + dir_value * DEG2RAD;
-        case 1: return dir_value * DEG2RAD;
-        case 2: return spawner_get_angle(spawner) + dir_value * DEG2RAD;
-        case 3: return spawner_get_last_angle(spawner) + dir_value * DEG2RAD;
+    switch (data.dir_type) {
+        case 0: return (player_position - spawner_get_global_position(spawner)).angle() + data.dir_value * DEG2RAD;
+        case 1: return data.dir_value * DEG2RAD;
+        case 2: return spawner_get_angle(spawner) + data.dir_value * DEG2RAD;
+        case 3: return spawner_get_last_angle(spawner) + data.dir_value * DEG2RAD;
         default: break;
     }
-    return (player_position - spawner_get_global_position(spawner)).angle() + dir_value * DEG2RAD;
+    return (player_position - spawner_get_global_position(spawner)).angle() + data.dir_value * DEG2RAD;
 }
 
-float _TamaSpawnManager::_resolve_speed(Object *data, Object *spawner) const {
-    int   speed_type  = (int)  data->get("speed_type");
-    float speed_value = (float)data->get("speed_value");
-    switch (speed_type) {
-        case 0: return speed_value;
-        case 1: case 2: return spawner_get_last_speed(spawner) + speed_value;
-        default: return speed_value;
+float _TamaSpawnManager::_resolve_speed(const TamaBulletFireData &data, Object *spawner) const {
+    switch (data.speed_type) {
+        case 0: return data.speed_value;
+        case 1: case 2: return spawner_get_last_speed(spawner) + data.speed_value;
+        default: return data.speed_value;
     }
 }
 
-Vector2 _TamaSpawnManager::_resolve_position(Object *data, Object *spawner, float angle) const {
-    bool has_pos = (bool)data->get("has_pos");
-    if (has_pos) {
+Vector2 _TamaSpawnManager::_resolve_position(const TamaBulletFireData &data, Object *spawner, float angle) const {
+    if (data.has_pos) {
         Vector2 pos = spawner_get_global_position(spawner);
-        if ((bool)data->get("pos_x_set")) {
-            int xt = (int)data->get("pos_x_type"); float xv = (float)data->get("pos_x");
-            if (xt == 0 || xt == 2) pos.x  = xv; else pos.x += xv;
+        if (data.pos_x_set) {
+            if (data.pos_x_type == 0 || data.pos_x_type == 2) pos.x  = data.pos_x; else pos.x += data.pos_x;
         }
-        if ((bool)data->get("pos_y_set")) {
-            int yt = (int)data->get("pos_y_type"); float yv = (float)data->get("pos_y");
-            if (yt == 0 || yt == 2) pos.y  = yv; else pos.y += yv;
+        if (data.pos_y_set) {
+            if (data.pos_y_type == 0 || data.pos_y_type == 2) pos.y  = data.pos_y; else pos.y += data.pos_y;
         }
         return pos;
     }
-    int offset_mode = (int)data->get("offset_mode");
-    if (offset_mode == 1) { // INLINE
-        float ov = (float)data->get("offset_value");
-        return spawner_get_global_position(spawner) + Vector2(ov, 0.0f).rotated(angle);
+    if (data.offset_mode == 1) { // INLINE
+        return spawner_get_global_position(spawner) + Vector2(data.offset_value, 0.0f).rotated(angle);
     }
-    if (offset_mode == 2) { // BLOCK
+    if (data.offset_mode == 2) { // BLOCK
         Vector2 world_offset, local_offset;
-        int oxt = (int)data->get("offset_x_type"); float oxv = (float)data->get("offset_x");
-        if (oxt == 1) local_offset.x = oxv; else world_offset.x = oxv; // REL=1
-        int oyt = (int)data->get("offset_y_type"); float oyv = (float)data->get("offset_y");
-        if (oyt == 1) local_offset.y = oyv; else world_offset.y = oyv;
+        if (data.offset_x_type == 1) local_offset.x = data.offset_x; else world_offset.x = data.offset_x; // REL=1
+        if (data.offset_y_type == 1) local_offset.y = data.offset_y; else world_offset.y = data.offset_y;
         return spawner_get_global_position(spawner) + world_offset + local_offset.rotated(angle);
     }
     return spawner_get_global_position(spawner);

@@ -139,7 +139,7 @@ void TamaEmitter::start() {
 
     _interpreter = memnew(_TamaInterpreter);
     _interpreter->set_context(mgr->_get_context());
-    _interpreter->connect("finished", callable_mp(this, &TamaEmitter::stop));
+    _interpreter->_finished_cb = [this]() { stop(); };
     mgr->_connect_interpreter(_interpreter, this);
     add_child(_interpreter);
     _running = true;

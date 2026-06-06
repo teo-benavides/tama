@@ -42,10 +42,10 @@ public:
     int get_scene_bullet_count() const;
 
 private:
-    void _on_bullet_fired(godot::Variant data_v, godot::Object *spawner);
+    void _on_bullet_fired(const TamaBulletFireData &data, godot::Object *spawner);
 
-    float _resolve_angle(godot::Object *data, godot::Object *spawner) const;
-    float _resolve_speed(godot::Object *data, godot::Object *spawner) const;
-    godot::Vector2 _resolve_position(godot::Object *data, godot::Object *spawner, float angle) const;
+    float _resolve_angle(const TamaBulletFireData &data, godot::Object *spawner) const;
+    float _resolve_speed(const TamaBulletFireData &data, godot::Object *spawner) const;
+    godot::Vector2 _resolve_position(const TamaBulletFireData &data, godot::Object *spawner, float angle) const;
     godot::Node *_get_spawn_parent() const;
 };
