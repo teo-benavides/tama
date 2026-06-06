@@ -467,27 +467,27 @@ chspd           ← tweened
 
 ```
 chrotspd_stmt = "chrotspd" NEWLINE chrotspd_block
-chrotspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT
+chrotspd_block = INDENT { ( rotspd_stmt | over_stmt ) NEWLINE } DEDENT
 ```
 
-Emits a rotation-speed change command to the bullet. `speed`/`spd` is required; `over` is optional and defaults to `0`. When `over` is `0` the rotation speed is set instantly without tweening. Rotation speed is measured in **degrees per second** and is applied each frame as `angle += rot_speed × (π/180) × delta`.
+Emits a rotation-speed change command to the bullet. `rotspd` is required; `over` is optional and defaults to `0`. When `over` is `0` the rotation speed is set instantly without tweening. Rotation speed is measured in **degrees per second** and is applied each frame as `angle += rot_speed × (π/180) × delta`.
 
-| Speed qualifier | Meaning |
+| `rotspd` qualifier | Meaning |
 |---|---|
 | `abs` (default) | Set rotation speed directly. |
 | `rel` | Add to the bullet's current rotation speed. |
 | `seq` | Add to the bullet's last rotation speed (before this command). |
 
 ```
-chrotspd        ← instant
-    spd abs 90  ← 90°/sec clockwise
+chrotspd            ← instant
+    rotspd abs 90   ← 90°/sec clockwise
 
-chrotspd        ← tweened
-    spd abs 90
-    over 0.5    ← ramp up over half a second
+chrotspd            ← tweened
+    rotspd abs 90
+    over 0.5        ← ramp up over half a second
 
-chrotspd        ← stop spinning
-    spd abs 0
+chrotspd            ← stop spinning
+    rotspd abs 0
 ```
 
 ### 6.16 `chpos`
@@ -1425,8 +1425,8 @@ chspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT ;
               (* speed required; over optional — defaults to 0 (instant)    *)
 
 chrotspd_stmt  = "chrotspd" NEWLINE chrotspd_block ;
-chrotspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT ;
-                 (* speed required (degrees/sec); over optional — defaults to 0 (instant)
+chrotspd_block = INDENT { ( rotspd_stmt | over_stmt ) NEWLINE } DEDENT ;
+                 (* rotspd required (degrees/sec); over optional — defaults to 0 (instant)
                     abs: set directly; rel: add to current; seq: add to last  *)
 
 rotspd_stmt  = "rotspd" [ VALUE_QUALIFIER | IDENT ] EXPR ;

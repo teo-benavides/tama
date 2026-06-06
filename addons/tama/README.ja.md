@@ -262,7 +262,7 @@ chspd
     over 2.0
 
 chrotspd            ← 回転速度を変更
-    spd abs 90      ← 90度/秒（時計回り）
+    rotspd abs 90   ← 90度/秒（時計回り）
     over 0.5
 
 chpos               ← 位置を変更

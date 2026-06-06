@@ -263,7 +263,7 @@ chspd
     over 2.0
 
 chrotspd            ← change rotation speed
-    spd abs 90      ← 90°/sec clockwise
+    rotspd abs 90   ← 90°/sec clockwise
     over 0.5
 
 chpos               ← move to position

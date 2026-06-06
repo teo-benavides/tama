@@ -40,10 +40,10 @@ COMMENT = "#" { any character except newline } ;
 (* reserved keywords — cannot be used as IDENT *)
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "repeatf" | "wait" | "waitf"
-   | "chdir" | "chspd" | "chpos" | "accel"
+   | "chdir" | "chspd" | "chrotspd" | "chpos" | "accel"
    | "vanish" | "var" | "break"
    | "if" | "elif" | "else" | "while"
-   | "dir" | "speed" | "spd" | "offset" | "pos" | "mvmt"
+   | "dir" | "speed" | "spd" | "rotspd" | "offset" | "pos" | "mvmt"
    | "emitter" | "emt" | "type" | "async"
    | "aim" | "abs" | "rel" | "seq"
    | "over" | "x" | "y"
@@ -117,6 +117,7 @@ bullet_block = INDENT { bullet_stmt NEWLINE } DEDENT ;
 
 fire_stmt = dir_stmt
            | speed_stmt
+           | rotspd_stmt
            | offset_stmt
            | pos_stmt
            | bullet_call ;
@@ -144,6 +145,7 @@ action_stmt = while_stmt
              | offset_stmt
              | chdir_stmt
              | chspd_stmt
+             | chrotspd_stmt
              | chpos_stmt
              | accel_stmt
              | inline_act
@@ -295,6 +297,19 @@ chspd_block = INDENT { chspd_inner NEWLINE } DEDENT ;
 chspd_inner = speed_stmt | over_stmt ;
               (* speed is required; over is optional — omitting it defaults to 0 (instant) *)
 
+chrotspd_stmt  = "chrotspd" NEWLINE chrotspd_block ;
+chrotspd_block = INDENT { chrotspd_inner NEWLINE } DEDENT ;
+chrotspd_inner = rotspd_stmt | over_stmt ;
+                 (* rotspd is required; over is optional — omitting it defaults to 0 (instant).
+                    changes the bullet's rotation speed (degrees/sec);
+                    angle accumulates as: angle += rot_speed * (PI/180) * delta each frame. *)
+
+rotspd_stmt = "rotspd" [ VALUE_TYPE ] EXPR ;
+              (* default VALUE_TYPE = abs.
+                 in fire blocks: initial rotation speed at spawn.
+                 in chrotspd blocks: target rotation speed to transition to.
+                 abs: set directly; rel: add to last fired/current rot speed; seq: same as rel. *)
+
 chpos_stmt  = "chpos" NEWLINE chpos_block ;
 chpos_block = INDENT { chpos_inner NEWLINE } DEDENT ;
 chpos_inner = axis [ VALUE_TYPE ] EXPR
@@ -316,6 +331,6 @@ mvmt_axis_stmt = axis [ VALUE_TYPE ] EXPR ;
                     defined in bullet blocks; evaluated with the bullet's scope each frame. *)
 
 over_stmt   = "over" EXPR ;
-              (* transition duration in seconds — used inside chdir, chspd, chpos, and accel.
-                 optional in all four; omitting is equivalent to over 0.
+              (* transition duration in seconds — used inside chdir, chspd, chrotspd, chpos, and accel.
+                 optional in all; omitting is equivalent to over 0.
                  when 0: value is applied instantly. when > 0: linear tween over that duration. *)

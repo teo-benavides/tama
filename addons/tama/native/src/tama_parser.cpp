@@ -493,8 +493,8 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_chrotspd() {
     auto node = tama_make_node((int)NT::CHROTSPD);
     parse_block([&]() -> std::shared_ptr<_TamaASTNode> {
         switch (peek_type()) {
-            case TT::KW_SPEED: node->speed = parse_speed(); break;
-            case TT::KW_OVER:  node->over  = parse_over(); break;
+            case TT::KW_ROTSPD: node->speed = parse_rotspd(); break;
+            case TT::KW_OVER:   node->over  = parse_over(); break;
             default:
                 error_at(peek(), "Unexpected token in chrotspd block");
                 _pos++; try_consume(TT::NEWLINE);
@@ -502,7 +502,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_chrotspd() {
         return nullptr;
     });
     if (!node->speed)
-        error_at(tok, "chrotspd requires a speed statement");
+        error_at(tok, "chrotspd requires a rotspd statement");
     return node;
 }
 
