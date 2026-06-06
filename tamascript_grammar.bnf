@@ -48,6 +48,7 @@ KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "aim" | "abs" | "rel" | "seq"
    | "over" | "x" | "y"
    | "include" | "export"
+   | "bounces"
    | "true" | "false" ;
 
 DIR_TYPE   = "aim" | "abs" | "rel" | "seq" ;
@@ -218,9 +219,21 @@ arg_list = "(" EXPR { "," EXPR } ")" ;
 
 bullet_stmt = bullet_type_stmt
              | bullet_spawner_stmt
+             | bounces_stmt
              | mvmt_stmt
              | act_call
              | inline_act ;
+
+bounces_stmt = "bounces" [ EXPR ] [ axis ] ;
+               (* declares that the bullet reflects off screen borders instead of despawning.
+                  EXPR: max number of bounces; omit or use -1 for infinite.
+                  axis: "x" = left/right walls only; "y" = top/bottom walls only; omit = all borders.
+                  after the last bounce the bullet is destroyed.
+                  examples:
+                    bounces        → infinite bounces, all borders
+                    bounces 3      → 3 bounces, all borders
+                    bounces 3 x    → 3 bounces, left/right walls only
+                    bounces -1 y   → infinite bounces, top/bottom walls only  *)
 
 bullet_type_stmt    = "type" IDENT ;
                       (* IDENT is resolved at runtime: if a variable with that name exists

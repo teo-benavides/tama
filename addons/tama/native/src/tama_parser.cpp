@@ -791,6 +791,37 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_inline_bullet() {
             case TT::KW_MVMT:
                 node->mvmt = parse_mvmt();
                 break;
+            case TT::KW_BOUNCES: {
+                consume(TT::KW_BOUNCES);
+                if (peek_type() == TT::NEWLINE) {
+                    node->count = "-1";
+                    node->axis  = "";
+                } else {
+                    int eol = _pos;
+                    while (eol < (int)_tokens.size() &&
+                           _tokens[eol].type != TT::NEWLINE &&
+                           _tokens[eol].type != TT::EOF_)
+                        ++eol;
+                    int last = eol - 1;
+                    if (last >= _pos && (_tokens[last].type == TT::KW_X ||
+                                         _tokens[last].type == TT::KW_Y)) {
+                        std::string expr_part;
+                        while (_pos < last) {
+                            if (!expr_part.empty()) expr_part += ' ';
+                            expr_part += _tokens[_pos].value;
+                            ++_pos;
+                        }
+                        node->axis  = _tokens[_pos].value;
+                        ++_pos;
+                        node->count = expr_part.empty() ? "-1" : expr_part;
+                    } else {
+                        node->count = collect_to_eol();
+                        node->axis  = "";
+                    }
+                }
+                consume(TT::NEWLINE);
+                break;
+            }
             default:
                 error_at(t, "Unexpected token in bullet block: '" + tok_display(t) + "'");
                 _pos++; try_consume(TT::NEWLINE);
@@ -1038,6 +1069,40 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_bullet_def() {
             case TT::KW_MVMT:
                 node->mvmt = parse_mvmt();
                 break;
+            case TT::KW_BOUNCES: {
+                consume(TT::KW_BOUNCES);
+                if (peek_type() == TT::NEWLINE) {
+                    // bare `bounces` → infinite, both axes
+                    node->count = "-1";
+                    node->axis  = "";
+                } else {
+                    // Find the NEWLINE; check if the last token before it is x or y.
+                    int eol = _pos;
+                    while (eol < (int)_tokens.size() &&
+                           _tokens[eol].type != TT::NEWLINE &&
+                           _tokens[eol].type != TT::EOF_)
+                        ++eol;
+                    int last = eol - 1;
+                    if (last >= _pos && (_tokens[last].type == TT::KW_X ||
+                                         _tokens[last].type == TT::KW_Y)) {
+                        // Trailing axis qualifier — collect expr tokens before it.
+                        std::string expr_part;
+                        while (_pos < last) {
+                            if (!expr_part.empty()) expr_part += ' ';
+                            expr_part += _tokens[_pos].value;
+                            ++_pos;
+                        }
+                        node->axis  = _tokens[_pos].value; // "x" or "y"
+                        ++_pos;
+                        node->count = expr_part.empty() ? "-1" : expr_part;
+                    } else {
+                        node->count = collect_to_eol();
+                        node->axis  = "";
+                    }
+                }
+                consume(TT::NEWLINE);
+                break;
+            }
             default:
                 error_at(t, "Unexpected token in bullet block: '" + tok_display(t) + "'");
                 _pos++; try_consume(TT::NEWLINE);

@@ -1,0 +1,7 @@
+main
+    repeat 50 i
+        fire
+            dir abs (360.0/50)*i
+            spd abs 300
+            bullet
+                bounces 2

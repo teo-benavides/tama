@@ -115,6 +115,8 @@ struct TamaBulletFireData {
     bool            mvmt_y_set  = false;
     int             mvmt_y_type = 0;
     std::string     mvmt_y_expr;
+    int             bounces_max  = 0;  // 0=none, -1=infinite, N=N bounces
+    int             bounces_axis = 0;  // 0=both, 1=x (left/right), 2=y (top/bottom)
     _TamaASTNode   *source_program = nullptr;
 };
 

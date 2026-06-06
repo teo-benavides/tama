@@ -126,6 +126,35 @@ void TamaBullet::_physics_process(double delta) {
             set_rotation(_angle);
     }
     move_and_slide();
+
+    if (_bounces_left != 0) {
+        static const float PI = 3.14159265f;
+        float sw = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_width");
+        float sh = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_height");
+        Vector2 pos = get_global_position();
+        bool hit_x = false, hit_y = false;
+        if (_bounces_axis != 2) { // not y-only
+            if (pos.x < 0.0f) {
+                pos.x = -pos.x; hit_x = true;
+            } else if (pos.x > sw) {
+                pos.x = 2.0f * sw - pos.x; hit_x = true;
+            }
+        }
+        if (_bounces_axis != 1) { // not x-only
+            if (pos.y < 0.0f) {
+                pos.y = -pos.y; hit_y = true;
+            } else if (pos.y > sh) {
+                pos.y = 2.0f * sh - pos.y; hit_y = true;
+            }
+        }
+        if (hit_x || hit_y) {
+            if (hit_x) { _angle = PI - _angle; _speed_x = -_speed_x; }
+            if (hit_y) { _angle = -_angle;     _speed_y = -_speed_y; }
+            set_global_position(pos);
+            if (_bounces_left > 0)
+                --_bounces_left;
+        }
+    }
 }
 
 void TamaBullet::destroy() {

@@ -686,6 +686,11 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
             data.bullet_act         = bul_node->act.get();
             _TamaASTNode *mvmt = bul_node->mvmt.get();
             if (mvmt) _populate_mvmt(&data, mvmt);
+            if (!bul_node->count.empty()) {
+                data.bounces_max  = (int)_eval_float(bul_node->count);
+                data.bounces_axis = bul_node->axis == "x" ? 1
+                                  : bul_node->axis == "y" ? 2 : 0;
+            }
         } else if (bul_node->type_id == (int)TamaNodeType::BULLET_CALL) {
             std::string bul_name = bul_node->name;
 
@@ -704,6 +709,11 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                         data.bullet_act         = svo->act.get();
                         _TamaASTNode *mvmt = svo->mvmt.get();
                         if (mvmt) _populate_mvmt(&data, mvmt);
+                        if (!svo->count.empty()) {
+                            data.bounces_max  = (int)_eval_float(svo->count);
+                            data.bounces_axis = svo->axis == "x" ? 1
+                                              : svo->axis == "y" ? 2 : 0;
+                        }
                         goto bullet_done;
                     }
                 } else if (bsit->second.kind == TamaScopeVal::REF) {
@@ -729,6 +739,11 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                     data.bullet_args        = eval_args;
                     _TamaASTNode *mvmt = bullet_def->mvmt.get();
                     if (mvmt) _populate_mvmt(&data, mvmt);
+                    if (!bullet_def->count.empty()) {
+                        data.bounces_max  = (int)_eval_float(bullet_def->count);
+                        data.bounces_axis = bullet_def->axis == "x" ? 1
+                                          : bullet_def->axis == "y" ? 2 : 0;
+                    }
                     goto bullet_done;
                 }
             }
@@ -752,6 +767,11 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                 data.bullet_args        = eval_args;
                 _TamaASTNode *mvmt = bullet_def->mvmt.get();
                 if (mvmt) _populate_mvmt(&data, mvmt);
+                if (!bullet_def->count.empty()) {
+                    data.bounces_max  = (int)_eval_float(bullet_def->count);
+                    data.bounces_axis = bullet_def->axis == "x" ? 1
+                                      : bullet_def->axis == "y" ? 2 : 0;
+                }
             }
         }
     }

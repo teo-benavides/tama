@@ -179,6 +179,8 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
     bullet->_angle            = angle;
     bullet->_speed            = speed;
     bullet->_initial_position = _resolve_position(data, spawner, angle);
+    bullet->_bounces_left     = data.bounces_max;
+    bullet->_bounces_axis     = data.bounces_axis;
 
     if (data.mvmt_x_set || data.mvmt_y_set) {
         std::vector<std::string> mvmt_var_names;

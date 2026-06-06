@@ -619,7 +619,7 @@ Properties can appear in any order inside a fire block. Only one `bullet` call i
 Valid inside `bullet` definitions and inline `bullet` blocks.
 
 ```
-bullet_stmt = type_stmt | emitter_stmt | mvmt_stmt | act_call | inline_act
+bullet_stmt = type_stmt | emitter_stmt | bounces_stmt | mvmt_stmt | act_call | inline_act
 ```
 
 ### 8.1 `type`
@@ -700,6 +700,50 @@ bullet homing
                 dir aim 0
                 over 0.3
             wait 0.3
+```
+
+### 8.5 `bounces`
+
+```
+bounces_stmt = "bounces" [ EXPR ] [ axis ]
+axis         = "x" | "y"
+```
+
+Declares that the bullet reflects off screen borders instead of despawning when it reaches them. All parts are optional:
+
+| Form | Meaning |
+|---|---|
+| `bounces` | Infinite bounces off all four borders |
+| `bounces N` | Up to `N` bounces off all four borders, then exit normally |
+| `bounces x` | Infinite bounces off left/right walls only |
+| `bounces y` | Infinite bounces off top/bottom walls only |
+| `bounces N x` | Up to `N` bounces off left/right walls only |
+| `bounces N y` | Up to `N` bounces off top/bottom walls only |
+| `bounces -1` | Explicit infinite — same as bare `bounces` |
+
+`EXPR` is evaluated at fire time using the emitter's scope (exports, `var` variables, etc.) and rounded to an integer. Use `-1` to express infinite bounces explicitly in an expression.
+
+After the last allowed bounce the bullet continues in its reflected direction and despawns via the normal out-of-bounds check. The bullet is **not** destroyed at the moment of the final bounce.
+
+**Reflection math:** the bullet's angle is stored as a float in radians internally. Hitting a left/right wall negates the x-component of velocity (`angle = π − angle`); hitting a top/bottom wall negates the y-component (`angle = −angle`). Any independent `speed_x`/`speed_y` acceleration is reflected the same way.
+
+`bounces` has no effect on bullets using `mvmt` expressions — position is controlled by the expression and border reflection cannot be applied.
+
+```
+bullet wall_bouncer
+    bounces 3           ← 3 bounces off any border, then exits
+
+bullet pinball
+    bounces             ← infinite bounces off all borders
+
+bullet side_only
+    bounces x           ← infinite bounces off left/right walls only
+
+bullet top_bottom
+    bounces 2 y         ← 2 bounces off top/bottom, then exits
+
+bullet param_bounces(n)
+    bounces n           ← count from caller
 ```
 
 ---
@@ -1140,6 +1184,7 @@ If `main` is absent (library file), `program.main` is null. The interpreter chec
 | `offset` | — | Fire/action stmt |
 | `pos` | — | Fire stmt |
 | `mvmt` | — | Bullet stmt |
+| `bounces` | — | Bullet stmt — border reflection declaration |
 | `chdir` | — | Action stmt |
 | `chspd` | — | Action stmt |
 | `chpos` | — | Action stmt |
@@ -1273,9 +1318,14 @@ inline_bullet = ( "bullet" | "bul" ) NEWLINE bullet_block ;
 
 (* ---- Bullet statements ---- *)
 
-bullet_stmt   = type_stmt | emitter_stmt | mvmt_stmt | act_call | inline_act ;
+bullet_stmt   = type_stmt | emitter_stmt | bounces_stmt | mvmt_stmt | act_call | inline_act ;
 type_stmt     = "type" IDENT ;
 emitter_stmt  = ( "emitter" | "emt" ) ( IDENT [ arg_list ] | NEWLINE action_block ) ;
+bounces_stmt  = "bounces" [ EXPR ] [ "x" | "y" ] ;
+                (* reflect off screen borders instead of despawning.
+                   EXPR: max bounces; omit or -1 for infinite.
+                   "x": left/right walls only; "y": top/bottom walls only; omit = all.
+                   trailing "x"/"y" is detected by checking the last token before NEWLINE. *) 
 mvmt_stmt     = "mvmt" NEWLINE mvmt_block ;
 mvmt_block    = INDENT { ( "x" | "y" ) [ VALUE_QUALIFIER | IDENT ] EXPR NEWLINE } DEDENT ;
                 (* default VALUE_QUALIFIER = abs;

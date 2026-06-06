@@ -82,6 +82,10 @@ struct BulletState {
     TweenState1D sx_tween;
     TweenState1D sy_tween;
 
+    // Bounce state
+    int bounces_left = 0;  // 0=no bouncing, -1=infinite, N>0=bounces remaining
+    int bounces_axis = 0;  // 0=both walls, 1=x (left/right), 2=y (top/bottom)
+
     // mvmt expressions (set at spawn, evaluated every frame)
     bool mvmt_x_set  = false;
     bool mvmt_y_set  = false;

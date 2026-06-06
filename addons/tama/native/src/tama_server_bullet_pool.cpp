@@ -356,6 +356,9 @@ Object *TamaServerBulletPool::spawn(
     b.sy_tween.active    = false;
     b.vel_dirty          = true;
 
+    b.bounces_left = p_data.bounces_max;
+    b.bounces_axis = p_data.bounces_axis;
+
     // mvmt
     b.mvmt_x_set  = p_data.mvmt_x_set;
     b.mvmt_y_set  = p_data.mvmt_y_set;
@@ -621,6 +624,36 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             }
             b->position.x += b->cached_vx * delta;
             b->position.y += b->cached_vy * delta;
+
+            if (b->bounces_left != 0) {
+                static constexpr float PI = 3.14159265f;
+                bool hit_x = false, hit_y = false;
+                if (b->bounces_axis != 2) { // not y-only
+                    if (b->position.x < world.position.x) {
+                        b->position.x = 2.0f * world.position.x - b->position.x;
+                        hit_x = true;
+                    } else if (b->position.x > world.get_end().x) {
+                        b->position.x = 2.0f * world.get_end().x - b->position.x;
+                        hit_x = true;
+                    }
+                }
+                if (b->bounces_axis != 1) { // not x-only
+                    if (b->position.y < world.position.y) {
+                        b->position.y = 2.0f * world.position.y - b->position.y;
+                        hit_y = true;
+                    } else if (b->position.y > world.get_end().y) {
+                        b->position.y = 2.0f * world.get_end().y - b->position.y;
+                        hit_y = true;
+                    }
+                }
+                if (hit_x || hit_y) {
+                    if (hit_x) { b->angle = PI - b->angle; b->speed_x = -b->speed_x; }
+                    if (hit_y) { b->angle = -b->angle;     b->speed_y = -b->speed_y; }
+                    b->vel_dirty = true;
+                    if (b->bounces_left > 0)
+                        --b->bounces_left;
+                }
+            }
         }
 
         float rot = 0.0f;

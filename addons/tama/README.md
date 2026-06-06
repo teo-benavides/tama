@@ -196,6 +196,18 @@ fire
 | `emt NAME` / `emt` *(inline)* | Attach a firing emitter that runs in parallel with the bullet's `act`. **Not supported for server bullets.** |
 | `mvmt` *(block)* | Per-frame position expression re-evaluated every physics frame. `abs` = world coordinate; `rel` = offset from spawn position. |
 | `act NAME` / `act` *(inline)* | Behaviour the bullet runs after spawning. |
+| `bounces [N] [x\|y]` | Make the bullet reflect off screen borders instead of despawning. `N` = max number of bounces (omit or `-1` for infinite). `x` = left/right walls only; `y` = top/bottom walls only; omit axis for all borders. After the last bounce the bullet exits normally. |
+
+```
+bullet wall_bouncer
+    bounces 3       ← bounce up to 3 times off all borders, then exit
+
+bullet side_bouncer
+    bounces x       ← infinite bounces off left/right walls only
+
+bullet finite_y
+    bounces 2 y     ← bounce twice off top/bottom walls, then exit normally
+```
 
 ### Variables and control flow
 

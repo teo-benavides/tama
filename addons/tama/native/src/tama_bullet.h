@@ -33,6 +33,8 @@ public:
     std::vector<std::string> _mvmt_var_names;
     std::vector<double>      _mvmt_var_values;
     godot::Vector2 _initial_position;
+    int            _bounces_left = 0;  // 0=none, -1=infinite, N>0=remaining
+    int            _bounces_axis = 0;  // 0=both, 1=x (left/right), 2=y (top/bottom)
 
     bool rotates       = true;
     bool face_velocity = true;
