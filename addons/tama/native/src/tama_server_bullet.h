@@ -65,6 +65,7 @@ struct BulletState {
 
     // Pool management
     bool    active      = false;
+    int64_t spawn_frame = -1;  // physics frame this slot was spawned (skip same-frame sim)
     int32_t active_idx  = -1;  // index in pool's _active[]
     int32_t global_slot = -1;  // PhysicsServer2D shape index
     void   *batch_ptr   = nullptr; // raw BatchData* — void* to avoid circular header dep

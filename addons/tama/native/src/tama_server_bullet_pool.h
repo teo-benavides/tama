@@ -29,13 +29,16 @@ class TamaServerBulletPool : public godot::Node2D {
     struct BatchData {
         godot::Ref<godot::MultiMesh> multimesh_res;
         godot::RID multimesh;
-        int used         = 0;
+        int used         = 0;   // packed: slots [0, used) are all live (== active_count)
         int active_count = 0;
         int birth_frame  = -1;
         // Per-batch animation state (independent from other batches of same type)
         float anim_time  = 0.0f;
         int   anim_frame = 0;
         godot::Ref<godot::Texture2D> current_texture;
+        // local_slot -> BulletState*, so recycle can pull the last live slot into a
+        // freed hole and keep the batch compact (used == active_count).
+        std::vector<BulletState *> slot_bullets;
     };
 
     struct TypeData {
@@ -78,7 +81,7 @@ class TamaServerBulletPool : public godot::Node2D {
         std::vector<BatchData *> active_batches; // birth-order (oldest first)
         std::vector<BatchData *> free_batches;
         BatchData *cur_batch  = nullptr;
-        int64_t    cur_frame  = -1;
+        int64_t    cur_frame  = -1; // physics frame cur_batch was opened (animated types only)
     };
 
     // ------------------------------------------------------------------

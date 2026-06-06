@@ -239,6 +239,7 @@ TamaServerBulletPool::BatchData *TamaServerBulletPool::_get_batch(TypeData &td) 
         b->multimesh_res->set_mesh(td.quad);
         b->multimesh_res->set_instance_count(BATCH_CHUNK);
         b->multimesh = b->multimesh_res->get_rid();
+        b->slot_bullets.assign(BATCH_CHUNK, nullptr);
         Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
         for (int i = 0; i < BATCH_CHUNK; ++i)
             RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(b->multimesh, i, offscreen);
@@ -295,12 +296,32 @@ Object *TamaServerBulletPool::spawn(
     td.ring_r        = (td.ring_r + 1) % n;
     --td.ring_count;
 
-    // Get or start this frame's batch
-    int64_t frame = Engine::get_singleton()->get_physics_frames();
-    if (!td.cur_batch || td.cur_frame != frame || td.cur_batch->used >= BATCH_CHUNK) {
-        td.cur_batch             = _get_batch(td);
+    // Get or start the current fill batch.
+    //
+    // Animation phase is per-batch: every instance in a batch is drawn with one
+    // shared texture (the batch's current animation frame). So for ANIMATED types we
+    // open a fresh batch each physics frame — that keeps each spawn-frame cohort on
+    // its own animation phase (older batches are further along the animation), which
+    // is the intended look.
+    //
+    // For STATIC types (single frame / fps <= 0) there is no phase to preserve, so we
+    // instead keep filling the current batch across frames until it reaches
+    // BATCH_CHUNK. A per-frame batch would otherwise be a problem at the pool limit:
+    // only a few spawns succeed per frame, so each batch would hold a handful of
+    // bullets yet still reserve a full BATCH_CHUNK of multimesh slots and linger until
+    // its longest-lived bullet exits. That fragments active_batches into hundreds of
+    // sparse batches, and every frame the _draw and animation passes iterate every
+    // active batch (with a per-batch multimesh_get_buffer readback in the composite
+    // path), so the cost climbs as the fragmentation builds — the gradual FPS decay
+    // seen when spawning and recycling at the pool limit. Filling across frames keeps
+    // static-type batches dense (~pool_size/256) regardless of the spawn cadence.
+    int64_t frame    = Engine::get_singleton()->get_physics_frames();
+    bool    animated = td.fps > 0.0f && td.frames.size() > 1;
+    if (!td.cur_batch || td.cur_batch->used >= BATCH_CHUNK ||
+        (animated && td.cur_frame != frame)) {
+        td.cur_batch              = _get_batch(td);
         td.cur_batch->birth_frame = (int)frame;
-        td.cur_frame             = frame;
+        td.cur_frame              = frame;
         td.active_batches.push_back(td.cur_batch);
     }
     BatchData *batch  = td.cur_batch;
@@ -311,12 +332,14 @@ Object *TamaServerBulletPool::spawn(
     // Init bullet state
     BulletState &b   = td.bullets[global_slot];
     b.active         = true;
+    b.spawn_frame    = frame;
     b.active_idx     = (int32_t)_active.size();
     _active.push_back(&b);
 
     b.multimesh_rid     = batch->multimesh;
     b.batch_ptr         = batch;   // direct pointer — immune to active_batches reordering
     b.local_slot        = local_slot;
+    batch->slot_bullets[local_slot] = &b;
 
     b.position          = position;
     b.initial_position  = position;
@@ -467,27 +490,56 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
     if (!b || !b->active) return;
     b->active = false;
 
-    // Hide in multimesh
     Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
-    RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-        b->multimesh_rid, b->local_slot, offscreen);
 
     // Find which TypeData owns this slot (search by area_rid)
     TypeData *td_owner = nullptr;
-    std::string td_key;
     for (auto &[k, td] : _types) {
-        if (td->area == b->area_rid) { td_owner = td; td_key = k; break; }
+        if (td->area == b->area_rid) { td_owner = td; break; }
     }
-    if (td_owner) {
-        // Decrement batch counter; recycle batch if empty.
-        // Use the direct BatchData* pointer — not an index, which would break when
-        // other batches are removed from active_batches and shift the indices.
-        if (b->batch_ptr) {
-            BatchData *batch = static_cast<BatchData *>(b->batch_ptr);
-            --batch->active_count;
-            if (batch->active_count == 0) _recycle_batch(*td_owner, batch);
-            b->batch_ptr = nullptr;
+
+    // Compact the batch: move the last live slot into this freed hole so the slots
+    // [0, used) stay packed and used == active_count. Without this, `used` is only a
+    // high-water mark, so drained-but-not-yet-freed slots keep getting uploaded and
+    // drawn every frame, and as batches drain the live bullets spread across ever more
+    // batches — the per-frame instance/batch-iteration cost climbs over one bullet
+    // lifetime. Use the direct BatchData* pointer, not an index (active_batches
+    // reorders as other batches free).
+    BatchData *batch = static_cast<BatchData *>(b->batch_ptr);
+    if (batch) {
+        int s    = b->local_slot;
+        int last = batch->used - 1;
+        if (s != last) {
+            BulletState *moved      = batch->slot_bullets[last];
+            moved->local_slot       = s;
+            batch->slot_bullets[s]  = moved;
+            // Mirror the moved bullet's render transform into the freed slot.
+            float rot = 0.0f;
+            if (moved->rotates) {
+                if (moved->face_velocity && !(moved->mvmt_x_set || moved->mvmt_y_set))
+                    rot = (moved->cached_vx != 0.0f || moved->cached_vy != 0.0f)
+                        ? std::atan2(moved->cached_vy, moved->cached_vx) : moved->angle;
+                else
+                    rot = moved->angle;
+            }
+            RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
+                batch->multimesh, s, Transform2D(rot, moved->texture_scale, 0.0f, moved->position));
         }
+        // Hide the vacated last slot and shrink the packed range.
+        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
+            batch->multimesh, last, offscreen);
+        batch->slot_bullets[last] = nullptr;
+        --batch->used;
+        --batch->active_count;
+        b->batch_ptr = nullptr;
+        if (td_owner && batch->active_count == 0) _recycle_batch(*td_owner, batch);
+    } else {
+        // No batch (shouldn't normally happen for an active bullet) — just hide it.
+        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
+            b->multimesh_rid, b->local_slot, offscreen);
+    }
+
+    if (td_owner) {
         // Return global slot to ring
         int ring_n = (int)td_owner->ring.size();
         td_owner->ring[td_owner->ring_w] = b->global_slot;
@@ -530,14 +582,25 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 
     _to_recycle.clear();
 
-    // Snapshot the size before the loop. spawn() called from a runner's bullet_fired signal
-    // appends to _active (may reallocate), and _recycle_internal() from a vanished signal
-    // does swap-erase. An index-based loop with a size snapshot handles both safely:
-    // new spawns are appended past n (processed next frame), recycled bullets are skipped
-    // via the b->active guard below.
-    const int n = (int)_active.size();
-    for (int i = 0; i < n; ++i) {
-        BulletState *b = _active[i];
+    // Iterate the flat per-type bullet arrays in slot order rather than _active.
+    // _active is a vector of BulletState* that swap-erase recycling + FIFO slot reuse
+    // scramble into a random permutation over the (multi-MB) bullets array within a few
+    // seconds at the pool limit. Walking it then cache-misses on every bullet and feeds
+    // random slots into the rendering/physics servers, which is the gradual slowdown.
+    // A linear scan of bullets[] keeps both CPU and server access sequential regardless
+    // of recycle history; the active flag skips empty slots (cheap, prefetched).
+    int64_t cur_frame = Engine::get_singleton()->get_physics_frames();
+    for (auto &[key, td_iter] : _types) {
+      std::vector<BulletState> &arr = td_iter->bullets;
+      const int sz = (int)arr.size();
+      for (int i = 0; i < sz; ++i) {
+        BulletState *b = &arr[i];
+        if (!b->active) continue;
+        // A bullet spawned on this physics frame is simulated starting next frame (its
+        // initial transform was already written by spawn()). This also prevents a
+        // freshly fired runner from cascading spawns within a single frame.
+        if (b->spawn_frame == cur_frame) continue;
+
         // Step runner before this bullet's position update so script changes
         // take effect in the same frame they are issued.
         if (b->runner) {
@@ -609,6 +672,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             b->position.x > world.get_end().x   + m ||
             b->position.y > world.get_end().y   + m)
             _to_recycle.push_back(b);
+      }
     }
 
     for (BulletState *b : _to_recycle)

@@ -5,6 +5,14 @@
 [ext_resource type="PackedScene" uid="uid://cppplayer001" path="res://addons/tama/example/player/example_player.tscn" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://cvsmm0ofq3fnv" path="res://addons/tama/example/fps_label.gd" id="4_bjbng"]
 
+[sub_resource type="LabelSettings" id="LabelSettings_cbgig"]
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_pq7m2"]
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
+
 [node name="TamaExample" type="Node2D" unique_id=1817544635]
 script = ExtResource("1_ig7tw")
 
@@ -36,10 +44,12 @@ offset_bottom = 40.0
 
 [node name="BulletsLabel" type="Label" parent="CanvasLayer/VBoxContainer" unique_id=1156148544]
 layout_mode = 2
+label_settings = SubResource("LabelSettings_cbgig")
 script = ExtResource("3_cx0jo")
 
 [node name="FPSLabel" type="Label" parent="CanvasLayer/VBoxContainer" unique_id=1434314083]
 layout_mode = 2
+label_settings = SubResource("LabelSettings_pq7m2")
 script = ExtResource("4_bjbng")
 
 [connection signal="item_selected" from="CanvasLayer/Container/OptionButton" to="." method="_on_option_button_item_selected"]
