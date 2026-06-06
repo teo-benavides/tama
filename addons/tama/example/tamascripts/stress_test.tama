@@ -1,8 +1,10 @@
 main
     repeat
-        repeat 1000 i
+        repeat 500 i
             fire
-                dir abs (360.0/1000.0) * i
+                dir abs (360.0/500.0) * i
                 spd 400
+                bul
+                    type fast
         wait 0.5
 

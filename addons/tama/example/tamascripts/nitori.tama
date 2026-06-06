@@ -1,0 +1,44 @@
+include builtin
+
+main
+    var spd_ 300
+    var intervalf 4
+    repeat
+        act burst
+        wait 0.3
+        act burst
+        wait 0.3
+        # the next three have a bullet in the middle
+        # right petal
+        async act nitori(30, 180, intervalf, 270+35, abs, spd_, 1)
+        # middle petal
+        async act nitori(30, 180, intervalf, 90, abs, spd_, 1)
+        # left petal
+        async act nitori(30, 180, intervalf, 270-35, abs, spd_, 1)
+        waitf 2
+        # the next three have a space in the middle
+        # right petal
+        async act nitori(30, 180, intervalf, 270+35, abs, spd_, 2)
+        # middle petal
+        async act nitori(30, 180, intervalf, 90, abs, spd_, 2)
+        # left petal. make this synchronous so we shoot bursts only after it's finished
+        act nitori(30, 180, intervalf, 270-35, abs, spd_, 2)
+        wait 0.3
+
+act nitori(amount, spread, intervalf, angle, dirtype, speed_, start_amt)
+    var curr_amt start_amt
+    repeat amount/2
+        repeat curr_amt i
+            fire
+                dir dirtype (2*i + 1 - curr_amt) * spread / (2 * maxi(amount - 2, 1)) + angle
+                spd speed_
+                bul
+                    type blue
+        curr_amt curr_amt + 2
+        waitf intervalf
+
+act burst
+    act aimed_shots(5, 90, 150, circle)
+    act aimed_shots(5, 90, 200, circle)
+    act aimed_shots(5, 90, 250, circle)
+

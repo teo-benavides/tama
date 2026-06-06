@@ -14,14 +14,15 @@ Tamaは、独自の弾幕定義言語「TamaScript」を搭載した、弾幕STG
 ## クイックスタート
 1. このリポジトリの `addons` フォルダをプロジェクトにドラッグ＆ドロップし、「プロジェクト設定 → プラグイン」から有効にします。
 2. `TamaBullet` ノード（または `TamaBullet` を継承したノード）から弾のシーンを作成します。
-3. `TamaBulletRegistry` リソースを作成し、弾を `entries` と `default_bullet` に追加します。`entries` に追加する際は弾にタイプ名を付ける必要があります。
+3. `TamaBulletRegistry` リソースを作成し、`default_scene_bullet` に先ほど作成したシーンを設定します。
 4. プロジェクト設定の「Tama → Scripts Path」に、TamaScriptファイルを保存するフォルダを設定します。デフォルトは `res://tamascripts` です。
 5. TamaScriptファイルを作成し、先ほど設定したフォルダに保存します。
 6. シーンに `TamaEmitter` を追加し、`script_filename` にTamaScriptファイルの名前を設定します。
 7. `TamaManager` を設定します:
     ```gdscript
-    # ステップ3で作成したレジストリ
-    TamaManager.registry = load("res://my_bullet_registry.tres")
+    TamaManager.set_registry(load("res://my_bullet_registry.tres"))
+    TamaManager.load_scripts()
+    TamaManager.set_player_position($Player.global_position)  # 毎フレーム更新する
     ```
 8. `TamaEmitter` の `start()` を呼び出してTamaScriptを実行します。
 9. （任意）カスタムの `TamaContext` を設定することで、独自のGDScript関数をTamaScriptに公開できます:
@@ -42,6 +43,77 @@ Tamaは、独自の弾幕定義言語「TamaScript」を搭載した、弾幕STG
             dir abs some_func()
             spd 200
     ```
+
+## サーバー弾
+
+サーバー弾は、`RenderingServer`（MultiMesh）と`PhysicsServer2D`を直接使用する高パフォーマンスな弾タイプです。弾ごとにシーンノードを作成しないため、数千発の弾を同時に扱う高密度な弾幕パターンに適しています。
+
+### セットアップ
+
+1. `TamaBulletRegistry` の「Default Server Bullet」をクリックし、新しい `TamaServerBulletConfig` を作成します。
+2. 作成した `TamaServerBulletConfig` をクリックして設定を変更します（下記プロパティ参照）。
+3. 「Default to Server Bullets」にチェックを入れます。
+
+### TamaServerBulletConfig のプロパティ
+
+| プロパティ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `frames` | `Array[Texture2D]` | `[]` | アニメーションフレーム。1枚 = 静止スプライト。 |
+| `fps` | `float` | `0` | アニメーション再生速度。`0` = アニメーションなし。 |
+| `auto_rect` | `bool` | `true` | 最初のフレームのサイズからスプライトの矩形を自動計算する。オフにすると `rect` を手動設定できる。 |
+| `rect` | `Rect2` | `(-8,-8,16,16)` | スプライトの描画矩形（`auto_rect` がオフのときに使用）。 |
+| `texture_scale` | `Vector2` | `(1,1)` | スプライトに適用するスケール。 |
+| `shape_radius` | `float` | `6` | コリジョン円の半径（ピクセル）。 |
+| `collision_layer` | `int` | `1` | 物理コリジョンレイヤー。 |
+| `collision_mask` | `int` | `2` | 物理コリジョンマスク。 |
+| `rotates` | `bool` | `true` | スプライトが弾の角度に合わせて回転するかどうか。 |
+| `face_velocity` | `bool` | `true` | スプライトが移動方向を向くかどうか（`rotates` が必要）。 |
+| `pool_size` | `int` | `1000` | このタイプの最大同時弾数。プールが満杯のときは新規スポーンを無視する。 |
+| `out_of_bounds_margin` | `float` | `50` | 弾がリサイクルされるまでの画面外余白（ピクセル）。 |
+
+### コリジョン検出
+
+`TamaManager` の `bullet_hit` シグナルに接続します:
+
+```gdscript
+TamaManager.bullet_hit.connect(_on_bullet_hit)
+
+func _on_bullet_hit(bullet: TamaServerBullet, body_instance_id: int):
+    if body_instance_id == get_instance_id():
+        # ヒット処理...
+    TamaManager.destroy_server_bullet(bullet)
+```
+
+`TamaServerBullet` が公開するプロパティ: `position`、`angle`、`speed`、`speed_x`、`speed_y`、`active`。
+
+### 制限事項
+
+サーバー弾では以下のTamaScript機能は**サポートされていません**:
+
+- **`emt`** — 弾に発射エミッターをアタッチする機能はシーンノードが必要なため、サーバー弾では動作しません。
+
+## TamaManager リファレンス
+
+`TamaManager` はシングルトンです。主なプロパティ:
+
+| プロパティ / シグナル | 型 | 説明 |
+|---|---|---|
+| `registry` | `TamaBulletRegistry` | 使用する弾レジストリ。エミッターの `start()` より前に設定します。 |
+| `player_position` | `Vector2` | `dir aim` の計算に使うプレイヤーのワールド座標。毎フレーム更新してください。 |
+| `spawn_parent` | `NodePath` | シーン弾の親ノード。デフォルトは現在のシーンのルート。 |
+| `context` | `TamaContext` | GDScript関数をTamaScriptに公開するカスタムコンテキスト。 |
+| `global_out_of_bounds_margin` | `float` | 0以上のとき、すべてのサーバー弾のコンフィグごとの余白を上書きします。デフォルト `-1`（無効）。 |
+| `bullet_count` | `int` *（読み取り専用）* | 全タイプのアクティブな弾の合計数。 |
+| `bullet_hit(bullet, body_id)` | シグナル | サーバー弾のコリジョンエリアが物理ボディと重なったときに発火。 |
+
+主なメソッド:
+
+| メソッド | 説明 |
+|---|---|
+| `get_server_bullet_pool()` | `TamaServerBulletPool` ノードを返します（手動で `recycle()` を呼ぶ際などに使用）。 |
+| `register_bullet(type, scene)` | レジストリの `scene_bullets` 設定に代わる命令型API。 |
+| `register_server_bullet(type, config)` | レジストリの `server_bullets` 設定に代わる命令型API。 |
+| `load_scripts(path)` | 指定パス（省略時はプロジェクト設定のパス）からTamaScriptファイルをリロードします。 |
 
 ## TamaScript 構文
 
@@ -119,8 +191,8 @@ fire
 
 | 文 | 説明 |
 |---|---|
-| `type NAME` | 弾のシーンタイプ — `TamaBulletRegistry` で `NAME` を検索する。省略するとレジストリのデフォルトを使用。 |
-| `emt NAME` / `emt` *(インライン)* | 弾の `act` と並列で動作する発射エミッターを付与する。 |
+| `type NAME` | 弾のタイプ — `TamaBulletRegistry` で `NAME` を検索する。省略するとレジストリのデフォルトを使用。 |
+| `emt NAME` / `emt` *(インライン)* | 弾の `act` と並列で動作する発射エミッターを付与する。**サーバー弾では非サポート。** |
 | `mvmt` *(ブロック)* | 毎物理フレーム再評価される位置式。`abs` = ワールド座標；`rel` = スポーン位置からのオフセット。 |
 | `act NAME` / `act` *(インライン)* | 弾がスポーンした後に実行する動作。 |
 
@@ -198,8 +270,6 @@ include builtin          ← 別の.tamaファイルからfire/act/bulletの定�
 ```
 
 ## 予定している機能
-- RenderingServerおよびPhysicsServer2Dを用いた最適化（弾にNodeを使わない方式）
-- 詳細なドキュメント
 ### TamaScript
 - 文字列（`"` で囲む）
 - 小さなサンプルゲーム

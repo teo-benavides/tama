@@ -1,10 +1,18 @@
-[gd_scene format=3 uid="uid://4me0elvt3ywq"]
+[gd_scene format=3 uid="uid://cppplayer001"]
 
-[ext_resource type="Script" uid="uid://c17etxllw3xho" path="res://addons/tama/example/player/example_player.gd" id="1_d8crl"]
-[ext_resource type="Texture2D" uid="uid://dtq7qop3sbprp" path="res://addons/tama/example/player/icon.svg" id="2_822uf"]
+[ext_resource type="Script" uid="uid://du5cn8q3x2yxc" path="res://addons/tama-cpp/example/player/example_player.gd" id="1_d8crl"]
+[ext_resource type="Texture2D" uid="uid://dhtl0khhdsduo" path="res://addons/tama-cpp/example/player/icon.svg" id="2_822uf"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_6sq6r"]
 
 [node name="ExamplePlayer" type="CharacterBody2D" unique_id=985488048]
+collision_mask = 2
+motion_mode = 1
 script = ExtResource("1_d8crl")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1785871821]
+scale = Vector2(0.296875, 0.296875)
 texture = ExtResource("2_822uf")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=573671170]
+shape = SubResource("CircleShape2D_6sq6r")

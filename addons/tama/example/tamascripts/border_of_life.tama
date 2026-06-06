@@ -1,0 +1,97 @@
+main
+    var intervalf 20
+    repeat
+        act opposing_circles(intervalf)
+        wait 2.0
+        act straight_circles(intervalf)
+        wait 2.0
+
+act straight_circles
+    act circle2
+    waitf intervalf
+    act circle3
+    waitf intervalf
+    act circle2
+    waitf intervalf
+    act circle3
+    waitf intervalf
+    act circle2
+    waitf intervalf
+    act circle3
+
+act opposing_circles(intervalf)
+        act circle(1)
+        waitf intervalf
+        act circle(1, -intervalf)
+        waitf intervalf
+        act circle(-1)
+        waitf intervalf
+        act circle(-1, -intervalf)
+        waitf intervalf
+        act circle(1)
+        waitf intervalf
+        act circle(1, -intervalf)
+        waitf intervalf
+        act circle(-1)
+        waitf intervalf
+        act circle(-1, -intervalf)
+
+act circle(direction, delayf)
+    repeat 27 i
+        fire
+            dir abs (360/27)*i
+            spd 100
+            bul b(direction, 0, delayf)
+        fire
+            dir abs (360/27)*i
+            spd 100
+            bul b(direction, 50, delayf)
+        fire
+            dir abs (360/27)*i
+            spd 100
+            bul b(direction, 100, delayf)
+
+act circle2
+    repeat 50 i
+        fire
+            dir abs (360/50) * i + 90
+            spd 100
+            bul b2(0)
+        fire
+            dir abs (360/50) * i + 90
+            spd 100
+            bul b2(50)
+        fire
+            dir abs (360/50) * i + 90
+            spd 100
+            bul b2(100)
+
+act circle3
+    repeat 50 i
+        fire
+            dir abs (360/50) * i + 90 + (360/50) / 2
+            spd 100
+            bul b2(0)
+        fire
+            dir abs (360/50) * i + 90 + (360/50) / 2
+            spd 100
+            bul b2(100)
+
+bul b(direction, launch_speed, delayf)
+    type circle
+    act
+        chdir
+            dir rel 50 * direction
+            over 2.0+f2s(delayf)
+        wait 2.0+f2s(delayf)
+        chspd
+            spd rel launch_speed
+            over 1.0
+
+bul b2(launch_speed)
+    type circle
+    act
+        wait 1.0
+        chspd
+            spd rel launch_speed
+            over 1.0

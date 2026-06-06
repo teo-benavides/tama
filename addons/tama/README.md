@@ -15,14 +15,15 @@ Check out the `example` folder inside the addon to see example TamaScript script
 ## Quick Start
 1. Drag and drop the `addons` folder from this repo into your project and enable it through Project Settings -> Plugins.
 2. Create a bullet scene from a `TamaBullet` node, or a node extending `TamaBullet`.
-3. Create a `TamaBulletRegistry` resource and add your bullet to `entries` and `default_bullet`. When adding to `entries`, you need to give the bullet a type name.
+3. Create a `TamaBulletRegistry` resource and set `default_scene_bullet` to the scene you just created.
 4. Set Tama -> Scripts Path in Project Settings to the folder you'd like to save your TamaScript scripts in. It's `res://tamascripts` by default.
 5. Write a TamaScript file and save it in the previously set folder.
 6. Add a `TamaEmitter` to your scene and set its `script_filename` to the name of one of your TamaScript files.
 7. Configure `TamaManager`, like so:
     ```gdscript
-    # registry you created in Step 3
-    TamaManager.registry = load("res://my_bullet_registry.tres")
+    TamaManager.set_registry(load("res://my_bullet_registry.tres"))
+    TamaManager.load_scripts()
+    TamaManager.set_player_position($Player.global_position)  # update this every frame
     ```
 8. Call `start()` on your `TamaEmitter` to make it start executing your TamaScript.
 9. (Optional) Configure a custom `TamaContext` to expose your own GDScript functions to TamaScript. Like this:
@@ -43,6 +44,77 @@ Check out the `example` folder inside the addon to see example TamaScript script
             dir abs some_func()
             spd 200
     ```
+
+## Server Bullets
+
+Server bullets are a high-performance bullet type that uses `RenderingServer` (MultiMesh) and `PhysicsServer2D` directly — no scene nodes are created per bullet. This makes them suitable for dense patterns with thousands of simultaneous bullets.
+
+### Setup
+
+1. In your `TamaBulletRegistry`, click on `Default Server Bullet` and create a new `TamaServerBulletConfig`.
+2. Click the newly created `TamaServerBulletConfig` and modify its settings (see properties below).
+3. Check "Default to Server Bullets".
+
+### TamaServerBulletConfig Properties
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `frames` | `Array[Texture2D]` | `[]` | Animation frames. Single texture = static sprite. |
+| `fps` | `float` | `0` | Animation playback speed. `0` = no animation. |
+| `auto_rect` | `bool` | `true` | Auto-compute sprite rect from the first frame's size. Disable to set `rect` manually. |
+| `rect` | `Rect2` | `(-8,-8,16,16)` | Sprite draw rect (used when `auto_rect` is off). |
+| `texture_scale` | `Vector2` | `(1,1)` | Scale applied to the sprite. |
+| `shape_radius` | `float` | `6` | Collision circle radius in pixels. |
+| `collision_layer` | `int` | `1` | Physics collision layer. |
+| `collision_mask` | `int` | `2` | Physics collision mask. |
+| `rotates` | `bool` | `true` | Whether the sprite rotates with the bullet's angle. |
+| `face_velocity` | `bool` | `true` | Sprite faces the direction of movement (requires `rotates`). |
+| `pool_size` | `int` | `1000` | Maximum simultaneous bullets of this type. When the pool is full, new spawns are silently dropped. |
+| `out_of_bounds_margin` | `float` | `50` | Extra pixels past the screen edge before a bullet is recycled. |
+
+### Collision Detection
+
+Connect to the `bullet_hit` signal on `TamaManager`:
+
+```gdscript
+TamaManager.bullet_hit.connect(_on_bullet_hit)
+
+func _on_bullet_hit(bullet: TamaServerBullet, body_instance_id: int):
+    if body_instance_id == get_instance_id():
+        # handle hit...
+    TamaManager.destroy_server_bullet(bullet)
+```
+
+`TamaServerBullet` exposes: `position`, `angle`, `speed`, `speed_x`, `speed_y`, `active`.
+
+### Limitations
+
+The following TamaScript features are **not supported** for server bullets:
+
+- **`emt`** — attaching a firing emitter to a bullet requires a scene node and does not work with server bullets.
+
+## TamaManager Reference
+
+`TamaManager` is a singleton. Key properties:
+
+| Property / Signal | Type | Description |
+|---|---|---|
+| `registry` | `TamaBulletRegistry` | The active bullet registry. Set before `start()` is called on any emitter. |
+| `player_position` | `Vector2` | Player world position used for `dir aim` calculations. Update every frame. |
+| `spawn_parent` | `NodePath` | Where scene bullets are parented. Defaults to the current scene root. |
+| `context` | `TamaContext` | Custom context that exposes GDScript functions to TamaScript. |
+| `global_out_of_bounds_margin` | `float` | When ≥ 0, overrides the per-config `out_of_bounds_margin` for all server bullets. Default `-1` (disabled). |
+| `bullet_count` | `int` *(read-only)* | Total active bullets across all types. |
+| `bullet_hit(bullet, body_id)` | Signal | Emitted when a server bullet's collision area overlaps a physics body. |
+
+Key methods:
+
+| Method | Description |
+|---|---|
+| `get_server_bullet_pool()` | Returns the `TamaServerBulletPool` node (for manual `recycle()` calls). |
+| `register_bullet(type, scene)` | Imperative alternative to setting `scene_bullets` in the registry. |
+| `register_server_bullet(type, config)` | Imperative alternative to setting `server_bullets` in the registry. |
+| `load_scripts(path)` | Reload all TamaScript files from the given path (or from project settings if omitted). |
 
 ## TamaScript Syntax
 
@@ -120,8 +192,8 @@ fire
 
 | Statement | Description |
 |---|---|
-| `type NAME` | Bullet scene type — looks up `NAME` in `TamaBulletRegistry`. Omit to use the registry default. |
-| `emt NAME` / `emt` *(inline)* | Attach a firing emitter that runs in parallel with the bullet's `act`. |
+| `type NAME` | Bullet type — looks up `NAME` in `TamaBulletRegistry`. Omit to use the registry default. |
+| `emt NAME` / `emt` *(inline)* | Attach a firing emitter that runs in parallel with the bullet's `act`. **Not supported for server bullets.** |
 | `mvmt` *(block)* | Per-frame position expression re-evaluated every physics frame. `abs` = world coordinate; `rel` = offset from spawn position. |
 | `act NAME` / `act` *(inline)* | Behaviour the bullet runs after spawning. |
 
@@ -199,8 +271,6 @@ include builtin          ← merges fire/act/bullet defs from another .tama file
 ```
 
 ## Planned features
-- Optimization via RenderingServer and PhysicsServer2D, forgoing Nodes for bullets
-- In-depth documentation
 ### TamaScript
 - Strings, delimited by `"`
 - Small example game

@@ -6,9 +6,10 @@ var emitter: TamaEmitter
 var _loading_script := false
 
 func _ready() -> void:
-	TamaManager.register_bullet("example", EXAMPLE_BULLET_SCENE)
-	TamaManager.set_default_bullet(EXAMPLE_BULLET_SCENE)
-	TamaManager.context = ExampleTamaContext.new()
+	TamaManager.set_registry(load("res://addons/tama/example/bullets/example_tama_bullet_registry.tres"))
+	TamaManager.set_context(ExampleTamaContext.new())
+	TamaManager.load_scripts()
+	TamaManager.global_out_of_bounds_margin = 100
 	_populate_script_list()
 	_on_option_button_item_selected(0)
 
@@ -28,19 +29,21 @@ func _populate_script_list() -> void:
 
 func _on_option_button_item_selected(index: int) -> void:
 	var script_name = $CanvasLayer/Container/OptionButton.get_item_text(index)
-	var scripts_path := ProjectSettings.get_setting("tama/scripts_path", "res://tamascripts") as String
-	for ext in [".tama", ".tam", ""]:
-		var path := scripts_path.path_join(script_name + ext)
-		if FileAccess.file_exists(path):
-			_loading_script = true
-			$CanvasLayer/Container/TextEdit.text = FileAccess.get_file_as_string(path)
-			_loading_script = false
-			break
+	if script_name != "badapple":
+		var scripts_path := ProjectSettings.get_setting("tama/scripts_path", "res://tamascripts") as String
+		for ext in [".tama", ".tam", ""]:
+			var path := scripts_path.path_join(script_name + ext)
+			if FileAccess.file_exists(path):
+				_loading_script = true
+				$CanvasLayer/Container/TextEdit.text = FileAccess.get_file_as_string(path)
+				_loading_script = false
+				break
 	_restart_emitter(script_name)
 
 func _restart_emitter(script_name: String) -> void:
 	get_tree().call_group(&"tama_emitters", &"queue_free")
 	get_tree().call_group(&"tama_bullets", &"destroy")
+	TamaManager.get_server_bullet_pool().recycle_all()
 	if emitter:
 		emitter.queue_free()
 	emitter = TamaEmitter.new()

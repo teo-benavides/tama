@@ -1,0 +1,92 @@
+#include "tama_server_bullet_config.h"
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/property_info.hpp>
+
+using namespace godot;
+
+static void _auto_compute_rect(TamaServerBulletConfig *cfg) {
+    if (cfg->frames.size() == 0) return;
+    Ref<Texture2D> first = cfg->frames[0];
+    if (!first.is_valid()) return;
+    Vector2i sz = first->get_size();
+    cfg->rect = Rect2(-sz.x * 0.5f, -sz.y * 0.5f, (float)sz.x, (float)sz.y);
+}
+
+void TamaServerBulletConfig::set_frames(TypedArray<Texture2D> v) {
+    frames = v;
+    if (auto_rect) _auto_compute_rect(this);
+}
+
+void TamaServerBulletConfig::set_auto_rect(bool v) {
+    auto_rect = v;
+    if (auto_rect) _auto_compute_rect(this);
+    notify_property_list_changed();
+}
+
+bool TamaServerBulletConfig::_get(const StringName &p_name, Variant &r_ret) const {
+    if (p_name == StringName("rect"))           { r_ret = rect;          return true; }
+    if (p_name == StringName("face_velocity"))  { r_ret = face_velocity; return true; }
+    return false;
+}
+
+bool TamaServerBulletConfig::_set(const StringName &p_name, const Variant &p_value) {
+    if (p_name == StringName("rect"))           { rect          = p_value; return true; }
+    if (p_name == StringName("face_velocity"))  { face_velocity = p_value; return true; }
+    return false;
+}
+
+void TamaServerBulletConfig::_get_property_list(List<PropertyInfo> *p_list) const {
+    uint32_t rect_usage = auto_rect
+        ? (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_READ_ONLY)
+        : PROPERTY_USAGE_DEFAULT;
+    p_list->push_back(PropertyInfo(Variant::RECT2, "rect", PROPERTY_HINT_NONE, "", rect_usage));
+
+    uint32_t fv_usage = rotates
+        ? PROPERTY_USAGE_DEFAULT
+        : (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_READ_ONLY);
+    p_list->push_back(PropertyInfo(Variant::BOOL, "face_velocity", PROPERTY_HINT_NONE, "", fv_usage));
+}
+
+void TamaServerBulletConfig::_bind_methods() {
+    ClassDB::bind_method(D_METHOD("get_frames"),             &TamaServerBulletConfig::get_frames);
+    ClassDB::bind_method(D_METHOD("set_frames", "v"),        &TamaServerBulletConfig::set_frames);
+    ClassDB::bind_method(D_METHOD("get_fps"),                &TamaServerBulletConfig::get_fps);
+    ClassDB::bind_method(D_METHOD("set_fps", "v"),           &TamaServerBulletConfig::set_fps);
+    ClassDB::bind_method(D_METHOD("get_auto_rect"),          &TamaServerBulletConfig::get_auto_rect);
+    ClassDB::bind_method(D_METHOD("set_auto_rect", "v"),     &TamaServerBulletConfig::set_auto_rect);
+    ClassDB::bind_method(D_METHOD("get_rect"),               &TamaServerBulletConfig::get_rect);
+    ClassDB::bind_method(D_METHOD("set_rect", "v"),          &TamaServerBulletConfig::set_rect);
+    ClassDB::bind_method(D_METHOD("get_texture_scale"),    &TamaServerBulletConfig::get_texture_scale);
+    ClassDB::bind_method(D_METHOD("set_texture_scale","v"),&TamaServerBulletConfig::set_texture_scale);
+    ClassDB::bind_method(D_METHOD("get_shape_radius"),     &TamaServerBulletConfig::get_shape_radius);
+    ClassDB::bind_method(D_METHOD("set_shape_radius","v"), &TamaServerBulletConfig::set_shape_radius);
+    ClassDB::bind_method(D_METHOD("get_collision_layer"),  &TamaServerBulletConfig::get_collision_layer);
+    ClassDB::bind_method(D_METHOD("set_collision_layer","v"),&TamaServerBulletConfig::set_collision_layer);
+    ClassDB::bind_method(D_METHOD("get_collision_mask"),   &TamaServerBulletConfig::get_collision_mask);
+    ClassDB::bind_method(D_METHOD("set_collision_mask","v"),&TamaServerBulletConfig::set_collision_mask);
+    ClassDB::bind_method(D_METHOD("get_rotates"),          &TamaServerBulletConfig::get_rotates);
+    ClassDB::bind_method(D_METHOD("set_rotates","v"),      &TamaServerBulletConfig::set_rotates);
+    ClassDB::bind_method(D_METHOD("get_face_velocity"),    &TamaServerBulletConfig::get_face_velocity);
+    ClassDB::bind_method(D_METHOD("set_face_velocity","v"),&TamaServerBulletConfig::set_face_velocity);
+    ClassDB::bind_method(D_METHOD("get_pool_size"),                    &TamaServerBulletConfig::get_pool_size);
+    ClassDB::bind_method(D_METHOD("set_pool_size","v"),                &TamaServerBulletConfig::set_pool_size);
+    ClassDB::bind_method(D_METHOD("get_out_of_bounds_margin"),         &TamaServerBulletConfig::get_out_of_bounds_margin);
+    ClassDB::bind_method(D_METHOD("set_out_of_bounds_margin","v"),     &TamaServerBulletConfig::set_out_of_bounds_margin);
+
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "frames", PROPERTY_HINT_ARRAY_TYPE, "Texture2D"),
+                 "set_frames", "get_frames");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "fps", PROPERTY_HINT_RANGE, "0,120,1,or_greater"),
+                 "set_fps", "get_fps");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_rect"), "set_auto_rect", "get_auto_rect");
+    // "rect" is added dynamically via _get_property_list so it can be read-only when auto_rect is true
+    ADD_PROPERTY(PropertyInfo(Variant::VECTOR2,"texture_scale"), "set_texture_scale", "get_texture_scale");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "shape_radius"),  "set_shape_radius",  "get_shape_radius");
+    ADD_PROPERTY(PropertyInfo(Variant::INT,    "collision_layer", PROPERTY_HINT_LAYERS_2D_PHYSICS),
+                 "set_collision_layer", "get_collision_layer");
+    ADD_PROPERTY(PropertyInfo(Variant::INT,    "collision_mask",  PROPERTY_HINT_LAYERS_2D_PHYSICS),
+                 "set_collision_mask",  "get_collision_mask");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rotates"),       "set_rotates",       "get_rotates");
+    // "face_velocity" is dynamic via _get_property_list so it can be read-only when rotates is false
+    ADD_PROPERTY(PropertyInfo(Variant::INT,   "pool_size"),              "set_pool_size",              "get_pool_size");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "out_of_bounds_margin"),   "set_out_of_bounds_margin",   "get_out_of_bounds_margin");
+}

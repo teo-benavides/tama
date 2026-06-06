@@ -1,0 +1,17 @@
+[configuration]
+entry_symbol = "tama_library_init"
+compatibility_minimum = "4.4"
+
+[icons]
+TamaBullet = "res://addons/tama/icons/bullet.svg"
+TamaEmitter = "res://addons/tama/icons/ammunition.svg"
+TamaBulletRegistry = "res://addons/tama/icons/tama.svg"
+TamaServerBulletConfig = "res://addons/tama/icons/tama.svg"
+
+[libraries]
+windows.editor.x86_64     = "res://addons/tama/bin/libtama.windows.template_debug.x86_64.dll"
+windows.template_debug.x86_64   = "res://addons/tama/bin/libtama.windows.template_debug.x86_64.dll"
+windows.template_release.x86_64 = "res://addons/tama/bin/libtama.windows.template_release.x86_64.dll"
+linux.editor.x86_64       = "res://addons/tama/bin/libtama.linux.template_debug.x86_64.so"
+linux.template_debug.x86_64     = "res://addons/tama/bin/libtama.linux.template_debug.x86_64.so"
+linux.template_release.x86_64   = "res://addons/tama/bin/libtama.linux.template_release.x86_64.so"

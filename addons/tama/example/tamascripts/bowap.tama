@@ -40,4 +40,4 @@ bullet shooter
                 # The *4 is just there to make the spinning faster.
                 dir rel time()*4 
                 over 0 # Change direction over 0 seconds, so instantly.
-            wait 0.07 # wait 0.07 seconds before shooting again
+            waitf 3 # wait 3 frames before shooting again

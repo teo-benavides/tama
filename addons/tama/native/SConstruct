@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+import os
+
+# Build godot-cpp and get the configured env
+env = SConscript("godot-cpp/SConstruct")
+
+# C++17 for std::variant, std::string_view, etc.
+env.Append(CXXFLAGS=["-std=c++17"] if env["platform"] == "windows" else ["-std=c++17"])
+
+env.Append(CPPPATH=["src/"])
+sources = Glob("src/*.cpp")
+
+if env["target"] in ["editor", "template_debug"]:
+    doc_data = env.GodotCPPDocData("src/gen/doc_data.gen.cpp", source=Glob("doc_classes/*.xml"))
+    sources.append(doc_data)
+
+output_name = "libtama"
+
+if env["platform"] == "macos":
+    library = env.SharedLibrary(
+        "../bin/{}.{}.{}.framework/{}.{}.{}".format(
+            output_name, env["platform"], env["target"],
+            output_name, env["platform"], env["target"],
+        ),
+        source=sources,
+    )
+elif env["platform"] == "ios":
+    library = env.StaticLibrary(
+        "../bin/{}{}{}".format(output_name, env["suffix"], ".a"),
+        source=sources,
+    )
+else:
+    library = env.SharedLibrary(
+        "../bin/{}{}{}".format(output_name, env["suffix"], env["SHLIBSUFFIX"]),
+        source=sources,
+    )
+
+env.NoCache(library)
+Default(library)

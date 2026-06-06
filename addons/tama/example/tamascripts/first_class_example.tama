@@ -4,7 +4,8 @@ fire simpleFire(proj, dir_type, spd_type)
     bullet proj
 
 bullet myBullet(accel_val, accel_type, emt_)
-   emt emt_
+    type example
+    emt emt_
 
 main
     repeat

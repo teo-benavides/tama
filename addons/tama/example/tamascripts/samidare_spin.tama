@@ -1,0 +1,15 @@
+main
+    repeat -1 i
+        act f7(i, fast)
+        act f7(i, orange, 95)
+        act f7(i, blue, 180)
+        act f7(i, green, 275)
+        waitf 3
+
+act f7(inc, btype, ofs)
+    repeat 7 i
+        fire
+            dir abs (inc + i) * (360.0/32.0) + ofs
+            spd 500
+            bul
+                type btype

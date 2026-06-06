@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaServerBullet" inherits="Object" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Lightweight handle to a single active server bullet, passed through the [signal TamaManager.bullet_hit] signal.
+	</brief_description>
+	<description>
+		[TamaServerBullet] is a thin proxy object that represents one active bullet managed by the server bullet pool. It is passed as the first argument of the [signal TamaManager.bullet_hit] signal whenever a server bullet's collision area overlaps a physics body.
+
+		Use [method TamaManager.destroy_server_bullet] to remove the bullet when handling a hit:
+		[codeblock]
+		func _ready():
+		    TamaManager.bullet_hit.connect(_on_bullet_hit)
+
+		func _on_bullet_hit(bullet: TamaServerBullet, body_instance_id: int) -> void:
+		    if body_instance_id == get_instance_id():
+		        TamaManager.destroy_server_bullet(bullet)
+		[/codeblock]
+
+		[b]Note:[/b] Do not store [TamaServerBullet] references across frames. The underlying slot may be recycled and reused at any time once the bullet is no longer active.
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="position" type="Vector2" setter="" getter="get_position" default="Vector2(0, 0)">
+			Current world position of the bullet.
+		</member>
+		<member name="angle" type="float" setter="" getter="get_angle" default="0.0">
+			Current travel angle of the bullet in radians.
+		</member>
+		<member name="speed" type="float" setter="" getter="get_speed" default="0.0">
+			Current speed of the bullet in pixels per second.
+		</member>
+		<member name="speed_x" type="float" setter="" getter="get_speed_x" default="0.0">
+			World-space X velocity component added on top of the directional speed (from [code]accel[/code]).
+		</member>
+		<member name="speed_y" type="float" setter="" getter="get_speed_y" default="0.0">
+			World-space Y velocity component added on top of the directional speed (from [code]accel[/code]).
+		</member>
+		<member name="active" type="bool" setter="" getter="get_active" default="false">
+			Whether this bullet is currently active. [code]false[/code] after the bullet has been recycled.
+		</member>
+	</members>
+</class>

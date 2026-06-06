@@ -1,16 +1,15 @@
-[gd_scene format=3 uid="uid://du2cceq7rvnfu"]
+[gd_scene format=3 uid="uid://cppbullet001"]
 
-[ext_resource type="Script" uid="uid://b1jfjgnmfghq" path="res://addons/tama/example/bullets/example_bullet.gd" id="1_v5ve1"]
-[ext_resource type="Texture2D" uid="uid://bicx42bqqr652" path="res://addons/tama/example/bullets/example_bullet.png" id="2_v5ve1"]
+[ext_resource type="Script" uid="uid://d3s2b5wwu1egu" path="res://addons/tama/example/bullets/example_bullet.gd" id="1_v5ve1"]
+[ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama/example/bullets/example_bullet.png" id="2_idp5l"]
 
-[node name="ExampleBullet" type="CharacterBody2D" unique_id=972656954]
+[node name="ExampleBullet" type="TamaBullet" unique_id=561976428]
 script = ExtResource("1_v5ve1")
-rotates = false
-metadata/_custom_type_script = "uid://cenfsbi0vwpig"
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=281565911]
+texture_filter = 1
 scale = Vector2(0.2, 0.2)
-texture = ExtResource("2_v5ve1")
+texture = ExtResource("2_idp5l")
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=1530201192]
 rect = Rect2(-13, -13, 26, 26)
