@@ -51,9 +51,9 @@ public:
     // Forwarded from TamaServerBulletPool — emitted when a server bullet hits a body.
     void _on_pool_bullet_hit(godot::Object *bullet, int64_t body_instance_id);
 
-    godot::Object *_get_tama_script(const godot::String &filename) const;
+    _TamaASTNode  *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
-    godot::Object *_get_script_from_repository(const godot::String &filename) const;
+    _TamaASTNode  *_get_script_from_repository(const godot::String &filename) const;
     void           _connect_interpreter(godot::Object *interpreter, godot::Object *spawner);
     _TamaSpawnManager *_get_spawn_manager() const { return _spawn_manager; }
     godot::Object *_get_context() const { return _spawn_manager ? _spawn_manager->get_context().ptr() : nullptr; }

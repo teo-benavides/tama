@@ -3,14 +3,16 @@
 #include "tama_ast_nodes.h"
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
+#include <godot_cpp/variant/string.hpp>
+
 // Called by the parser to resolve 'include' directives.
-// Should return the ProgramNode for the named script, or an empty Ref on failure.
-using TamaResolver = std::function<godot::Ref<_TamaASTNode>(const std::string &)>;
+using TamaResolver = std::function<std::shared_ptr<_TamaASTNode>(const std::string &)>;
 
 struct TamaParseError {
     int         line, col, length;
@@ -18,8 +20,8 @@ struct TamaParseError {
 };
 
 struct TamaParseResult {
-    godot::Ref<_TamaASTNode>      program; // NodeType::PROGRAM, or empty on total failure
-    std::vector<TamaParseError>  errors;
+    std::shared_ptr<_TamaASTNode>  program; // NodeType::PROGRAM, or null on total failure
+    std::vector<TamaParseError>   errors;
     bool ok() const { return errors.empty(); }
 };
 
@@ -49,7 +51,7 @@ private:
     std::vector<Ref3> _fire_refs, _act_refs, _bullet_refs;
 
     TamaResolver _resolver;
-    std::unordered_map<std::string, godot::Ref<_TamaASTNode>> _resolved_includes;
+    std::unordered_map<std::string, std::shared_ptr<_TamaASTNode>> _resolved_includes;
 
     // -----------------------------------------------------------------------
     // Cursor helpers
@@ -73,10 +75,10 @@ private:
     // -----------------------------------------------------------------------
     std::string collect_to_eol();
     std::string collect_to_rparen(const TamaToken &open_tok);
-    godot::Array parse_call_args(const TamaToken &caller_tok);
-    godot::Variant parse_single_arg(const TamaToken &open_tok);
-    std::string parse_identifier();
-    godot::Array parse_param_list();   // Array[String]
+    std::vector<TamaArgVal>    parse_call_args(const TamaToken &caller_tok);
+    TamaArgVal                 parse_single_arg(const TamaToken &open_tok);
+    std::string                parse_identifier();
+    std::vector<godot::String> parse_param_list();
 
     // -----------------------------------------------------------------------
     // Qualifier helpers
@@ -87,65 +89,65 @@ private:
     // -----------------------------------------------------------------------
     // Shared sub-parsers
     // -----------------------------------------------------------------------
-    godot::Ref<_TamaASTNode> parse_dir();
-    godot::Ref<_TamaASTNode> parse_speed();
-    godot::Ref<_TamaASTNode> parse_wait();
-    godot::Ref<_TamaASTNode> parse_waitf();
-    godot::Ref<_TamaASTNode> parse_vanish();
-    godot::Ref<_TamaASTNode> parse_break();
-    godot::Ref<_TamaASTNode> parse_over();
-    godot::Ref<_TamaASTNode> parse_offset();
-    godot::Ref<_TamaASTNode> parse_pos();
-    godot::Ref<_TamaASTNode> parse_chdir();
-    godot::Ref<_TamaASTNode> parse_chspd();
-    godot::Ref<_TamaASTNode> parse_chpos();
-    godot::Ref<_TamaASTNode> parse_accel();
-    godot::Ref<_TamaASTNode> parse_repeatf();
-    godot::Ref<_TamaASTNode> parse_mvmt();
-    godot::Ref<_TamaASTNode> parse_while();
-    godot::Ref<_TamaASTNode> parse_if();
-    godot::Ref<_TamaASTNode> parse_var_decl();
-    godot::Ref<_TamaASTNode> parse_var_assign();
-    godot::Ref<_TamaASTNode> parse_repeat();
-    godot::Ref<_TamaASTNode> parse_inline_act();
-    godot::Ref<_TamaASTNode> parse_inline_emitter();
-    godot::Ref<_TamaASTNode> parse_inline_fire();
-    godot::Ref<_TamaASTNode> parse_fire_call();
-    godot::Ref<_TamaASTNode> parse_act_call();
-    godot::Ref<_TamaASTNode> parse_async_act();
-    godot::Ref<_TamaASTNode> parse_bullet_call();
-    godot::Ref<_TamaASTNode> parse_inline_bullet();
+    std::shared_ptr<_TamaASTNode> parse_dir();
+    std::shared_ptr<_TamaASTNode> parse_speed();
+    std::shared_ptr<_TamaASTNode> parse_wait();
+    std::shared_ptr<_TamaASTNode> parse_waitf();
+    std::shared_ptr<_TamaASTNode> parse_vanish();
+    std::shared_ptr<_TamaASTNode> parse_break();
+    std::shared_ptr<_TamaASTNode> parse_over();
+    std::shared_ptr<_TamaASTNode> parse_offset();
+    std::shared_ptr<_TamaASTNode> parse_pos();
+    std::shared_ptr<_TamaASTNode> parse_chdir();
+    std::shared_ptr<_TamaASTNode> parse_chspd();
+    std::shared_ptr<_TamaASTNode> parse_chpos();
+    std::shared_ptr<_TamaASTNode> parse_accel();
+    std::shared_ptr<_TamaASTNode> parse_repeatf();
+    std::shared_ptr<_TamaASTNode> parse_mvmt();
+    std::shared_ptr<_TamaASTNode> parse_while();
+    std::shared_ptr<_TamaASTNode> parse_if();
+    std::shared_ptr<_TamaASTNode> parse_var_decl();
+    std::shared_ptr<_TamaASTNode> parse_var_assign();
+    std::shared_ptr<_TamaASTNode> parse_repeat();
+    std::shared_ptr<_TamaASTNode> parse_inline_act();
+    std::shared_ptr<_TamaASTNode> parse_inline_emitter();
+    std::shared_ptr<_TamaASTNode> parse_inline_fire();
+    std::shared_ptr<_TamaASTNode> parse_fire_call();
+    std::shared_ptr<_TamaASTNode> parse_act_call();
+    std::shared_ptr<_TamaASTNode> parse_async_act();
+    std::shared_ptr<_TamaASTNode> parse_bullet_call();
+    std::shared_ptr<_TamaASTNode> parse_inline_bullet();
 
     // -----------------------------------------------------------------------
     // Action-block dispatcher
     // -----------------------------------------------------------------------
-    godot::Ref<_TamaASTNode> parse_action_statement();
+    std::shared_ptr<_TamaASTNode> parse_action_statement();
 
     // -----------------------------------------------------------------------
     // Fire-block parser (fills dir/speed/offset/pos/bullet onto node)
     // -----------------------------------------------------------------------
-    void parse_fire_block(godot::Ref<_TamaASTNode> node, const TamaToken &open_tok);
+    void parse_fire_block(const std::shared_ptr<_TamaASTNode> &node, const TamaToken &open_tok);
 
     // -----------------------------------------------------------------------
     // Axis sub-parser (used by offset/pos/chpos/accel/mvmt blocks)
     // -----------------------------------------------------------------------
-    godot::Ref<_TamaASTNode> parse_axis_node(int default_qt); // ValueType default
+    std::shared_ptr<_TamaASTNode> parse_axis_node(int default_qt); // ValueType default
 
     // -----------------------------------------------------------------------
     // Block helper: consumes INDENT … DEDENT, calling stmt_fn for each stmt.
     // -----------------------------------------------------------------------
-    using StmtFn = std::function<godot::Ref<_TamaASTNode>()>;
-    godot::Array parse_block(StmtFn stmt_fn);
+    using StmtFn = std::function<std::shared_ptr<_TamaASTNode>()>;
+    std::vector<std::shared_ptr<_TamaASTNode>> parse_block(StmtFn stmt_fn);
 
     // -----------------------------------------------------------------------
     // Top-level definition parsers
     // -----------------------------------------------------------------------
-    void                    parse_include(godot::Ref<_TamaASTNode> program);
-    godot::Ref<_TamaASTNode> parse_export();
-    godot::Ref<_TamaASTNode> parse_main();
-    godot::Ref<_TamaASTNode> parse_fire_def();
-    godot::Ref<_TamaASTNode> parse_act_def();
-    godot::Ref<_TamaASTNode> parse_bullet_def();
+    void                          parse_include(const std::shared_ptr<_TamaASTNode> &program);
+    std::shared_ptr<_TamaASTNode> parse_export();
+    std::shared_ptr<_TamaASTNode> parse_main();
+    std::shared_ptr<_TamaASTNode> parse_fire_def();
+    std::shared_ptr<_TamaASTNode> parse_act_def();
+    std::shared_ptr<_TamaASTNode> parse_bullet_def();
 
     // -----------------------------------------------------------------------
     // Post-parse reference validation

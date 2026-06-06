@@ -1,21 +1,34 @@
 #pragma once
-#include <godot_cpp/classes/ref_counted.hpp>
-#include <godot_cpp/variant/array.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/variant.hpp>
 
 // ---------------------------------------------------------------------------
-// _TamaASTNode — flat struct for all AST node types.
-//
-// GDCLASS is kept so nodes can live in godot::Array (ExecFrame::body).
-// All fields are direct C++ members — no Dictionary lookup, no _get() overhead.
+// _TamaASTNode — plain C++ struct, no Godot machinery.
 // ---------------------------------------------------------------------------
 
-class _TamaASTNode : public godot::RefCounted {
-    GDCLASS(_TamaASTNode, godot::RefCounted)
-protected:
-    static void _bind_methods();
-public:
+struct _TamaASTNode;
+
+// Evaluated argument value — either a Godot Variant or an AST node pointer.
+struct TamaArgVal {
+    bool is_node = false;
+    godot::Variant var;
+    _TamaASTNode *node = nullptr;
+    // Owns the node when created from a shared_ptr (parser inline nodes).
+    // Null when node is a raw ptr into a body already owned by the AST.
+    std::shared_ptr<_TamaASTNode> _owner;
+
+    TamaArgVal() = default;
+    TamaArgVal(const godot::Variant &v) : var(v) {}
+    // Raw-ptr constructor: caller guarantees lifetime (body nodes owned by AST).
+    TamaArgVal(_TamaASTNode *n) : is_node(true), node(n) {}
+    // Owning constructor: takes ownership (inline parser-created nodes).
+    TamaArgVal(std::shared_ptr<_TamaASTNode> n) : is_node(true), node(n.get()), _owner(std::move(n)) {}
+};
+
+struct _TamaASTNode {
     int type_id = 0;
 
     // Shared scalar fields
@@ -37,34 +50,22 @@ public:
     bool is_async   = false;
     godot::Variant default_value;
 
-    // Array fields
-    godot::Array body;
-    godot::Array params;
-    godot::Array args;
-    godot::Array conditions;
-    godot::Array bodies;
-    godot::Array else_body;
-    godot::Array fires;
-    godot::Array acts;
-    godot::Array bullets;
-    godot::Array exports;
+    // Body/block fields (now vectors of shared_ptr)
+    std::vector<std::shared_ptr<_TamaASTNode>> body, else_body;
+    std::vector<std::shared_ptr<_TamaASTNode>> fires, acts, bullets, exports;
+
+    // IF-chain fields
+    std::vector<godot::String>                               conditions;
+    std::vector<std::vector<std::shared_ptr<_TamaASTNode>>> bodies;
+
+    // Params/args
+    std::vector<godot::String> params;
+    std::vector<TamaArgVal>    args;
 
     // Child node fields
-    godot::Ref<_TamaASTNode> dir;
-    godot::Ref<_TamaASTNode> speed;
-    godot::Ref<_TamaASTNode> over;
-    godot::Ref<_TamaASTNode> offset;
-    godot::Ref<_TamaASTNode> pos;
-    godot::Ref<_TamaASTNode> bullet;
-    godot::Ref<_TamaASTNode> x;
-    godot::Ref<_TamaASTNode> y;
-    godot::Ref<_TamaASTNode> emitter_act;
-    godot::Ref<_TamaASTNode> act;
-    godot::Ref<_TamaASTNode> mvmt;
-    godot::Ref<_TamaASTNode> main;
-
-    int get_type_id() const { return type_id; }
+    std::shared_ptr<_TamaASTNode> dir, speed, over, offset, pos, bullet;
+    std::shared_ptr<_TamaASTNode> x, y, emitter_act, act, mvmt, main;
 };
 
 // Convenience factory used by the parser.
-godot::Ref<_TamaASTNode> tama_make_node(int type_id);
+std::shared_ptr<_TamaASTNode> tama_make_node(int type_id);

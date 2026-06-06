@@ -2,6 +2,7 @@
 #include "tama_emitter.h"
 #include "tama_manager.h"
 
+#include <algorithm>
 #include <cmath>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
@@ -17,7 +18,6 @@ using namespace godot;
 
 void _TamaSpawnManager::_bind_methods() {
     ClassDB::bind_method(D_METHOD("connect_interpreter","interpreter","spawner"), &_TamaSpawnManager::connect_interpreter);
-    ClassDB::bind_method(D_METHOD("get_tama_script","filename"), &_TamaSpawnManager::get_tama_script);
     ClassDB::bind_method(D_METHOD("get_registry"),     &_TamaSpawnManager::get_registry);
     ClassDB::bind_method(D_METHOD("set_registry","v"), &_TamaSpawnManager::set_registry);
     ClassDB::bind_method(D_METHOD("get_context"),      &_TamaSpawnManager::get_context);
@@ -46,7 +46,7 @@ void _TamaSpawnManager::connect_interpreter(Object *interpreter, Object *spawner
     };
 }
 
-Object *_TamaSpawnManager::get_tama_script(const String &filename) const {
+_TamaASTNode *_TamaSpawnManager::get_tama_script(const String &filename) const {
     if (_repository) return _repository->get_tama_script(filename);
     return nullptr;
 }
@@ -109,12 +109,14 @@ static float spawner_get_angle(godot::Object *s) {
 void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object *spawner) {
     // Resolve bullet_type (substitute from params if it matches a param name)
     String bullet_type = data.bullet_type;
-    Array bullet_params = data.bullet_params;
-    Array bullet_args   = data.bullet_args;
+    const std::vector<godot::String> &bullet_params = data.bullet_params;
+    const std::vector<TamaArgVal>    &bullet_args   = data.bullet_args;
     if (!bullet_type.is_empty() && bullet_params.size() > 0) {
-        for (int i = 0; i < (int)UtilityFunctions::mini(bullet_params.size(), bullet_args.size()); ++i) {
-            if (String(bullet_params[i]) == bullet_type) {
-                bullet_type = String(Variant(bullet_args[i]));
+        for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i) {
+            const TamaArgVal &av = bullet_args[i];
+            if (bullet_params[i] == bullet_type) {
+                if (!av.is_node && av.var.get_type() == Variant::STRING)
+                    bullet_type = (String)av.var;
                 break;
             }
         }
@@ -183,8 +185,10 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
 
     if (data.mvmt_x_set || data.mvmt_y_set) {
         Dictionary mvmt_scope;
-        for (int i = 0; i < (int)UtilityFunctions::mini(bullet_params.size(), bullet_args.size()); ++i)
-            mvmt_scope[bullet_params[i]] = bullet_args[i];
+        for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i) {
+            const TamaArgVal &av = bullet_args[i];
+            if (!av.is_node) mvmt_scope[bullet_params[i]] = av.var;
+        }
         mvmt_scope["spawn_x"] = bullet->_initial_position.x;
         mvmt_scope["spawn_y"] = bullet->_initial_position.y;
         bullet->_mvmt_x_set  = data.mvmt_x_set;
@@ -198,21 +202,23 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
 
     spawn_parent->call_deferred("add_child", Variant(bullet));
 
-    Object *bullet_act         = data.bullet_act;
-    Object *bullet_emitter_act = data.bullet_emitter_act;
-    Object *source_program     = data.source_program;
+    _TamaASTNode *bullet_act         = data.bullet_act;
+    _TamaASTNode *bullet_emitter_act = data.bullet_emitter_act;
+    _TamaASTNode *source_program     = data.source_program;
 
     if (bullet_act) {
-        Dictionary act_scope;
-        for (int i = 0; i < (int)UtilityFunctions::mini(bullet_params.size(), bullet_args.size()); ++i)
-            act_scope[bullet_params[i]] = bullet_args[i];
-        act_scope["spawn_x"] = bullet->_initial_position.x;
-        act_scope["spawn_y"] = bullet->_initial_position.y;
+        TamaScope act_scope;
+        for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
+            act_scope[bullet_params[i].utf8().get_data()] = TamaScopeVal(bullet_args[i]);
+        act_scope["spawn_x"] = TamaScopeVal(Variant(bullet->_initial_position.x));
+        act_scope["spawn_y"] = TamaScopeVal(Variant(bullet->_initial_position.y));
         connect_interpreter(bullet_runner, bullet);
-        bullet->connect("ready",
-            callable_mp(bullet_runner, &_TamaInterpreter::start_act)
-                .bind(Variant(source_program), Variant(bullet_act), Variant(act_scope)),
-            Object::CONNECT_ONE_SHOT);
+        _TamaInterpreter *br = bullet_runner;
+        _TamaASTNode *prog = source_program;
+        _TamaASTNode *act  = bullet_act;
+        bullet->_on_ready_cb = [br, prog, act, sc = std::move(act_scope)]() mutable {
+            br->start_act(prog, act, std::move(sc));
+        };
     }
 
     if (bullet_emitter_act) {
@@ -225,15 +231,28 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
             spawner_runner = bullet_runner;
         }
         connect_interpreter(spawner_runner, bullet);
-        Dictionary emt_scope;
-        for (int i = 0; i < (int)UtilityFunctions::mini(bullet_params.size(), bullet_args.size()); ++i)
-            emt_scope[bullet_params[i]] = bullet_args[i];
-        emt_scope["spawn_x"] = bullet->_initial_position.x;
-        emt_scope["spawn_y"] = bullet->_initial_position.y;
-        bullet->connect("ready",
-            callable_mp(spawner_runner, &_TamaInterpreter::start_act)
-                .bind(Variant(source_program), Variant(bullet_emitter_act), Variant(emt_scope)),
-            Object::CONNECT_ONE_SHOT);
+        TamaScope emt_scope;
+        for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
+            emt_scope[bullet_params[i].utf8().get_data()] = TamaScopeVal(bullet_args[i]);
+        emt_scope["spawn_x"] = TamaScopeVal(Variant(bullet->_initial_position.x));
+        emt_scope["spawn_y"] = TamaScopeVal(Variant(bullet->_initial_position.y));
+        _TamaInterpreter *sr = spawner_runner;
+        _TamaASTNode *prog   = source_program;
+        _TamaASTNode *emt    = bullet_emitter_act;
+        if (bullet_act) {
+            // bullet_act already took _on_ready_cb — chain via a second lambda stored on bullet
+            // Use the existing slot: if bullet_act set _on_ready_cb, we chain emt after.
+            // Since only one _on_ready_cb slot exists, we wrap both:
+            auto prev_cb = std::move(bullet->_on_ready_cb);
+            bullet->_on_ready_cb = [prev_cb = std::move(prev_cb), sr, prog, emt, sc2 = std::move(emt_scope)]() mutable {
+                if (prev_cb) prev_cb();
+                sr->start_act(prog, emt, std::move(sc2));
+            };
+        } else {
+            bullet->_on_ready_cb = [sr, prog, emt, sc = std::move(emt_scope)]() mutable {
+                sr->start_act(prog, emt, std::move(sc));
+            };
+        }
     }
 }
 

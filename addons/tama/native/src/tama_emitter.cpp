@@ -132,7 +132,7 @@ void TamaEmitter::start() {
     }
     TamaManager *mgr = TamaManager::get_instance();
     if (!mgr) return;
-    Object *program = mgr->_get_tama_script(_script_filename);
+    _TamaASTNode *program = mgr->_get_tama_script(_script_filename);
     if (!program) {
         UtilityFunctions::push_error(String("TamaEmitter: script '") + _script_filename + "' not found in repository (check tama/scripts_path project setting)");
         return;
@@ -144,8 +144,15 @@ void TamaEmitter::start() {
     mgr->_connect_interpreter(_interpreter, this);
     add_child(_interpreter);
     _running = true;
-    Dictionary scope = _export_values.duplicate();
-    _interpreter->start(program, scope);
+
+    // Convert _export_values Dictionary → TamaScope
+    TamaScope scope;
+    Array keys = _export_values.keys();
+    for (int i = 0; i < keys.size(); ++i) {
+        std::string k = ((String)keys[i]).utf8().get_data();
+        scope[k] = TamaScopeVal(_export_values[keys[i]]);
+    }
+    _interpreter->start(program, std::move(scope));
 }
 
 void TamaEmitter::stop() {
@@ -159,11 +166,10 @@ void TamaEmitter::stop() {
 // Editor helpers
 // ---------------------------------------------------------------------------
 
-void TamaEmitter::_read_exports_from(Object *program) {
-    _TamaASTNode *prog = Object::cast_to<_TamaASTNode>(program);
+void TamaEmitter::_read_exports_from(_TamaASTNode *prog) {
     if (!prog) return;
-    for (int i = 0; i < prog->exports.size(); ++i) {
-        _TamaASTNode *exp = Object::cast_to<_TamaASTNode>(prog->exports[i].operator Object *());
+    for (const auto &sp : prog->exports) {
+        _TamaASTNode *exp = sp.get();
         if (!exp) continue;
         ExportDef def;
         def.name          = exp->name;
@@ -188,13 +194,13 @@ void TamaEmitter::_refresh_exports() {
         // Must use memnew — Godot Objects cannot be stack-allocated.
         // parse_source_for_exports stores the AST in the repo so the raw pointer stays valid.
         _TamaScriptRepository *temp = memnew(_TamaScriptRepository);
-        Object *program = temp->parse_source_for_exports(source, scripts_dir);
+        _TamaASTNode *program = temp->parse_source_for_exports(source, scripts_dir);
         if (program) _read_exports_from(program);
         memdelete(temp);
     } else {
         TamaManager *mgr = TamaManager::get_instance();
         if (mgr && mgr->_has_tama_script(_script_filename)) {
-            Object *program = mgr->_get_script_from_repository(_script_filename);
+            _TamaASTNode *program = mgr->_get_script_from_repository(_script_filename);
             if (program) _read_exports_from(program);
         }
     }

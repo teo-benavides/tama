@@ -28,7 +28,6 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
         return;
     }
     // Internal classes — not visible in the editor or docs
-    ClassDB::register_internal_class<_TamaASTNode>();
     ClassDB::register_internal_class<_TamaScriptRepository>();
     ClassDB::register_internal_class<_TamaSpawnManager>();
     ClassDB::register_internal_class<_TamaExprRuntime>();

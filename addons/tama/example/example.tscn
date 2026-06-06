@@ -17,7 +17,7 @@ outline_color = Color(0, 0, 0, 1)
 script = ExtResource("1_ig7tw")
 
 [node name="EmitterPosition" type="Marker2D" parent="." unique_id=1648329798]
-position = Vector2(568, 143)
+position = Vector2(523, 295)
 
 [node name="ExamplePlayer" parent="." unique_id=985488048 instance=ExtResource("3_h2yge")]
 position = Vector2(372, 446)

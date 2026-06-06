@@ -1,6 +1,7 @@
 #pragma once
 #include "tama_interpreter.h"
 
+#include <functional>
 #include <godot_cpp/classes/character_body2d.hpp>
 #include <godot_cpp/classes/tween.hpp>
 #include <godot_cpp/templates/list.hpp>
@@ -14,6 +15,7 @@ protected:
 
 public:
     godot::Object *_runner        = nullptr;
+    std::function<void()> _on_ready_cb;
     float          _angle         = 0.0f;
     float          _speed         = 0.0f;
     float          _speed_x       = 0.0f;

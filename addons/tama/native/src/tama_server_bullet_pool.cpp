@@ -366,9 +366,9 @@ Object *TamaServerBulletPool::spawn(
 
     if (b.mvmt_x_set || b.mvmt_y_set) {
         // Build mvmt scope from bullet_params/args + spawn_x/y
-        Array params = p_data.bullet_params;
-        Array args   = p_data.bullet_args;
-        int   n_args = std::min(params.size(), args.size());
+        const auto &params = p_data.bullet_params;
+        const auto &args   = p_data.bullet_args;
+        int   n_args = (int)std::min(params.size(), args.size());
 
         std::vector<std::string> var_names;
         b.mvmt_values.clear();
@@ -376,8 +376,8 @@ Object *TamaServerBulletPool::spawn(
         b.mvmt_values.reserve(n_args + 2);
 
         for (int i = 0; i < n_args; ++i) {
-            var_names.push_back(((String)params[i]).utf8().get_data());
-            b.mvmt_values.push_back((double)args[i]);
+            var_names.push_back(params[i].utf8().get_data());
+            b.mvmt_values.push_back(args[i].is_node ? 0.0 : (double)(float)args[i].var);
         }
         var_names.push_back("spawn_x");
         b.mvmt_values.push_back((double)position.x);
@@ -420,20 +420,20 @@ Object *TamaServerBulletPool::spawn(
 
     // bullet_act runner — C++ _TamaInterpreter (stepped in _physics_process)
     b.runner = nullptr;
-    Object *bullet_act_obj = p_data.bullet_act;
+    _TamaASTNode *bullet_act_node = p_data.bullet_act;
 
-    if (bullet_act_obj) {
+    if (bullet_act_node) {
         _TamaInterpreter *runner = memnew(_TamaInterpreter);
         runner->set_context(p_context);
         b.runner = runner;
 
         // Build act scope
-        Dictionary act_scope;
-        int na = std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
+        TamaScope act_scope;
+        int na = (int)std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
         for (int i = 0; i < na; ++i)
-            act_scope[(String)p_data.bullet_params[i]] = p_data.bullet_args[i];
-        act_scope["spawn_x"] = position.x;
-        act_scope["spawn_y"] = position.y;
+            act_scope[p_data.bullet_params[i].utf8().get_data()] = TamaScopeVal(p_data.bullet_args[i]);
+        act_scope["spawn_x"] = TamaScopeVal(Variant(position.x));
+        act_scope["spawn_y"] = TamaScopeVal(Variant(position.y));
 
         // Register C++ event handler — no signal/allocation overhead
         TamaServerBullet *wrapper_bullet = Object::cast_to<TamaServerBullet>(b.wrapper);
@@ -444,7 +444,7 @@ Object *TamaServerBulletPool::spawn(
         _TamaSpawnManager *sm = mgr ? mgr->_get_spawn_manager() : nullptr;
         if (sm) sm->connect_interpreter(runner, b.wrapper);
 
-        runner->start_act(p_data.source_program, bullet_act_obj, act_scope);
+        runner->start_act(p_data.source_program, bullet_act_node, std::move(act_scope));
     }
 
     return b.wrapper;

@@ -1,4 +1,5 @@
 #include "tama_manager.h"
+#include "tama_ast_nodes.h"
 
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
@@ -199,13 +200,13 @@ int TamaManager::get_bullet_count() const {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-Object *TamaManager::_get_tama_script(const String &filename) const {
+_TamaASTNode *TamaManager::_get_tama_script(const String &filename) const {
     return _spawn_manager ? _spawn_manager->get_tama_script(filename) : nullptr;
 }
 bool TamaManager::_has_tama_script(const String &filename) const {
     return _repository ? _repository->has_tama_script(filename) : false;
 }
-Object *TamaManager::_get_script_from_repository(const String &filename) const {
+_TamaASTNode *TamaManager::_get_script_from_repository(const String &filename) const {
     return _repository ? _repository->get_tama_script(filename) : nullptr;
 }
 void TamaManager::_connect_interpreter(Object *interpreter, Object *spawner) {

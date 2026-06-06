@@ -66,6 +66,8 @@ void TamaBullet::_get_property_list(List<PropertyInfo> *p_list) const {
 }
 
 void TamaBullet::_ready() {
+    if (_on_ready_cb) { auto cb = std::move(_on_ready_cb); cb(); }
+
     add_to_group("tama_bullets");
     set_global_position(_initial_position);
 
