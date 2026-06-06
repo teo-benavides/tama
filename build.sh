@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NATIVE_DIR="$SCRIPT_DIR/addons/tama/native"
 
 # ── defaults ───────────────────────────────────────────────────────────────
-PLATFORMS="windows,linux,web"
+PLATFORMS="windows,linux"
 TARGETS="debug,release"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 
