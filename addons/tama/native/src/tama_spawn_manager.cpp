@@ -92,6 +92,19 @@ static void spawner_set_last_speed(godot::Object *s, float v) {
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
         { if (sb->_state) sb->_state->last_speed = v; }
 }
+static float spawner_get_last_rot_speed(godot::Object *s) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   return e->_last_rot_speed;
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))    return b->_last_rot_speed;
+    if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
+        return sb->_state ? sb->_state->last_rot_speed : 0.0f;
+    return 0.0f;
+}
+static void spawner_set_last_rot_speed(godot::Object *s, float v) {
+    if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   { e->_last_rot_speed = v; return; }
+    if (auto *b = godot::Object::cast_to<TamaBullet>(s))    { b->_last_rot_speed = v; return; }
+    if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
+        { if (sb->_state) sb->_state->last_rot_speed = v; }
+}
 static float spawner_get_angle(godot::Object *s) {
     if (auto *b  = godot::Object::cast_to<TamaBullet>(s))       return b->_angle;
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
@@ -135,7 +148,13 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
             Vector2 pos    = _resolve_position(data, spawner, angle);
             spawner_set_last_angle(spawner, angle);
             spawner_set_last_speed(spawner, speed);
-            _server_pool->spawn(data, srv_cfg, angle, speed, pos, context.ptr());
+            auto *wrapper = godot::Object::cast_to<TamaServerBullet>(
+                _server_pool->spawn(data, srv_cfg, angle, speed, pos, context.ptr()));
+            if (wrapper && wrapper->_state && data.has_rot_speed) {
+                float rot_spd = _resolve_rot_speed(data, spawner);
+                spawner_set_last_rot_speed(spawner, rot_spd);
+                wrapper->_state->rot_speed = rot_spd;
+            }
             return;
         }
     }
@@ -178,6 +197,8 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
 
     bullet->_angle            = angle;
     bullet->_speed            = speed;
+    bullet->_rot_speed        = data.has_rot_speed ? _resolve_rot_speed(data, spawner) : 0.0f;
+    if (data.has_rot_speed) spawner_set_last_rot_speed(spawner, bullet->_rot_speed);
     bullet->_initial_position = _resolve_position(data, spawner, angle);
     bullet->_bounces_left     = data.bounces_max;
     bullet->_bounces_axis     = data.bounces_axis;
@@ -264,6 +285,14 @@ float _TamaSpawnManager::_resolve_speed(const TamaBulletFireData &data, Object *
         case 0: return data.speed_value;
         case 1: case 2: return spawner_get_last_speed(spawner) + data.speed_value;
         default: return data.speed_value;
+    }
+}
+
+float _TamaSpawnManager::_resolve_rot_speed(const TamaBulletFireData &data, Object *spawner) const {
+    switch (data.rot_speed_type) {
+        case 0: return data.rot_speed_value;
+        case 1: case 2: return spawner_get_last_rot_speed(spawner) + data.rot_speed_value;
+        default: return data.rot_speed_value;
     }
 }
 

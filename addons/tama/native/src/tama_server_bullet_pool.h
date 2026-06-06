@@ -117,10 +117,11 @@ class TamaServerBulletPool : public godot::Node2D {
 
     void _step_tweens(BulletState &b, float delta);
     // C++ event handlers — called directly by TamaServerBullet (friend)
-    void _apply_chdir(BulletState &b, const TamaChdirEvent &e);
-    void _apply_chspd(BulletState &b, const TamaChspdEvent &e);
-    void _apply_chpos(BulletState &b, const TamaChposEvent &e);
-    void _apply_accel(BulletState &b, const TamaAccelEvent &e);
+    void _apply_chdir    (BulletState &b, const TamaChdirEvent    &e);
+    void _apply_chspd    (BulletState &b, const TamaChspdEvent    &e);
+    void _apply_chrotspd (BulletState &b, const TamaChrotspdEvent &e);
+    void _apply_chpos    (BulletState &b, const TamaChposEvent    &e);
+    void _apply_accel    (BulletState &b, const TamaAccelEvent    &e);
 
     friend class TamaServerBullet;
 

@@ -1,0 +1,13 @@
+main
+    fire
+        dir abs 0
+        spd abs 0
+        rotspd abs 180
+        bullet
+            act
+                repeat
+                    repeat 8 i
+                        fire
+                            dir rel (360.0/8)*i
+                            spd abs 200
+                    waitf 2

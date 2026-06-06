@@ -27,6 +27,8 @@ void TamaBullet::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_speed_x","v"),      &TamaBullet::set_speed_x);
     ClassDB::bind_method(D_METHOD("get_speed_y"),          &TamaBullet::get_speed_y);
     ClassDB::bind_method(D_METHOD("set_speed_y","v"),      &TamaBullet::set_speed_y);
+    ClassDB::bind_method(D_METHOD("get_rot_speed"),        &TamaBullet::get_rot_speed);
+    ClassDB::bind_method(D_METHOD("set_rot_speed","v"),    &TamaBullet::set_rot_speed);
     ClassDB::bind_method(D_METHOD("get_rotates"),            &TamaBullet::get_rotates);
     ClassDB::bind_method(D_METHOD("set_rotates","v"),        &TamaBullet::set_rotates);
     ClassDB::bind_method(D_METHOD("get_face_velocity"),      &TamaBullet::get_face_velocity);
@@ -43,6 +45,8 @@ void TamaBullet::_bind_methods() {
                  "set_speed_x", "get_speed_x");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "_speed_y", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
                  "set_speed_y", "get_speed_y");
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "_rot_speed", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
+                 "set_rot_speed", "get_rot_speed");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rotates"), "set_rotates", "get_rotates");
     // "face_velocity" is dynamic via _get_property_list so it can be read-only when rotates is false
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "_initial_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
@@ -87,6 +91,12 @@ void TamaBullet::_physics_process(double delta) {
     // Step interpreters so act commands (chdir/chspd/etc.) apply this frame
     if (_runner)  _runner->step(delta);
     if (_runner2) _runner2->step(delta);
+
+    // Apply rotation speed (degrees/sec → accumulates into angle each frame)
+    if (_rot_speed != 0.0f) {
+        static const float DEG2RAD = 3.14159265f / 180.0f;
+        _angle += _rot_speed * DEG2RAD * (float)delta;
+    }
 
     if (_mvmt_x_set || _mvmt_y_set) {
         Vector2 pos_before = get_global_position();
@@ -190,6 +200,25 @@ void TamaBullet::on_chspd(const TamaChspdEvent &e) {
         _spd_tween->set_process_mode(Tween::TWEEN_PROCESS_PHYSICS);
         _spd_tween->tween_property(this, NodePath("_speed"), Variant(target), (double)e.over)
                   ->set_trans(Tween::TRANS_LINEAR);
+    }
+}
+
+void TamaBullet::on_chrotspd(const TamaChrotspdEvent &e) {
+    float target;
+    switch (e.speed_type) {
+        case 1: target = _rot_speed + e.speed_value;       break; // REL
+        case 2: target = _last_rot_speed + e.speed_value;  break; // SEQ
+        default: target = e.speed_value;                   break; // ABS
+    }
+    _last_rot_speed = _rot_speed;
+    if (_rotspd_tween.is_valid()) _rotspd_tween->kill();
+    if (e.over <= 0.0f) {
+        _rot_speed = target;
+    } else {
+        _rotspd_tween = create_tween();
+        _rotspd_tween->set_process_mode(Tween::TWEEN_PROCESS_PHYSICS);
+        _rotspd_tween->tween_property(this, NodePath("_rot_speed"), Variant(target), (double)e.over)
+                     ->set_trans(Tween::TRANS_LINEAR);
     }
 }
 

@@ -154,6 +154,7 @@ bullet tracker    ← named bullet definition
 |---|---|---|
 | `dir [aim\|abs\|rel\|seq] EXPR` | `aim` | Bullet direction (degrees). `aim` = toward player + offset; `abs` = world angle; `rel` = relative to spawner angle; `seq` = relative to last fired angle. |
 | `speed [abs\|rel\|seq] EXPR` | `abs` | Bullet speed. `rel`/`seq` add to last fired speed. |
+| `rotspd [abs\|rel\|seq] EXPR` | `0` (no spin) | Initial rotation speed in degrees/sec. Bullet's angle accumulates at this rate each frame. `rel`/`seq` add to last fired rotation speed. |
 | `offset EXPR` | — | Spawn offset along bullet's local axis. |
 | `offset` *(block)* | — | Per-axis spawn offset. Default qualifier `rel` (rotated by bullet angle); `abs`/`seq` add to spawner position in world space. |
 | `pos` *(block)* | — | Set spawn position directly. Default qualifier `abs` (world coords); `rel` adds to spawner position. Takes priority over `offset`. |
@@ -184,7 +185,7 @@ fire
 | `fire NAME` / `fire` *(inline)* | Spawn a bullet. |
 | `act NAME` / `act` *(inline)* | Run an act (blocking). |
 | `async act …` | Run an act without blocking. |
-| `chdir` / `chspd` / `chpos` / `accel` | Send a transition command to this bullet. Omit `over` (or set it to `0`) to apply instantly. |
+| `chdir` / `chspd` / `chrotspd` / `chpos` / `accel` | Send a transition command to this bullet. Omit `over` (or set it to `0`) to apply instantly. |
 | `vanish` | Stop this bullet's act and destroy it. |
 | `break` | Exit the innermost enclosing `repeat`, `repeatf`, or `while`. |
 
@@ -247,7 +248,7 @@ main
 
 ### Bullet direction/speed/position transitions (inside bullet `act`)
 
-`over` is optional on all four statements and defaults to `0`. When `over` is `0` the value is applied instantly without tweening.
+`over` is optional on all these statements and defaults to `0`. When `over` is `0` the value is applied instantly without tweening.
 
 ```
 chdir               ← change direction (instant — no over)
@@ -260,6 +261,10 @@ chdir               ← change direction (tweened)
 chspd
     spd abs 400
     over 2.0
+
+chrotspd            ← change rotation speed
+    spd abs 90      ← 90°/sec clockwise
+    over 0.5
 
 chpos               ← move to position
     x abs 500

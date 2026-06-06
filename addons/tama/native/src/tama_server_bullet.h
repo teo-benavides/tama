@@ -82,6 +82,11 @@ struct BulletState {
     TweenState1D sx_tween;
     TweenState1D sy_tween;
 
+    // Rotation speed (degrees/sec, applied every frame as angle += rot_speed * DEG2RAD * delta)
+    float rot_speed      = 0.0f;
+    float last_rot_speed = 0.0f;
+    TweenState1D rot_speed_tween;
+
     // Bounce state
     int bounces_left = 0;  // 0=no bouncing, -1=infinite, N>0=bounces remaining
     int bounces_axis = 0;  // 0=both walls, 1=x (left/right), 2=y (top/bottom)
@@ -138,9 +143,10 @@ public:
     float          get_speed_x()   const;
     float          get_speed_y()   const;
 
-    void on_chdir    (const TamaChdirEvent  &e) override;
-    void on_chspd    (const TamaChspdEvent  &e) override;
-    void on_chpos    (const TamaChposEvent  &e) override;
-    void on_accel    (const TamaAccelEvent  &e) override;
-    void on_vanished ()                         override;
+    void on_chdir    (const TamaChdirEvent    &e) override;
+    void on_chspd    (const TamaChspdEvent    &e) override;
+    void on_chrotspd (const TamaChrotspdEvent &e) override;
+    void on_chpos    (const TamaChposEvent    &e) override;
+    void on_accel    (const TamaAccelEvent    &e) override;
+    void on_vanished ()                            override;
 };

@@ -27,24 +27,27 @@ enum class TamaNodeType : int {
     REPEAT_FRAME = 25, MVMT = 26, OVER = 27,
     INLINE_ACT = 28, INLINE_FIRE = 29, FIRE_CALL = 30,
     WHILE = 31, IF = 32, VAR_DECL = 33, ACT_CALL = 34,
+    CHROTSPD = 35,
 };
 
 // ---------------------------------------------------------------------------
 // Pure C++ event structs (no heap allocation, no Godot machinery)
 // ---------------------------------------------------------------------------
 
-struct TamaChdirEvent  { int dir_type; float dir_value; float over; };
-struct TamaChspdEvent  { int speed_type; float speed_value; float over; };
-struct TamaChposEvent  { bool has_x; int x_type; float x; bool has_y; int y_type; float y; float over; };
-struct TamaAccelEvent  { bool has_x; int x_type; float x; bool has_y; int y_type; float y; float over; };
+struct TamaChdirEvent    { int dir_type; float dir_value; float over; };
+struct TamaChspdEvent    { int speed_type; float speed_value; float over; };
+struct TamaChrotspdEvent { int speed_type; float speed_value; float over; };
+struct TamaChposEvent    { bool has_x; int x_type; float x; bool has_y; int y_type; float y; float over; };
+struct TamaAccelEvent    { bool has_x; int x_type; float x; bool has_y; int y_type; float y; float over; };
 
 class TamaBulletEventHandler {
 public:
-    virtual void on_chdir    (const TamaChdirEvent  &) {}
-    virtual void on_chspd    (const TamaChspdEvent  &) {}
-    virtual void on_chpos    (const TamaChposEvent  &) {}
-    virtual void on_accel    (const TamaAccelEvent  &) {}
-    virtual void on_vanished ()                        {}
+    virtual void on_chdir    (const TamaChdirEvent    &) {}
+    virtual void on_chspd    (const TamaChspdEvent    &) {}
+    virtual void on_chrotspd (const TamaChrotspdEvent &) {}
+    virtual void on_chpos    (const TamaChposEvent    &) {}
+    virtual void on_accel    (const TamaAccelEvent    &) {}
+    virtual void on_vanished ()                          {}
     virtual ~TamaBulletEventHandler() = default;
 };
 
@@ -115,6 +118,9 @@ struct TamaBulletFireData {
     bool            mvmt_y_set  = false;
     int             mvmt_y_type = 0;
     std::string     mvmt_y_expr;
+    bool            has_rot_speed   = false;
+    int             rot_speed_type  = 0;    // ABS=0, REL=1, SEQ=2
+    float           rot_speed_value = 0.0f;
     int             bounces_max  = 0;  // 0=none, -1=infinite, N=N bounces
     int             bounces_axis = 0;  // 0=both, 1=x (left/right), 2=y (top/bottom)
     _TamaASTNode   *source_program = nullptr;
@@ -213,10 +219,11 @@ class _TamaInterpreter {
     void _exec_fire_call(_TamaASTNode *n);
 
     // Signal emission helpers
-    void _emit_chdir(_TamaASTNode *n);
-    void _emit_chspd(_TamaASTNode *n);
-    void _emit_chpos(_TamaASTNode *n);
-    void _emit_accel(_TamaASTNode *n);
+    void _emit_chdir    (_TamaASTNode *n);
+    void _emit_chspd    (_TamaASTNode *n);
+    void _emit_chrotspd (_TamaASTNode *n);
+    void _emit_chpos    (_TamaASTNode *n);
+    void _emit_accel    (_TamaASTNode *n);
 
     // Scope helpers
     TamaScope _scope_snapshot_plus_params(

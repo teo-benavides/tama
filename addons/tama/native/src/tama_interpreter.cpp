@@ -361,10 +361,11 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
         _exec_fire_node(n);
         return;
 
-    case NT::CHDIR:  _emit_chdir(n); return;
-    case NT::CHSPD:  _emit_chspd(n); return;
-    case NT::CHPOS:  _emit_chpos(n); return;
-    case NT::ACCEL:  _emit_accel(n); return;
+    case NT::CHDIR:    _emit_chdir(n);    return;
+    case NT::CHSPD:    _emit_chspd(n);    return;
+    case NT::CHROTSPD: _emit_chrotspd(n); return;
+    case NT::CHPOS:    _emit_chpos(n);    return;
+    case NT::ACCEL:    _emit_accel(n);    return;
 
     case NT::IF: {
         bool taken = false;
@@ -650,6 +651,13 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
         data.speed_value = _eval_float(spd_node->expr);
     }
 
+    _TamaASTNode *rotspd_node = node->rotspd.get();
+    if (rotspd_node) {
+        data.has_rot_speed   = true;
+        data.rot_speed_type  = _get_speed_type(rotspd_node);
+        data.rot_speed_value = _eval_float(rotspd_node->expr);
+    }
+
     _TamaASTNode *off_node = node->offset.get();
     if (off_node) {
         if (off_node->type_id == (int)TamaNodeType::OFFSET_INLINE) {
@@ -822,6 +830,18 @@ void _TamaInterpreter::_emit_chspd(_TamaASTNode *n) {
     e.speed_value = _eval_float(spd_node->expr);
     e.over        = over ? _eval_float(over->expr) : 0.0f;
     _event_handler->on_chspd(e);
+}
+
+void _TamaInterpreter::_emit_chrotspd(_TamaASTNode *n) {
+    if (!_event_handler) return;
+    _TamaASTNode *spd_node = n->speed.get();
+    if (!spd_node) return;
+    _TamaASTNode *over = n->over.get();
+    TamaChrotspdEvent e;
+    e.speed_type  = _get_speed_type(spd_node);
+    e.speed_value = _eval_float(spd_node->expr);
+    e.over        = over ? _eval_float(over->expr) : 0.0f;
+    _event_handler->on_chrotspd(e);
 }
 
 void _TamaInterpreter::_emit_chpos(_TamaASTNode *n) {

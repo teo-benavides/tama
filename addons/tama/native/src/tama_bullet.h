@@ -33,8 +33,10 @@ public:
     std::vector<std::string> _mvmt_var_names;
     std::vector<double>      _mvmt_var_values;
     godot::Vector2 _initial_position;
-    int            _bounces_left = 0;  // 0=none, -1=infinite, N>0=remaining
-    int            _bounces_axis = 0;  // 0=both, 1=x (left/right), 2=y (top/bottom)
+    float          _rot_speed      = 0.0f;  // degrees/sec; applied each frame as angle += rot_speed * DEG2RAD * delta
+    float          _last_rot_speed = 0.0f;
+    int            _bounces_left   = 0;     // 0=none, -1=infinite, N>0=remaining
+    int            _bounces_axis   = 0;     // 0=both, 1=x (left/right), 2=y (top/bottom)
 
     bool rotates       = true;
     bool face_velocity = true;
@@ -52,10 +54,12 @@ public:
     void   set_angle(float v)   { _angle = v; }
     float  get_speed()    const { return _speed; }
     void   set_speed(float v)   { _speed = v; }
-    float  get_speed_x()  const { return _speed_x; }
-    void   set_speed_x(float v) { _speed_x = v; }
-    float  get_speed_y()  const { return _speed_y; }
-    void   set_speed_y(float v) { _speed_y = v; }
+    float  get_speed_x()   const { return _speed_x; }
+    void   set_speed_x(float v)  { _speed_x = v; }
+    float  get_speed_y()   const { return _speed_y; }
+    void   set_speed_y(float v)  { _speed_y = v; }
+    float  get_rot_speed() const { return _rot_speed; }
+    void   set_rot_speed(float v){ _rot_speed = v; }
 
     bool  get_rotates()         const { return rotates; }
     void  set_rotates(bool v)         { rotates = v; notify_property_list_changed(); }
@@ -68,14 +72,16 @@ public:
 private:
     godot::Ref<godot::Tween> _dir_tween;
     godot::Ref<godot::Tween> _spd_tween;
+    godot::Ref<godot::Tween> _rotspd_tween;
     godot::Ref<godot::Tween> _pos_tween;
     godot::Ref<godot::Tween> _accel_tween;
 
-    void on_chdir    (const TamaChdirEvent  &e) override;
-    void on_chspd    (const TamaChspdEvent  &e) override;
-    void on_chpos    (const TamaChposEvent  &e) override;
-    void on_accel    (const TamaAccelEvent  &e) override;
-    void on_vanished ()                         override;
+    void on_chdir    (const TamaChdirEvent    &e) override;
+    void on_chspd    (const TamaChspdEvent    &e) override;
+    void on_chrotspd (const TamaChrotspdEvent &e) override;
+    void on_chpos    (const TamaChposEvent    &e) override;
+    void on_accel    (const TamaAccelEvent    &e) override;
+    void on_vanished ()                            override;
 
     float _dir_to_angle(int dir_type, float value) const;
     float _spd_to_value(int speed_type, float value) const;

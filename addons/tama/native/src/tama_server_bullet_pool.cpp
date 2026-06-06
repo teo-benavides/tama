@@ -349,12 +349,15 @@ Object *TamaServerBulletPool::spawn(
     b.texture_scale     = Vector2(td.texture_scale.x, -td.texture_scale.y); // negate Y for QuadMesh UV convention
     b.last_angle        = angle;
     b.last_speed        = speed;
-    b.angle_tween.active = false;
-    b.speed_tween.active = false;
-    b.pos_tween.active   = false;
-    b.sx_tween.active    = false;
-    b.sy_tween.active    = false;
-    b.vel_dirty          = true;
+    b.angle_tween.active     = false;
+    b.speed_tween.active     = false;
+    b.pos_tween.active       = false;
+    b.sx_tween.active        = false;
+    b.sy_tween.active        = false;
+    b.rot_speed              = 0.0f;
+    b.last_rot_speed         = 0.0f;
+    b.rot_speed_tween.active = false;
+    b.vel_dirty              = true;
 
     b.bounces_left = p_data.bounces_max;
     b.bounces_axis = p_data.bounces_axis;
@@ -594,9 +597,17 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 
         // Mark velocity dirty when any relevant tween is active this frame.
         bool tween_was_active = b->angle_tween.active || b->speed_tween.active
-                             || b->sx_tween.active    || b->sy_tween.active;
+                             || b->sx_tween.active    || b->sy_tween.active
+                             || b->rot_speed_tween.active;
         _step_tweens(*b, delta);
         if (tween_was_active) b->vel_dirty = true;
+
+        // Apply rotation speed (degrees/sec → angle accumulates each frame).
+        if (b->rot_speed != 0.0f) {
+            static constexpr float DEG2RAD = 3.14159265f / 180.0f;
+            b->angle += b->rot_speed * DEG2RAD * delta;
+            b->vel_dirty = true;
+        }
 
         Vector2 pos_before = b->position;
 
@@ -757,11 +768,12 @@ void TamaServerBulletPool::_draw() {
 // ---------------------------------------------------------------------------
 
 void TamaServerBulletPool::_step_tweens(BulletState &b, float delta) {
-    if (b.angle_tween.active)  b.angle   = b.angle_tween.step(delta);
-    if (b.speed_tween.active)  b.speed   = b.speed_tween.step(delta);
-    if (b.pos_tween.active)    b.position = b.pos_tween.step(delta);
-    if (b.sx_tween.active)     b.speed_x = b.sx_tween.step(delta);
-    if (b.sy_tween.active)     b.speed_y = b.sy_tween.step(delta);
+    if (b.angle_tween.active)     b.angle     = b.angle_tween.step(delta);
+    if (b.speed_tween.active)     b.speed     = b.speed_tween.step(delta);
+    if (b.pos_tween.active)       b.position  = b.pos_tween.step(delta);
+    if (b.sx_tween.active)        b.speed_x   = b.sx_tween.step(delta);
+    if (b.sy_tween.active)        b.speed_y   = b.sy_tween.step(delta);
+    if (b.rot_speed_tween.active) b.rot_speed = b.rot_speed_tween.step(delta);
 }
 
 // ---------------------------------------------------------------------------
@@ -831,6 +843,22 @@ void TamaServerBulletPool::_apply_chspd(BulletState &b, const TamaChspdEvent &e)
     }
 }
 
+void TamaServerBulletPool::_apply_chrotspd(BulletState &b, const TamaChrotspdEvent &e) {
+    float target;
+    switch (e.speed_type) {
+    case 1: target = b.rot_speed + e.speed_value;      break; // REL
+    case 2: target = b.last_rot_speed + e.speed_value; break; // SEQ
+    default: target = e.speed_value;                   break; // ABS
+    }
+    b.last_rot_speed = b.rot_speed;
+    if (e.over <= 0.0f) {
+        b.rot_speed = target;
+        b.rot_speed_tween.active = false;
+    } else {
+        b.rot_speed_tween = { true, b.rot_speed, target, 0.0f, e.over };
+    }
+}
+
 void TamaServerBulletPool::_apply_chpos(BulletState &b, const TamaChposEvent &e) {
     Vector2 target = b.position;
     if (e.has_x) {
@@ -879,6 +907,9 @@ void TamaServerBullet::on_chdir(const TamaChdirEvent &e) {
 }
 void TamaServerBullet::on_chspd(const TamaChspdEvent &e) {
     if (_state && _pool) _pool->_apply_chspd(*_state, e);
+}
+void TamaServerBullet::on_chrotspd(const TamaChrotspdEvent &e) {
+    if (_state && _pool) _pool->_apply_chrotspd(*_state, e);
 }
 void TamaServerBullet::on_chpos(const TamaChposEvent &e) {
     if (_state && _pool) _pool->_apply_chpos(*_state, e);

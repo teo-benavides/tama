@@ -82,10 +82,10 @@ The following identifiers are reserved and cannot be used as variable or definit
 ```
 main    fire    act     bullet  bul
 repeat  repeatf wait    waitf   vanish  break
-chdir   chspd   chpos   accel   over
-dir     speed   spd     offset  pos     mvmt
+chdir   chspd   chrotspd  chpos   accel   over
+dir     speed   spd     rotspd  offset  pos     mvmt
 aim     abs     rel     seq
-x       y       type
+x       y       type    bounces
 emitter emt     async
 if      elif    else    while
 var     true    false
@@ -220,7 +220,7 @@ fire_block   = INDENT { fire_stmt   NEWLINE } DEDENT
 bullet_block = INDENT { bullet_stmt NEWLINE } DEDENT
 ```
 
-`chdir`, `chspd`, `chpos`, `accel`, `offset`, and `pos` have their own inner block forms (see §9).
+`chdir`, `chspd`, `chrotspd`, `chpos`, `accel`, `offset`, and `pos` have their own inner block forms (see §9).
 
 ---
 
@@ -463,7 +463,34 @@ chspd           ← tweened
     over 2.0
 ```
 
-### 6.15 `chpos`
+### 6.15 `chrotspd`
+
+```
+chrotspd_stmt = "chrotspd" NEWLINE chrotspd_block
+chrotspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT
+```
+
+Emits a rotation-speed change command to the bullet. `speed`/`spd` is required; `over` is optional and defaults to `0`. When `over` is `0` the rotation speed is set instantly without tweening. Rotation speed is measured in **degrees per second** and is applied each frame as `angle += rot_speed × (π/180) × delta`.
+
+| Speed qualifier | Meaning |
+|---|---|
+| `abs` (default) | Set rotation speed directly. |
+| `rel` | Add to the bullet's current rotation speed. |
+| `seq` | Add to the bullet's last rotation speed (before this command). |
+
+```
+chrotspd        ← instant
+    spd abs 90  ← 90°/sec clockwise
+
+chrotspd        ← tweened
+    spd abs 90
+    over 0.5    ← ramp up over half a second
+
+chrotspd        ← stop spinning
+    spd abs 0
+```
+
+### 6.16 `chpos`
 
 ```
 chpos_stmt  = "chpos" NEWLINE chpos_block
@@ -487,7 +514,7 @@ chpos
 
 At runtime this emits a `changed_position` signal. The bullet node is responsible for implementing the movement.
 
-### 6.16 `accel`
+### 6.17 `accel`
 
 ```
 accel_stmt = "accel" NEWLINE accel_block
@@ -504,7 +531,7 @@ accel
     over 1.5
 ```
 
-### 6.17 `fire` (inline)
+### 6.18 `fire` (inline)
 
 ```
 inline_fire = "fire" NEWLINE fire_block
@@ -518,7 +545,7 @@ fire
     spd 200
 ```
 
-### 6.18 `fire <name>` (named call)
+### 6.19 `fire <name>` (named call)
 
 ```
 fire_call = "fire" IDENT [ arg_list ]
@@ -531,7 +558,7 @@ fire spread
 fire spread(45, 300)
 ```
 
-### 6.19 `act` (inline)
+### 6.20 `act` (inline)
 
 ```
 inline_act = "act" NEWLINE action_block
@@ -547,7 +574,7 @@ act
         spd 200
 ```
 
-### 6.20 `act <name>` (named call)
+### 6.21 `act <name>` (named call)
 
 ```
 act_call = "act" IDENT [ arg_list ]
@@ -560,7 +587,7 @@ act circle
 act circle(8, 200)
 ```
 
-### 6.21 `async`
+### 6.22 `async`
 
 ```
 async_stmt = "async" ( inline_act | act_call )
@@ -587,7 +614,7 @@ The interpreter tracks async act count and waits for all async acts to finish be
 Valid inside `fire` definitions and inline `fire` blocks.
 
 ```
-fire_stmt = dir_stmt | speed_stmt | offset_stmt | pos_stmt | bullet_call | inline_bullet
+fire_stmt = dir_stmt | speed_stmt | rotspd_stmt | offset_stmt | pos_stmt | bullet_call | inline_bullet
 ```
 
 All properties are optional. A fire with no `bullet` uses the registry's default bullet. When both `offset` and `pos` are present, `pos` takes priority.
@@ -608,7 +635,37 @@ inline_bullet = ( "bullet" | "bul" ) NEWLINE bullet_block
 
 An anonymous inline bullet definition (see §8).
 
-### 7.3 Order
+### 7.3 `rotspd`
+
+```
+rotspd_stmt = "rotspd" [ VALUE_QUALIFIER | IDENT ] EXPR
+```
+
+Sets the bullet's initial rotation speed in degrees per second. The bullet's `angle` accumulates at this rate each frame (`angle += rot_speed × (π/180) × delta`), causing it to curve continuously.
+
+**Default qualifier:** `abs`
+
+| Qualifier | Meaning |
+|---|---|
+| `abs` | Set rotation speed directly. |
+| `rel` | Add to the spawner's last fired rotation speed. |
+| `seq` | Same as `rel`. |
+
+Like `dir` and `speed`, the qualifier may be a scope variable holding `"abs"`, `"rel"`, or `"seq"`.
+
+```
+fire
+    dir abs 0
+    spd 200
+    rotspd 90       ← 90°/sec clockwise; bullet curves downward
+
+fire
+    dir aim 0
+    spd 150
+    rotspd rel 30   ← 30°/sec added to last fired rotation speed
+```
+
+### 7.4 Order
 
 Properties can appear in any order inside a fire block. Only one `bullet` call is permitted per fire block.
 
@@ -847,7 +904,7 @@ fire
 over_stmt = "over" EXPR NEWLINE
 ```
 
-Transition duration in seconds. Used inside `chdir`, `chspd`, `chpos`, and `accel` blocks. Optional in all four — omitting it is equivalent to `over 0`. When the resolved value is `0`, the change is applied instantly (no tween created). Evaluated as a float.
+Transition duration in seconds. Used inside `chdir`, `chspd`, `chrotspd`, `chpos`, and `accel` blocks. Optional in all — omitting it is equivalent to `over 0`. When the resolved value is `0`, the change is applied instantly (no tween created). Evaluated as a float.
 
 ---
 
@@ -1084,9 +1141,11 @@ When `fire` executes:
 
 Sets `_running = false` on the interpreter and emits `vanished`. The game-side bullet node listens to `vanished` to destroy itself.
 
-### 15.7 `chdir` / `chspd` / `chpos` / `accel`
+### 15.7 `chdir` / `chspd` / `chrotspd` / `chpos` / `accel`
 
 These are **fire-and-forget** signals to the bullet. The interpreter emits the signal and immediately continues — it does not wait for the transition to complete. The bullet node is responsible for implementing the transition. When `over` is `0` (or omitted), the value is applied immediately without creating a tween; when `over` > `0`, a linear tween runs for that many seconds.
+
+`chrotspd` changes the bullet's rotation speed (degrees/sec). The rotation speed is applied every physics frame as `angle += rot_speed × (π/180) × delta`, causing the bullet to curve. `rotspd` in a `fire` block sets the initial rotation speed at spawn time.
 
 ### 15.8 `repeatf`
 
@@ -1187,9 +1246,11 @@ If `main` is absent (library file), `program.main` is null. The interpreter chec
 | `bounces` | — | Bullet stmt — border reflection declaration |
 | `chdir` | — | Action stmt |
 | `chspd` | — | Action stmt |
+| `chrotspd` | — | Action stmt — change bullet rotation speed (degrees/sec) |
 | `chpos` | — | Action stmt |
 | `accel` | — | Action stmt |
-| `over` | — | chdir/chspd/chpos/accel inner stmt |
+| `over` | — | chdir/chspd/chrotspd/chpos/accel inner stmt |
+| `rotspd` | — | Fire stmt — set initial bullet rotation speed (degrees/sec) |
 | `type` | — | Bullet stmt |
 | `aim` | — | Dir qualifier |
 | `abs` | — | Dir/value qualifier |
@@ -1261,6 +1322,7 @@ action_stmt   = while_stmt
               | offset_stmt
               | chdir_stmt
               | chspd_stmt
+              | chrotspd_stmt
               | chpos_stmt
               | accel_stmt
               | inline_act
@@ -1310,7 +1372,7 @@ inline_act    = "act"   NEWLINE action_block ;
 
 (* ---- Fire statements ---- *)
 
-fire_stmt     = dir_stmt | speed_stmt | offset_stmt | pos_stmt
+fire_stmt     = dir_stmt | speed_stmt | rotspd_stmt | offset_stmt | pos_stmt
               | bullet_call | inline_bullet ;
 bullet_call   = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
 inline_bullet = ( "bullet" | "bul" ) NEWLINE bullet_block ;
@@ -1362,6 +1424,16 @@ chspd_stmt  = "chspd" NEWLINE chspd_block ;
 chspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT ;
               (* speed required; over optional — defaults to 0 (instant)    *)
 
+chrotspd_stmt  = "chrotspd" NEWLINE chrotspd_block ;
+chrotspd_block = INDENT { ( speed_stmt | over_stmt ) NEWLINE } DEDENT ;
+                 (* speed required (degrees/sec); over optional — defaults to 0 (instant)
+                    abs: set directly; rel: add to current; seq: add to last  *)
+
+rotspd_stmt  = "rotspd" [ VALUE_QUALIFIER | IDENT ] EXPR ;
+               (* default VALUE_QUALIFIER = abs;
+                  initial rotation speed in degrees/sec applied at spawn.
+                  rel/seq: add to spawner's last fired rotation speed.        *)
+
 chpos_stmt  = "chpos" NEWLINE chpos_block ;
 chpos_block = INDENT { ( axis_stmt | over_stmt ) NEWLINE } DEDENT ;
               (* at least one axis required; over optional — defaults to 0 (instant)
@@ -1374,8 +1446,8 @@ accel_block = INDENT { ( axis_stmt | over_stmt ) NEWLINE } DEDENT ;
 axis_stmt   = ( "x" | "y" ) [ VALUE_QUALIFIER | IDENT ] EXPR ;
 
 over_stmt   = "over" EXPR ;
-              (* transition duration in seconds; used in chdir/chspd/chpos/accel.
-                 optional in all four — omitting is equivalent to over 0.
+              (* transition duration in seconds; used in chdir/chspd/chrotspd/chpos/accel.
+                 optional in all — omitting is equivalent to over 0.
                  when 0: value applied instantly; when > 0: linear tween.   *)
 ```
 

@@ -469,6 +469,43 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_chspd() {
     return node;
 }
 
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_rotspd() {
+    TamaToken tok = consume(TT::KW_ROTSPD);
+    int qt = 0; std::string qt_var;
+    if (peek_type() == TT::WORD && peek_type_at(1) != TT::NEWLINE) {
+        qt_var = _tokens[_pos].value; _pos++;
+    } else {
+        qt = peek_value_qualifier(0); // ABS default
+    }
+    std::string expr = collect_to_eol();
+    if (expr.empty()) error_at(peek(), "Expected expression after rotspd");
+    consume(TT::NEWLINE);
+    auto n = tama_make_node((int)NT::SPEED);
+    n->speed_type     = qt;
+    n->speed_type_var = qt_var;
+    n->expr           = expr;
+    return n;
+}
+
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_chrotspd() {
+    TamaToken tok = consume(TT::KW_CHROTSPD);
+    consume(TT::NEWLINE);
+    auto node = tama_make_node((int)NT::CHROTSPD);
+    parse_block([&]() -> std::shared_ptr<_TamaASTNode> {
+        switch (peek_type()) {
+            case TT::KW_SPEED: node->speed = parse_speed(); break;
+            case TT::KW_OVER:  node->over  = parse_over(); break;
+            default:
+                error_at(peek(), "Unexpected token in chrotspd block");
+                _pos++; try_consume(TT::NEWLINE);
+        }
+        return nullptr;
+    });
+    if (!node->speed)
+        error_at(tok, "chrotspd requires a speed statement");
+    return node;
+}
+
 std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_chpos() {
     TamaToken tok = consume(TT::KW_CHPOS);
     consume(TT::NEWLINE);
@@ -846,8 +883,9 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_action_statement() {
         case TT::KW_BREAK:  return parse_break();
         case TT::KW_OFFSET: return parse_offset();
         case TT::KW_CHDIR:  return parse_chdir();
-        case TT::KW_CHSPD:  return parse_chspd();
-        case TT::KW_CHPOS:  return parse_chpos();
+        case TT::KW_CHSPD:    return parse_chspd();
+        case TT::KW_CHROTSPD: return parse_chrotspd();
+        case TT::KW_CHPOS:    return parse_chpos();
         case TT::KW_ACCEL:  return parse_accel();
         case TT::KW_REPEAT: return parse_repeat();
         case TT::KW_REPEATF:return parse_repeatf();
@@ -885,6 +923,7 @@ void TamaParserCpp::parse_fire_block(const std::shared_ptr<_TamaASTNode> &node, 
         switch (t.type) {
             case TT::KW_DIR:    node->dir    = parse_dir(); break;
             case TT::KW_SPEED:  node->speed  = parse_speed(); break;
+            case TT::KW_ROTSPD: node->rotspd = parse_rotspd(); break;
             case TT::KW_OFFSET: node->offset = parse_offset(); break;
             case TT::KW_POS:    node->pos    = parse_pos(); break;
             case TT::KW_BULLET:

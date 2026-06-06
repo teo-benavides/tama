@@ -46,6 +46,7 @@ private:
 
     float _resolve_angle(const TamaBulletFireData &data, godot::Object *spawner) const;
     float _resolve_speed(const TamaBulletFireData &data, godot::Object *spawner) const;
+    float _resolve_rot_speed(const TamaBulletFireData &data, godot::Object *spawner) const;
     godot::Vector2 _resolve_position(const TamaBulletFireData &data, godot::Object *spawner, float angle) const;
     godot::Node *_get_spawn_parent() const;
 };

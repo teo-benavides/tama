@@ -49,8 +49,9 @@ public:
     godot::Variant get_export(const godot::String &name) const { return _export_values.get(name, godot::Variant()); }
 
     // For spawner compatibility
-    float _last_angle = 0.0f;
-    float _last_speed = 0.0f;
+    float _last_angle    = 0.0f;
+    float _last_speed    = 0.0f;
+    float _last_rot_speed = 0.0f;
 
 private:
     struct ExportDef { std::string name, type; godot::Variant default_value; };
