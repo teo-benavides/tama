@@ -5,10 +5,6 @@
 #include <cmath>
 #include <cstdlib>
 
-#include <godot_cpp/classes/engine.hpp>
-#include <godot_cpp/classes/scene_tree.hpp>
-#include <godot_cpp/classes/window.hpp>
-#include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
@@ -16,25 +12,6 @@ using namespace godot;
 // ===========================================================================
 // _TamaInterpreter
 // ===========================================================================
-
-void _TamaInterpreter::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("step", "delta"),                  &_TamaInterpreter::step);
-    ClassDB::bind_method(D_METHOD("stop"),                           &_TamaInterpreter::stop);
-    ClassDB::bind_method(D_METHOD("is_running"),                     &_TamaInterpreter::is_running);
-    ClassDB::bind_method(D_METHOD("set_context", "ctx"),             &_TamaInterpreter::set_context);
-    ClassDB::bind_method(D_METHOD("get_context"),                    &_TamaInterpreter::get_context);
-    ClassDB::bind_method(D_METHOD("eval_expr", "expr", "scope"),     &_TamaInterpreter::eval_expr);
-
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "context"), "set_context", "get_context");
-}
-
-void _TamaInterpreter::_ready() {
-    set_physics_process(false);
-}
-
-void _TamaInterpreter::_physics_process(double delta) {
-    step(delta);
-}
 
 // ---------------------------------------------------------------------------
 // Public entry points
@@ -59,8 +36,6 @@ void _TamaInterpreter::start(_TamaASTNode *program, TamaScope scope) {
         return;
     }
     _push_body(main_node->body);
-
-    if (is_inside_tree()) set_physics_process(true);
 }
 
 void _TamaInterpreter::start_act(_TamaASTNode *program, _TamaASTNode *act_n, TamaScope scope) {
@@ -82,13 +57,13 @@ void _TamaInterpreter::start_act(_TamaASTNode *program, _TamaASTNode *act_n, Tam
 
         auto sit = _scope.find(name);
         if (sit != _scope.end()) {
-            if (sit->second.is_node) {
+            if (sit->second.kind == TamaScopeVal::NODE) {
                 _TamaASTNode *sv = sit->second.node;
                 if (sv && sv->type_id == (int)TamaNodeType::INLINE_ACT) {
                     _push_body(sv->body);
                     goto start_act_done;
                 }
-            } else if (sit->second.ref) {
+            } else if (sit->second.kind == TamaScopeVal::REF) {
                 const auto &tref = sit->second.ref;
                 _TamaASTNode *act_def = _find_act(tref->name);
                 if (!act_def) {
@@ -119,32 +94,26 @@ void _TamaInterpreter::start_act(_TamaASTNode *program, _TamaASTNode *act_n, Tam
     } else {
         _running = false;
     }
-
-    if (is_inside_tree()) set_physics_process(true);
 }
 
 void _TamaInterpreter::stop() {
     _running = false;
     _exec_stack.clear();
-    for (auto *child : _async_children) {
+    for (auto &child : _async_children)
         child->stop();
-        child->queue_free();
-    }
     _async_children.clear();
-    if (is_inside_tree()) set_physics_process(false);
 }
 
 // ---------------------------------------------------------------------------
-// Step — called every physics frame
+// Step — called every physics frame by the owning Node
 // ---------------------------------------------------------------------------
 
 void _TamaInterpreter::step(double p_delta) {
     float delta = (float)p_delta;
 
     for (auto it = _async_children.begin(); it != _async_children.end(); ) {
-        _TamaInterpreter *child = *it;
-        if (child->is_running()) {
-            child->step(delta);
+        if ((*it)->is_running()) {
+            (*it)->step(delta);
             ++it;
         } else {
             it = _async_children.erase(it);
@@ -153,7 +122,6 @@ void _TamaInterpreter::step(double p_delta) {
 
     if (!_running) {
         if (_async_children.empty() && _exec_stack.empty()) {
-            if (is_inside_tree()) set_physics_process(false);
             if (_finished_cb) _finished_cb();
         }
         return;
@@ -183,7 +151,6 @@ void _TamaInterpreter::step(double p_delta) {
     if (_exec_stack.empty() && _running) {
         _running = false;
         if (_async_children.empty()) {
-            if (is_inside_tree()) set_physics_process(false);
             if (_finished_cb) _finished_cb();
         }
     }
@@ -299,19 +266,6 @@ void _TamaInterpreter::_pop_body_frame() {
     _exec_stack.pop_back();
 }
 
-float _TamaInterpreter::eval_expr(const String &expr, const Dictionary &scope) {
-    TamaScope saved = _scope;
-    _scope.clear();
-    Array keys = scope.keys();
-    for (int i = 0; i < keys.size(); ++i) {
-        std::string k = ((String)keys[i]).utf8().get_data();
-        _scope[k] = TamaScopeVal(scope[keys[i]]);
-    }
-    float result = _eval_float(std::string(expr.utf8().get_data()));
-    _scope = std::move(saved);
-    return result;
-}
-
 // ---------------------------------------------------------------------------
 // Frame stepping
 // ---------------------------------------------------------------------------
@@ -351,7 +305,7 @@ void _TamaInterpreter::_step_loop_ctrl(ExecFrame &f, bool &yielded) {
     }
 
     if (!f.loop_index_var.empty())
-        _scope[f.loop_index_var] = TamaScopeVal(Variant((float)f.loop_i));
+        _scope[f.loop_index_var] = TamaScopeVal((float)f.loop_i);
 
     if (is_repeatf) {
         auto pre = _snapshot_scope_keys();
@@ -458,7 +412,7 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
             int i = 0;
             while (count_n < 0 || i < count_n) {
                 if (!idx_var.empty())
-                    _scope[idx_var] = TamaScopeVal(Variant((float)i));
+                    _scope[idx_var] = TamaScopeVal((float)i);
                 auto pre = _snapshot_scope_keys();
                 _exec_body_sync(n->body);
                 for (auto it = _scope.begin(); it != _scope.end(); ) {
@@ -507,7 +461,7 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
             } else {
                 for (int i = 0; i < rf_n && _running; ++i) {
                     if (!idx_var.empty())
-                        _scope[idx_var] = TamaScopeVal(Variant((float)i));
+                        _scope[idx_var] = TamaScopeVal((float)i);
                     auto pre = _snapshot_scope_keys();
                     _exec_body_sync(n->body);
                     for (auto it = _scope.begin(); it != _scope.end(); ) {
@@ -529,14 +483,14 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
 
         auto sit = _scope.find(name);
         if (sit != _scope.end()) {
-            if (sit->second.is_node) {
+            if (sit->second.kind == TamaScopeVal::NODE) {
                 _TamaASTNode *sv = sit->second.node;
                 if (sv && sv->type_id == (int)TamaNodeType::INLINE_ACT) {
                     if (is_async) _run_async_act(sv, _scope);
                     else          _push_body(sv->body);
                     return;
                 }
-            } else if (sit->second.ref) {
+            } else if (sit->second.kind == TamaScopeVal::REF) {
                 const auto &tref = sit->second.ref;
                 _TamaASTNode *act_def = _find_act(tref->name);
                 if (!act_def) {
@@ -617,7 +571,7 @@ void _TamaInterpreter::_exec_body_sync(const std::vector<_TamaASTNode*> &body) {
 // ---------------------------------------------------------------------------
 
 void _TamaInterpreter::_run_async_act(_TamaASTNode *act_n, TamaScope scope_copy) {
-    _TamaInterpreter *child = memnew(_TamaInterpreter);
+    auto child = std::make_unique<_TamaInterpreter>();
     child->_context     = _context;
     child->_program     = _program;
     child->_fires_map   = _fires_map;
@@ -632,7 +586,7 @@ void _TamaInterpreter::_run_async_act(_TamaASTNode *act_n, TamaScope scope_copy)
                   act_n->type_id == (int)TamaNodeType::ACT_DEF)) {
         child->_push_body(act_n->body);
     }
-    _async_children.push_back(child);
+    _async_children.push_back(std::move(child));
 }
 
 // ---------------------------------------------------------------------------
@@ -644,13 +598,13 @@ void _TamaInterpreter::_exec_fire_call(_TamaASTNode *n) {
 
     auto sit = _scope.find(name);
     if (sit != _scope.end()) {
-        if (sit->second.is_node) {
+        if (sit->second.kind == TamaScopeVal::NODE) {
             _TamaASTNode *sv = sit->second.node;
             if (sv && sv->type_id == (int)TamaNodeType::INLINE_FIRE) {
                 _exec_fire_node(sv);
                 return;
             }
-        } else if (sit->second.ref) {
+        } else if (sit->second.kind == TamaScopeVal::REF) {
             const auto &tref = sit->second.ref;
             _TamaASTNode *fire_def = _find_fire(tref->name);
             if (!fire_def) {
@@ -724,9 +678,8 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
         if (bul_node->type_id == (int)TamaNodeType::INLINE_BULLET) {
             const std::string &btype = bul_node->bullet_type;
             auto bsit = _scope.find(btype);
-            if (bsit != _scope.end() && !bsit->second.is_node &&
-                bsit->second.var.get_type() == Variant::STRING)
-                data.bullet_type = std::string(((String)bsit->second.var).utf8().get_data());
+            if (bsit != _scope.end() && bsit->second.kind == TamaScopeVal::STRING)
+                data.bullet_type = bsit->second.str;
             else
                 data.bullet_type = btype;
             data.bullet_emitter_act = bul_node->emitter_act.get();
@@ -738,14 +691,13 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
 
             auto bsit = _scope.find(bul_name);
             if (bsit != _scope.end()) {
-                if (bsit->second.is_node) {
+                if (bsit->second.kind == TamaScopeVal::NODE) {
                     _TamaASTNode *svo = bsit->second.node;
                     if (svo && svo->type_id == (int)TamaNodeType::INLINE_BULLET) {
                         const std::string &btype = svo->bullet_type;
                         auto btsit = _scope.find(btype);
-                        if (btsit != _scope.end() && !btsit->second.is_node &&
-                            btsit->second.var.get_type() == Variant::STRING)
-                            data.bullet_type = std::string(((String)btsit->second.var).utf8().get_data());
+                        if (btsit != _scope.end() && btsit->second.kind == TamaScopeVal::STRING)
+                            data.bullet_type = btsit->second.str;
                         else
                             data.bullet_type = btype;
                         data.bullet_emitter_act = svo->emitter_act.get();
@@ -754,7 +706,7 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                         if (mvmt) _populate_mvmt(&data, mvmt);
                         goto bullet_done;
                     }
-                } else if (bsit->second.ref) {
+                } else if (bsit->second.kind == TamaScopeVal::REF) {
                     const auto &tref = bsit->second.ref;
                     bul_name = tref->name;
                     _TamaASTNode *bullet_def = _find_bullet(bul_name);
@@ -767,9 +719,8 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                     for (const TamaArgVal &a : bul_node->args)    eval_args.push_back(_eval_arg(a));
                     const std::string &btype = bullet_def->bullet_type;
                     auto btsit = _scope.find(btype);
-                    if (btsit != _scope.end() && !btsit->second.is_node &&
-                        btsit->second.var.get_type() == Variant::STRING)
-                        data.bullet_type = std::string(((String)btsit->second.var).utf8().get_data());
+                    if (btsit != _scope.end() && btsit->second.kind == TamaScopeVal::STRING)
+                        data.bullet_type = btsit->second.str;
                     else
                         data.bullet_type = btype;
                     data.bullet_emitter_act = bullet_def->emitter_act.get();
@@ -791,9 +742,8 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                 for (const TamaArgVal &a : bul_node->args) eval_args.push_back(_eval_arg(a));
                 const std::string &btype = bullet_def->bullet_type;
                 auto btsit = _scope.find(btype);
-                if (btsit != _scope.end() && !btsit->second.is_node &&
-                    btsit->second.var.get_type() == Variant::STRING)
-                    data.bullet_type = std::string(((String)btsit->second.var).utf8().get_data());
+                if (btsit != _scope.end() && btsit->second.kind == TamaScopeVal::STRING)
+                    data.bullet_type = btsit->second.str;
                 else
                     data.bullet_type = btype;
                 data.bullet_emitter_act = bullet_def->emitter_act.get();
@@ -896,7 +846,7 @@ TamaArgVal _TamaInterpreter::_eval_arg(const TamaArgVal &arg) {
                 tr->bound_args.push_back(_eval_arg(sa));
             // Merge with existing ref in scope if present
             auto sit = _scope.find(obj->name);
-            if (sit != _scope.end() && sit->second.ref) {
+            if (sit != _scope.end() && sit->second.kind == TamaScopeVal::REF) {
                 auto merged = std::make_shared<TamaRef>();
                 merged->name = sit->second.ref->name;
                 merged->bound_args = sit->second.ref->bound_args;
@@ -918,12 +868,12 @@ TamaArgVal _TamaInterpreter::_eval_arg(const TamaArgVal &arg) {
     if (stripped.is_valid_identifier()) {
         auto sit = _scope.find(std::string(stripped.utf8().get_data()));
         if (sit != _scope.end()) {
-            if (sit->second.ref)    return TamaArgVal(sit->second.ref);
-            if (sit->second.is_node) return TamaArgVal(sit->second.node);
-            const Variant &sv = sit->second.var;
-            if (sv.get_type() == Variant::FLOAT || sv.get_type() == Variant::INT || sv.get_type() == Variant::BOOL)
-                return TamaArgVal(Variant((float)sv));
-            return TamaArgVal(sv);
+            switch (sit->second.kind) {
+                case TamaScopeVal::REF:    return TamaArgVal(sit->second.ref);
+                case TamaScopeVal::NODE:   return TamaArgVal(sit->second.node);
+                case TamaScopeVal::FLOAT:  return TamaArgVal(Variant(sit->second.f));
+                case TamaScopeVal::STRING: return TamaArgVal(Variant(String(sit->second.str.c_str())));
+            }
         }
         if (stripped == "aim" || stripped == "abs" || stripped == "rel" || stripped == "seq")
             return TamaArgVal(Variant(stripped));
@@ -956,30 +906,60 @@ float _TamaInterpreter::_eval_float(const std::string &expr) {
     }
     if (is_ident) {
         auto sit = _scope.find(s);
-        if (sit != _scope.end() && !sit->second.is_node && !sit->second.ref) {
-            const Variant &sv = sit->second.var;
-            if (sv.get_type() == Variant::FLOAT || sv.get_type() == Variant::INT || sv.get_type() == Variant::BOOL)
-                return (float)sv;
-        }
+        if (sit != _scope.end() && sit->second.kind == TamaScopeVal::FLOAT)
+            return sit->second.f;
     }
 
-    // Full expression evaluator
+    // Full expression evaluator — build native var arrays (no Packed array allocation)
     _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
     if (!er) return 0.0f;
 
-    PackedStringArray var_names;
-    PackedFloat64Array var_values;
+    std::vector<std::string> var_names;
+    std::vector<double> var_values;
     for (const auto &kv : _scope) {
-        if (!kv.second.is_node && !kv.second.ref) {
-            const Variant &val = kv.second.var;
-            if (val.get_type() == Variant::FLOAT || val.get_type() == Variant::INT || val.get_type() == Variant::BOOL) {
-                var_names.push_back(String(kv.first.c_str()));
-                var_values.push_back((double)(float)val);
-            }
+        if (kv.second.kind == TamaScopeVal::FLOAT) {
+            var_names.push_back(kv.first);
+            var_values.push_back((double)kv.second.f);
         }
     }
 
-    return (float)(double)er->eval(String(s.c_str()), var_names, var_values, _context);
+    std::string cache_key = s + "|";
+    for (size_t i = 0; i < var_names.size(); ++i) {
+        if (i > 0) cache_key += ',';
+        cache_key += var_names[i];
+    }
+
+    const TamaExprChunk *chunk = er->get_chunk(s, var_names, cache_key);
+    if (!chunk || chunk->code.empty()) return 0.0f;
+    return (float)er->eval_chunk(*chunk, var_values.data(), var_values.size(), _context);
+}
+
+float _TamaInterpreter::eval_expr_native(
+        const std::string &expr,
+        const std::vector<std::string> &var_names,
+        const std::vector<double> &var_values)
+{
+    // Fast numeric path
+    char *endp;
+    float fv = std::strtof(expr.c_str(), &endp);
+    if (endp == expr.c_str() + expr.size()) return fv;
+
+    // Fast path: exact variable name match
+    for (size_t i = 0; i < var_names.size(); ++i)
+        if (var_names[i] == expr) return (float)var_values[i];
+
+    _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
+    if (!er) return 0.0f;
+
+    std::string cache_key = expr + "|";
+    for (size_t i = 0; i < var_names.size(); ++i) {
+        if (i > 0) cache_key += ',';
+        cache_key += var_names[i];
+    }
+
+    const TamaExprChunk *chunk = er->get_chunk(expr, var_names, cache_key);
+    if (!chunk || chunk->code.empty()) return 0.0f;
+    return (float)er->eval_chunk(*chunk, var_values.data(), var_values.size(), _context);
 }
 
 float _TamaInterpreter::_eval_arg_float(const TamaArgVal &arg) {
@@ -996,8 +976,8 @@ float _TamaInterpreter::_eval_arg_float(const TamaArgVal &arg) {
 int _TamaInterpreter::_get_dir_type(_TamaASTNode *dir_node) const {
     if (dir_node->dir_type_var.empty()) return dir_node->dir_type;
     auto sit = _scope.find(dir_node->dir_type_var);
-    if (sit != _scope.end() && !sit->second.is_node && sit->second.var.get_type() == Variant::STRING) {
-        String s = (String)sit->second.var;
+    if (sit != _scope.end() && sit->second.kind == TamaScopeVal::STRING) {
+        const std::string &s = sit->second.str;
         if (s == "aim") return 0; if (s == "abs") return 1;
         if (s == "rel") return 2; if (s == "seq") return 3;
     }
@@ -1007,8 +987,8 @@ int _TamaInterpreter::_get_dir_type(_TamaASTNode *dir_node) const {
 int _TamaInterpreter::_get_speed_type(_TamaASTNode *spd_node) const {
     if (spd_node->speed_type_var.empty()) return spd_node->speed_type;
     auto sit = _scope.find(spd_node->speed_type_var);
-    if (sit != _scope.end() && !sit->second.is_node && sit->second.var.get_type() == Variant::STRING) {
-        String s = (String)sit->second.var;
+    if (sit != _scope.end() && sit->second.kind == TamaScopeVal::STRING) {
+        const std::string &s = sit->second.str;
         if (s == "abs") return 0; if (s == "rel") return 1; if (s == "seq") return 2;
     }
     return 0;
@@ -1017,8 +997,8 @@ int _TamaInterpreter::_get_speed_type(_TamaASTNode *spd_node) const {
 int _TamaInterpreter::_get_axis_type(_TamaASTNode *axis_node) const {
     if (axis_node->axis_type_var.empty()) return axis_node->axis_type;
     auto sit = _scope.find(axis_node->axis_type_var);
-    if (sit != _scope.end() && !sit->second.is_node && sit->second.var.get_type() == Variant::STRING) {
-        String s = (String)sit->second.var;
+    if (sit != _scope.end() && sit->second.kind == TamaScopeVal::STRING) {
+        const std::string &s = sit->second.str;
         if (s == "abs") return 0; if (s == "rel") return 1; if (s == "seq") return 2;
     }
     return 1;

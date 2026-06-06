@@ -91,7 +91,7 @@ struct BulletState {
     const TamaExprChunk *mvmt_y_chunk = nullptr;
     std::vector<double> mvmt_values;               // snapshot of variable values at spawn time
 
-    godot::Object *runner = nullptr;
+    _TamaInterpreter *runner = nullptr;
 
     // Wrapper Object exposed through bullet_hit signal (created once per slot)
     // Pointer set by TamaServerBulletPool::register_type, valid for pool lifetime.

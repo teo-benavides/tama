@@ -109,6 +109,10 @@ void TamaEmitter::_process(double delta) {
     _check_file_changed();
 }
 
+void TamaEmitter::_physics_process(double delta) {
+    if (_interpreter && _running) _interpreter->step(delta);
+}
+
 // ---------------------------------------------------------------------------
 // script_filename setter
 // ---------------------------------------------------------------------------
@@ -138,11 +142,11 @@ void TamaEmitter::start() {
         return;
     }
 
-    _interpreter = memnew(_TamaInterpreter);
+    _interpreter = std::make_unique<_TamaInterpreter>();
     _interpreter->set_context(mgr->_get_context());
     _interpreter->_finished_cb = [this]() { stop(); };
-    mgr->_connect_interpreter(_interpreter, this);
-    add_child(_interpreter);
+    mgr->_connect_interpreter(_interpreter.get(), this);
+    set_physics_process(true);
     _running = true;
 
     // Convert _export_values Dictionary → TamaScope
@@ -160,6 +164,7 @@ void TamaEmitter::stop() {
         _interpreter->stop();
     }
     _running = false;
+    set_physics_process(false);
 }
 
 // ---------------------------------------------------------------------------

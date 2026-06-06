@@ -11,6 +11,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/node_path.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+#include <godot_cpp/variant/variant.hpp>
 
 using namespace godot;
 
@@ -66,8 +67,6 @@ void TamaBullet::_get_property_list(List<PropertyInfo> *p_list) const {
 }
 
 void TamaBullet::_ready() {
-    if (_on_ready_cb) { auto cb = std::move(_on_ready_cb); cb(); }
-
     add_to_group("tama_bullets");
     set_global_position(_initial_position);
 
@@ -82,28 +81,23 @@ void TamaBullet::_ready() {
     }
 
     if (rotates) set_rotation(_angle);
-
-    if (!_runner) return;
-    _TamaInterpreter *runner = Object::cast_to<_TamaInterpreter>(_runner);
-    if (!runner) return;
-
-    runner->set_event_handler(this);
 }
 
-void TamaBullet::_physics_process(double /*delta*/) {
+void TamaBullet::_physics_process(double delta) {
+    // Step interpreters so act commands (chdir/chspd/etc.) apply this frame
+    if (_runner)  _runner->step(delta);
+    if (_runner2) _runner2->step(delta);
+
     if (_mvmt_x_set || _mvmt_y_set) {
         Vector2 pos_before = get_global_position();
         Vector2 pos = pos_before;
-        _TamaInterpreter *runner = Object::cast_to<_TamaInterpreter>(_runner);
-        if (runner) {
-            if (_mvmt_x_set) {
-                float vx = runner->eval_expr(String(_mvmt_x_expr.c_str()), _mvmt_scope);
-                pos.x = (_mvmt_x_type == 0) ? vx : _initial_position.x + vx; // 0=ABS
-            }
-            if (_mvmt_y_set) {
-                float vy = runner->eval_expr(String(_mvmt_y_expr.c_str()), _mvmt_scope);
-                pos.y = (_mvmt_y_type == 0) ? vy : _initial_position.y + vy;
-            }
+        if (_mvmt_x_set && _runner) {
+            float vx = _runner->eval_expr_native(_mvmt_x_expr, _mvmt_var_names, _mvmt_var_values);
+            pos.x = (_mvmt_x_type == 0) ? vx : _initial_position.x + vx; // 0=ABS
+        }
+        if (_mvmt_y_set && _runner) {
+            float vy = _runner->eval_expr_native(_mvmt_y_expr, _mvmt_var_names, _mvmt_var_values);
+            pos.y = (_mvmt_y_type == 0) ? vy : _initial_position.y + vy;
         }
         set_global_position(pos);
         if (rotates) {

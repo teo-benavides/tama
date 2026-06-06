@@ -423,7 +423,7 @@ Object *TamaServerBulletPool::spawn(
     _TamaASTNode *bullet_act_node = p_data.bullet_act;
 
     if (bullet_act_node) {
-        _TamaInterpreter *runner = memnew(_TamaInterpreter);
+        _TamaInterpreter *runner = new _TamaInterpreter();
         runner->set_context(p_context);
         b.runner = runner;
 
@@ -432,8 +432,8 @@ Object *TamaServerBulletPool::spawn(
         int na = (int)std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
         for (int i = 0; i < na; ++i)
             act_scope[p_data.bullet_params[i]] = TamaScopeVal(p_data.bullet_args[i]);
-        act_scope["spawn_x"] = TamaScopeVal(Variant(position.x));
-        act_scope["spawn_y"] = TamaScopeVal(Variant(position.y));
+        act_scope["spawn_x"] = TamaScopeVal(position.x);
+        act_scope["spawn_y"] = TamaScopeVal(position.y);
 
         // Register C++ event handler — no signal/allocation overhead
         TamaServerBullet *wrapper_bullet = Object::cast_to<TamaServerBullet>(b.wrapper);
@@ -535,11 +535,8 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
 
     // Clean up runner
     if (b->runner) {
-        _TamaInterpreter *ti = Object::cast_to<_TamaInterpreter>(b->runner);
-        if (ti) {
-            ti->stop();
-            ti->queue_free();
-        }
+        b->runner->stop();
+        delete b->runner;
         b->runner = nullptr;
     }
 
@@ -587,10 +584,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 
         // Step runner before this bullet's position update so script changes
         // take effect in the same frame they are issued.
-        if (b->runner) {
-            _TamaInterpreter *ti = Object::cast_to<_TamaInterpreter>(b->runner);
-            if (ti && ti->is_running()) ti->step(delta);
-        }
+        if (b->runner && b->runner->is_running()) b->runner->step(delta);
 
         // The runner may have recycled this bullet (e.g. vanish command). Skip it.
         if (!b->active) continue;

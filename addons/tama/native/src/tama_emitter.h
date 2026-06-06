@@ -1,6 +1,7 @@
 #pragma once
 #include "tama_interpreter.h"
 
+#include <memory>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/core/property_info.hpp>
 #include <godot_cpp/templates/list.hpp>
@@ -25,8 +26,9 @@ public:
     // -----------------------------------------------------------------------
     // Godot virtuals
     // -----------------------------------------------------------------------
-    void _ready()   override;
-    void _process(double delta) override;
+    void _ready()                        override;
+    void _process(double delta)          override;
+    void _physics_process(double delta)  override;
 
     // Dynamic property overrides for tama_export_* inspector variables
     bool _get(const godot::StringName &p_name, godot::Variant &r_ret) const;
@@ -55,7 +57,7 @@ private:
 
     godot::String _script_filename;
     bool          _excluded_from_group = false;
-    _TamaInterpreter *_interpreter = nullptr;
+    std::unique_ptr<_TamaInterpreter> _interpreter;
     bool          _running        = false;
     godot::Dictionary _export_values;
     std::vector<ExportDef> _cached_export_defs;

@@ -54,7 +54,7 @@ public:
     _TamaASTNode  *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
     _TamaASTNode  *_get_script_from_repository(const godot::String &filename) const;
-    void           _connect_interpreter(godot::Object *interpreter, godot::Object *spawner);
+    void           _connect_interpreter(_TamaInterpreter *interpreter, godot::Object *spawner);
     _TamaSpawnManager *_get_spawn_manager() const { return _spawn_manager; }
     godot::Object *_get_context() const { return _spawn_manager ? _spawn_manager->get_context().ptr() : nullptr; }
     godot::String  _get_scripts_path() const;

@@ -209,7 +209,7 @@ bool TamaManager::_has_tama_script(const String &filename) const {
 _TamaASTNode *TamaManager::_get_script_from_repository(const String &filename) const {
     return _repository ? _repository->get_tama_script(filename) : nullptr;
 }
-void TamaManager::_connect_interpreter(Object *interpreter, Object *spawner) {
+void TamaManager::_connect_interpreter(_TamaInterpreter *interpreter, Object *spawner) {
     if (_spawn_manager) _spawn_manager->connect_interpreter(interpreter, spawner);
 }
 String TamaManager::_get_scripts_path() const {

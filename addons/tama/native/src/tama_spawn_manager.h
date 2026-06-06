@@ -27,7 +27,7 @@ public:
     void _exit_tree();
 
     // spawner may be a Node2D (TamaEmitter / TamaBullet) or a TamaServerBullet (Object)
-    void connect_interpreter(godot::Object *interpreter, godot::Object *spawner);
+    void connect_interpreter(_TamaInterpreter *interpreter, godot::Object *spawner);
     _TamaASTNode  *get_tama_script(const godot::String &filename) const;
 
     TamaBulletRegistry *get_registry() const { return registry.ptr(); }

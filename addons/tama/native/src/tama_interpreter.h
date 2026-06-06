@@ -9,9 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/object.hpp>
-#include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/variant.hpp>
 
@@ -51,23 +49,35 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// Scope types
+// Scope types — native tagged union, no Godot::Variant boxing for floats
 // ---------------------------------------------------------------------------
 
 struct TamaScopeVal {
-    bool is_node = false;
-    godot::Variant var;
+    enum Kind : uint8_t { FLOAT = 0, STRING = 1, NODE = 2, REF = 3 } kind = FLOAT;
+    float f = 0.0f;
+    std::string str;
     _TamaASTNode *node = nullptr;
     std::shared_ptr<_TamaASTNode> _owner;
     std::shared_ptr<TamaRef> ref;
 
     TamaScopeVal() = default;
-    TamaScopeVal(const godot::Variant &v) : var(v) {}
-    TamaScopeVal(_TamaASTNode *n) : is_node(true), node(n) {}
+    explicit TamaScopeVal(float v) : kind(FLOAT), f(v) {}
+    TamaScopeVal(_TamaASTNode *n) : kind(NODE), node(n) {}
+
+    TamaScopeVal(const godot::Variant &v) {
+        switch (v.get_type()) {
+            case godot::Variant::FLOAT:  kind = FLOAT;  f = (float)(double)v;               break;
+            case godot::Variant::INT:    kind = FLOAT;  f = (float)(int64_t)v;              break;
+            case godot::Variant::BOOL:   kind = FLOAT;  f = (bool)v ? 1.0f : 0.0f;         break;
+            case godot::Variant::STRING: kind = STRING; str = ((godot::String)v).utf8().get_data(); break;
+            default:                     kind = FLOAT;  f = 0.0f;                           break;
+        }
+    }
+
     TamaScopeVal(const TamaArgVal &av) {
-        if (av.ref) { ref = av.ref; }
-        else if (av.is_node) { is_node = true; node = av.node; _owner = av._owner; }
-        else { var = av.var; }
+        if (av.ref) { kind = REF; ref = av.ref; }
+        else if (av.is_node) { kind = NODE; node = av.node; _owner = av._owner; }
+        else { *this = TamaScopeVal(av.var); }
     }
 };
 using TamaScope = std::unordered_map<std::string, TamaScopeVal>;
@@ -141,12 +151,10 @@ struct ExecFrame {
 };
 
 // ---------------------------------------------------------------------------
-// _TamaInterpreter
+// _TamaInterpreter — plain C++ class (no Node, no GDCLASS)
 // ---------------------------------------------------------------------------
 
-class _TamaInterpreter : public godot::Node {
-    GDCLASS(_TamaInterpreter, godot::Node)
-
+class _TamaInterpreter {
     // -----------------------------------------------------------------------
     // State
     // -----------------------------------------------------------------------
@@ -165,7 +173,7 @@ class _TamaInterpreter : public godot::Node {
     std::vector<TamaScope> _scope_saves;
 
     // Async children (act calls with is_async=true) — stepped in step()
-    std::vector<_TamaInterpreter *> _async_children;
+    std::vector<std::unique_ptr<_TamaInterpreter>> _async_children;
 
     // Definition lookup tables (built once from program)
     std::unordered_map<std::string, _TamaASTNode *> _fires_map;
@@ -238,16 +246,9 @@ class _TamaInterpreter : public godot::Node {
     void _exec_body_sync(const std::vector<std::shared_ptr<_TamaASTNode>> &body);
     void _exec_body_sync(const std::vector<_TamaASTNode*> &body);
 
-protected:
-    static void _bind_methods();
-
 public:
     _TamaInterpreter() = default;
-    ~_TamaInterpreter() override = default;
-
-    // Godot virtuals
-    void _ready()                        override;
-    void _physics_process(double delta)  override;
+    ~_TamaInterpreter() = default;
 
     // Public API
     void step(double delta);
@@ -257,8 +258,11 @@ public:
     void stop();
     bool is_running() const { return _running || !_exec_stack.empty() || !_async_children.empty(); }
 
-    // Evaluate an expression with a given scope — used by TamaBullet for mvmt expressions.
-    float eval_expr(const godot::String &expr, const godot::Dictionary &scope);
+    // Evaluate an expression using an external var set (for mvmt expressions).
+    // Does not touch _scope. Uses _context for context functions.
+    float eval_expr_native(const std::string &expr,
+                           const std::vector<std::string> &var_names,
+                           const std::vector<double> &var_values);
 
     // C++ callbacks — set by spawn manager / emitter, no Godot signal overhead
     std::function<void(const TamaBulletFireData &)> _fire_cb;
@@ -270,8 +274,4 @@ public:
     // Property
     void           set_context(godot::Object *ctx) { _context = ctx; }
     godot::Object *get_context() const             { return _context; }
-
-    // For pool: set the scene tree reference without being in the tree
-    void set_tree_override(godot::Object *tree) { _tree_override = tree; }
-    godot::Object *_tree_override = nullptr;
 };

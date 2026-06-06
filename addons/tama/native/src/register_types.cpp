@@ -31,7 +31,6 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     ClassDB::register_internal_class<_TamaScriptRepository>();
     ClassDB::register_internal_class<_TamaSpawnManager>();
     ClassDB::register_internal_class<_TamaExprRuntime>();
-    ClassDB::register_internal_class<_TamaInterpreter>();
     ClassDB::register_internal_class<TamaServerBulletPool>();
 
     // User-facing classes

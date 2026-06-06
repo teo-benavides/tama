@@ -14,8 +14,10 @@ protected:
     static void _bind_methods();
 
 public:
-    godot::Object *_runner        = nullptr;
-    std::function<void()> _on_ready_cb;
+    // Owned interpreter(s) — freed when bullet is freed
+    std::unique_ptr<_TamaInterpreter> _runner;   // act runner (also used for eval context)
+    std::unique_ptr<_TamaInterpreter> _runner2;  // emitter-act runner (may be null)
+
     float          _angle         = 0.0f;
     float          _speed         = 0.0f;
     float          _speed_x       = 0.0f;
@@ -28,7 +30,8 @@ public:
     bool           _mvmt_y_set    = false;
     int            _mvmt_y_type   = 0;
     std::string    _mvmt_y_expr;
-    godot::Dictionary _mvmt_scope;
+    std::vector<std::string> _mvmt_var_names;
+    std::vector<double>      _mvmt_var_values;
     godot::Vector2 _initial_position;
 
     bool rotates       = true;

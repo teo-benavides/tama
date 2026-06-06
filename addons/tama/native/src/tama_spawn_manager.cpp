@@ -17,7 +17,6 @@ using namespace godot;
 // OffsetMode: NONE=0 INLINE=1 BLOCK=2
 
 void _TamaSpawnManager::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("connect_interpreter","interpreter","spawner"), &_TamaSpawnManager::connect_interpreter);
     ClassDB::bind_method(D_METHOD("get_registry"),     &_TamaSpawnManager::get_registry);
     ClassDB::bind_method(D_METHOD("set_registry","v"), &_TamaSpawnManager::set_registry);
     ClassDB::bind_method(D_METHOD("get_context"),      &_TamaSpawnManager::get_context);
@@ -38,8 +37,7 @@ void _TamaSpawnManager::_exit_tree() {
     if (mgr) mgr->_on_scene_nodes_freed();
 }
 
-void _TamaSpawnManager::connect_interpreter(Object *interpreter, Object *spawner) {
-    _TamaInterpreter *interp = Object::cast_to<_TamaInterpreter>(interpreter);
+void _TamaSpawnManager::connect_interpreter(_TamaInterpreter *interp, Object *spawner) {
     if (!interp) return;
     interp->_fire_cb = [this, spawner](const TamaBulletFireData &data) {
         _on_bullet_fired(data, spawner);
@@ -169,10 +167,9 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         return;
     }
 
-    _TamaInterpreter *bullet_runner = memnew(_TamaInterpreter);
-    bullet_runner->set_context(context.ptr());
-    bullet->add_child(bullet_runner);
-    bullet->_runner = bullet_runner;
+    bullet->_runner = std::make_unique<_TamaInterpreter>();
+    bullet->_runner->set_context(context.ptr());
+    _TamaInterpreter *bullet_runner = bullet->_runner.get();
 
     float angle = _resolve_angle(data, spawner);
     float speed = _resolve_speed(data, spawner);
@@ -184,20 +181,27 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
     bullet->_initial_position = _resolve_position(data, spawner, angle);
 
     if (data.mvmt_x_set || data.mvmt_y_set) {
-        Dictionary mvmt_scope;
+        std::vector<std::string> mvmt_var_names;
+        std::vector<double> mvmt_var_values;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i) {
             const TamaArgVal &av = bullet_args[i];
-            if (!av.is_node) mvmt_scope[String(bullet_params[i].c_str())] = av.var;
+            if (!av.is_node) {
+                mvmt_var_names.push_back(bullet_params[i]);
+                mvmt_var_values.push_back((double)(float)av.var);
+            }
         }
-        mvmt_scope["spawn_x"] = bullet->_initial_position.x;
-        mvmt_scope["spawn_y"] = bullet->_initial_position.y;
-        bullet->_mvmt_x_set  = data.mvmt_x_set;
-        bullet->_mvmt_x_type = data.mvmt_x_type;
-        bullet->_mvmt_x_expr = data.mvmt_x_expr;
-        bullet->_mvmt_y_set  = data.mvmt_y_set;
-        bullet->_mvmt_y_type = data.mvmt_y_type;
-        bullet->_mvmt_y_expr = data.mvmt_y_expr;
-        bullet->_mvmt_scope  = mvmt_scope;
+        mvmt_var_names.push_back("spawn_x");
+        mvmt_var_values.push_back((double)bullet->_initial_position.x);
+        mvmt_var_names.push_back("spawn_y");
+        mvmt_var_values.push_back((double)bullet->_initial_position.y);
+        bullet->_mvmt_x_set      = data.mvmt_x_set;
+        bullet->_mvmt_x_type     = data.mvmt_x_type;
+        bullet->_mvmt_x_expr     = data.mvmt_x_expr;
+        bullet->_mvmt_y_set      = data.mvmt_y_set;
+        bullet->_mvmt_y_type     = data.mvmt_y_type;
+        bullet->_mvmt_y_expr     = data.mvmt_y_expr;
+        bullet->_mvmt_var_names  = std::move(mvmt_var_names);
+        bullet->_mvmt_var_values = std::move(mvmt_var_values);
     }
 
     spawn_parent->call_deferred("add_child", Variant(bullet));
@@ -210,49 +214,30 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         TamaScope act_scope;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
             act_scope[bullet_params[i]] = TamaScopeVal(bullet_args[i]);
-        act_scope["spawn_x"] = TamaScopeVal(Variant(bullet->_initial_position.x));
-        act_scope["spawn_y"] = TamaScopeVal(Variant(bullet->_initial_position.y));
+        act_scope["spawn_x"] = TamaScopeVal(bullet->_initial_position.x);
+        act_scope["spawn_y"] = TamaScopeVal(bullet->_initial_position.y);
         connect_interpreter(bullet_runner, bullet);
-        _TamaInterpreter *br = bullet_runner;
-        _TamaASTNode *prog = source_program;
-        _TamaASTNode *act  = bullet_act;
-        bullet->_on_ready_cb = [br, prog, act, sc = std::move(act_scope)]() mutable {
-            br->start_act(prog, act, std::move(sc));
-        };
+        bullet_runner->set_event_handler(bullet);
+        bullet_runner->start_act(source_program, bullet_act, std::move(act_scope));
     }
 
     if (bullet_emitter_act) {
         _TamaInterpreter *spawner_runner;
         if (bullet_act) {
-            spawner_runner = memnew(_TamaInterpreter);
-            spawner_runner->set_context(context.ptr());
-            bullet->add_child(spawner_runner);
+            bullet->_runner2 = std::make_unique<_TamaInterpreter>();
+            bullet->_runner2->set_context(context.ptr());
+            spawner_runner = bullet->_runner2.get();
         } else {
             spawner_runner = bullet_runner;
         }
         connect_interpreter(spawner_runner, bullet);
+        spawner_runner->set_event_handler(bullet);
         TamaScope emt_scope;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
             emt_scope[bullet_params[i]] = TamaScopeVal(bullet_args[i]);
-        emt_scope["spawn_x"] = TamaScopeVal(Variant(bullet->_initial_position.x));
-        emt_scope["spawn_y"] = TamaScopeVal(Variant(bullet->_initial_position.y));
-        _TamaInterpreter *sr = spawner_runner;
-        _TamaASTNode *prog   = source_program;
-        _TamaASTNode *emt    = bullet_emitter_act;
-        if (bullet_act) {
-            // bullet_act already took _on_ready_cb — chain via a second lambda stored on bullet
-            // Use the existing slot: if bullet_act set _on_ready_cb, we chain emt after.
-            // Since only one _on_ready_cb slot exists, we wrap both:
-            auto prev_cb = std::move(bullet->_on_ready_cb);
-            bullet->_on_ready_cb = [prev_cb = std::move(prev_cb), sr, prog, emt, sc2 = std::move(emt_scope)]() mutable {
-                if (prev_cb) prev_cb();
-                sr->start_act(prog, emt, std::move(sc2));
-            };
-        } else {
-            bullet->_on_ready_cb = [sr, prog, emt, sc = std::move(emt_scope)]() mutable {
-                sr->start_act(prog, emt, std::move(sc));
-            };
-        }
+        emt_scope["spawn_x"] = TamaScopeVal(bullet->_initial_position.x);
+        emt_scope["spawn_y"] = TamaScopeVal(bullet->_initial_position.y);
+        spawner_runner->start_act(source_program, bullet_emitter_act, std::move(emt_scope));
     }
 }
 
