@@ -85,12 +85,14 @@ repeat  repeatf wait    waitf   vanish  break
 chdir   chspd   chrotspd  chpos   accel   over
 dir     speed   spd     rotspd  offset  pos     mvmt
 aim     abs     rel     seq
-x       y       type    bounces delay
+x       y       type    bounces
 emitter emt     async
 if      elif    else    while
 var     true    false
 export  include
 ```
+
+`delay` is a **soft keyword**: it is only treated as the fire-block `delay` statement when it appears as the first token of a line inside a fire block. It is **not** reserved and may be used freely as a variable or parameter name anywhere else.
 
 `bul` is an alias for `bullet`; `spd` is an alias for `speed`; `emt` is an alias for `emitter`.
 
@@ -1263,7 +1265,7 @@ If `main` is absent (library file), `program.main` is null. The interpreter chec
 | `pos` | — | Fire stmt |
 | `mvmt` | — | Bullet stmt |
 | `bounces` | — | Bullet stmt — border reflection declaration |
-| `delay` | — | Fire stmt — per-fire spawn delay override (server bullets only) |
+| `delay` | — | Fire stmt — per-fire spawn delay override (server bullets only). **Soft keyword** — not reserved; may be used as a variable or parameter name. |
 | `chdir` | — | Action stmt |
 | `chspd` | — | Action stmt |
 | `chrotspd` | — | Action stmt — change bullet rotation speed (degrees/sec) |

@@ -488,7 +488,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_rotspd() {
 }
 
 std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_delay() {
-    consume(TT::KW_DELAY);
+    consume(TT::WORD); // "delay" is a soft keyword — detected by name, not reserved at lex time
     std::string expr = collect_to_eol();
     if (expr.empty()) error_at(peek(), "Expected expression after delay");
     consume(TT::NEWLINE);
@@ -930,13 +930,16 @@ void TamaParserCpp::parse_fire_block(const std::shared_ptr<_TamaASTNode> &node, 
     skip_newlines();
     while (peek_type() != TT::DEDENT && peek_type() != TT::EOF_) {
         TamaToken &t = peek();
-        switch (t.type) {
+        // "delay" is a soft keyword: recognised by name inside fire blocks only,
+        // so it remains usable as a variable or parameter name elsewhere in the script.
+        if (t.type == TT::WORD && t.value == "delay") {
+            node->delay = parse_delay();
+        } else switch (t.type) {
             case TT::KW_DIR:    node->dir    = parse_dir(); break;
             case TT::KW_SPEED:  node->speed  = parse_speed(); break;
             case TT::KW_ROTSPD: node->rotspd = parse_rotspd(); break;
             case TT::KW_OFFSET: node->offset = parse_offset(); break;
             case TT::KW_POS:    node->pos    = parse_pos(); break;
-            case TT::KW_DELAY:  node->delay  = parse_delay(); break;
             case TT::KW_BULLET:
                 if (peek_type_at(1) == TT::NEWLINE)
                     node->bullet = parse_inline_bullet();

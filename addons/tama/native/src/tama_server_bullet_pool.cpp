@@ -260,11 +260,10 @@ TamaServerBulletPool::BatchData *TamaServerBulletPool::_get_batch(TypeData &td) 
             RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(b->multimesh, i, offscreen);
     }
     // Each batch starts at frame 0 of the animation, independent of other batches
-    b->anim_time      = 0.0f;
-    b->anim_frame     = 0;
+    b->anim_time       = 0.0f;
+    b->anim_frame      = 0;
     b->current_texture = td.first_texture;
-    b->spawn_frames_remaining = 0;
-    b->birth_delay            = 0;
+    b->spawn_active_count = 0;
     return b;
 }
 
@@ -334,22 +333,17 @@ Object *TamaServerBulletPool::spawn(
     bool    animated = td.fps > 0.0f && td.frames.size() > 1;
     // Resolve effective spawn delay: fire-block override takes priority.
     int eff_delay = (p_data.spawn_delay_override >= 0) ? p_data.spawn_delay_override : td.spawn_delay;
-    // Types with spawn animation need a fresh batch every frame so each cohort
-    // has independent animation state. Also force a new batch when the effective
-    // delay differs from the current batch's delay (different fire blocks with
-    // different delay values must not share a batch).
-    bool needs_per_frame_batch = animated || eff_delay > 0;
+    // Spawn animation state is per-bullet, so spawn-delay types no longer need per-frame batches.
+    // Only animated types (multi-frame sprites) need a fresh batch each frame to keep
+    // each spawn-frame cohort on its own independent animation phase.
+    bool needs_per_frame_batch = animated;
     bool need_new_batch = !td.cur_batch
         || td.cur_batch->used >= BATCH_CHUNK
-        || (needs_per_frame_batch && td.cur_frame != frame)
-        || (td.cur_batch->birth_delay != eff_delay);
+        || (needs_per_frame_batch && td.cur_frame != frame);
     if (need_new_batch) {
         td.cur_batch              = _get_batch(td);
         td.cur_batch->birth_frame = (int)frame;
-        td.cur_batch->birth_delay = eff_delay;
         td.cur_frame              = frame;
-        if (eff_delay > 0)
-            td.cur_batch->spawn_frames_remaining = eff_delay;
         td.active_batches.push_back(td.cur_batch);
     }
     BatchData *batch  = td.cur_batch;
@@ -390,6 +384,9 @@ Object *TamaServerBulletPool::spawn(
     b.last_rot_speed         = 0.0f;
     b.rot_speed_tween.active = false;
     b.vel_dirty              = true;
+
+    b.spawn_frames_remaining = eff_delay;
+    b.birth_delay            = eff_delay;
 
     b.bounces_left = p_data.bounces_max;
     b.bounces_axis = p_data.bounces_axis;
@@ -449,6 +446,7 @@ Object *TamaServerBulletPool::spawn(
     float rot = b.rotates ? b.angle : 0.0f;
     if (eff_delay > 0) {
         // Bullet is frozen during spawn animation — hide in regular multimesh.
+        ++batch->spawn_active_count;
         Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
             batch->multimesh, local_slot, offscreen);
@@ -580,39 +578,59 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
         int s    = b->local_slot;
         int last = batch->used - 1;
         if (s != last) {
-            BulletState *moved      = batch->slot_bullets[last];
-            moved->local_slot       = s;
-            batch->slot_bullets[s]  = moved;
-            // Mirror the moved bullet's render transform into the freed slot.
-            float rot = 0.0f;
-            if (moved->rotates) {
-                if (moved->face_velocity && !(moved->mvmt_x_set || moved->mvmt_y_set))
-                    rot = (moved->cached_vx != 0.0f || moved->cached_vy != 0.0f)
-                        ? std::atan2(moved->cached_vy, moved->cached_vx) : moved->angle;
-                else
-                    rot = moved->angle;
-            }
-            RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-                batch->multimesh, s, Transform2D(rot, moved->texture_scale, 0.0f, moved->position));
+            BulletState *moved     = batch->slot_bullets[last];
+            moved->local_slot      = s;
+            batch->slot_bullets[s] = moved;
 
-            // If the batch is in spawn animation, also update the spawn multimesh slot.
-            if (batch->spawn_frames_remaining > 0 && batch->spawn_multimesh != RID() && td_owner) {
-                float t = batch->birth_delay > 0
-                    ? 1.0f - (float)batch->spawn_frames_remaining / (float)batch->birth_delay
-                    : 1.0f;
-                float sc = td_owner->starting_spawn_scale + (1.0f - td_owner->starting_spawn_scale) * t;
-                float mrot = moved->rotates ? moved->angle : 0.0f;
+            // Mirror the moved bullet's render state into the freed slot.
+            // The regular multimesh slot and spawn multimesh slot are handled
+            // independently based on whether the moved bullet is still animating.
+            if (moved->spawn_frames_remaining > 0) {
+                // Moved bullet is still in spawn animation: keep regular MM offscreen,
+                // update spawn MM to reflect its current animated position.
                 RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-                    batch->spawn_multimesh, s,
-                    Transform2D(mrot, Vector2(sc, -sc), 0.0f, moved->position));
+                    batch->multimesh, s, offscreen);
+                if (batch->spawn_multimesh != RID() && td_owner) {
+                    float t  = moved->birth_delay > 0
+                        ? 1.0f - (float)moved->spawn_frames_remaining / (float)moved->birth_delay
+                        : 1.0f;
+                    float sc = td_owner->starting_spawn_scale
+                             + (1.0f - td_owner->starting_spawn_scale) * t;
+                    float mrot = moved->rotates ? moved->angle : 0.0f;
+                    RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
+                        batch->spawn_multimesh, s,
+                        Transform2D(mrot, Vector2(sc, -sc), 0.0f, moved->position));
+                }
+            } else {
+                // Moved bullet is done animating: show at its real position in regular MM,
+                // ensure spawn MM slot is offscreen.
+                float rot = 0.0f;
+                if (moved->rotates) {
+                    if (moved->face_velocity && !(moved->mvmt_x_set || moved->mvmt_y_set))
+                        rot = (moved->cached_vx != 0.0f || moved->cached_vy != 0.0f)
+                            ? std::atan2(moved->cached_vy, moved->cached_vx) : moved->angle;
+                    else
+                        rot = moved->angle;
+                }
+                RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
+                    batch->multimesh, s,
+                    Transform2D(rot, moved->texture_scale, 0.0f, moved->position));
+                if (batch->spawn_multimesh != RID())
+                    RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
+                        batch->spawn_multimesh, s, offscreen);
             }
         }
-        // Hide the vacated last slot and shrink the packed range.
+        // Hide the vacated last slot in both multimeshes.
         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
             batch->multimesh, last, offscreen);
-        if (batch->spawn_frames_remaining > 0 && batch->spawn_multimesh != RID())
+        if (batch->spawn_multimesh != RID())
             RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                 batch->spawn_multimesh, last, offscreen);
+
+        // If the freed bullet was still animating, reduce the batch counter.
+        if (b->spawn_frames_remaining > 0)
+            --batch->spawn_active_count;
+
         batch->slot_bullets[last] = nullptr;
         --batch->used;
         --batch->active_count;
@@ -684,10 +702,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
         if (b->spawn_frame == cur_frame) continue;
 
         // Bullet is frozen during spawn animation — skip movement and runner.
-        {
-            BatchData *cb = static_cast<BatchData *>(b->batch_ptr);
-            if (cb && cb->spawn_frames_remaining > 0) continue;
-        }
+        if (b->spawn_frames_remaining > 0) continue;
 
         // Step runner before this bullet's position update so script changes
         // take effect in the same frame they are issued.
@@ -801,36 +816,32 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
     for (BulletState *b : _to_recycle)
         _recycle_internal(b);
 
-    // Advance spawn animation counters (skipped on the batch's birth frame so the first
-    // _draw() shows t=0, i.e. the full starting scale/opacity).
+    // Advance spawn animation counters (per-bullet, independent of other bullets in the batch).
+    // Skipped on the bullet's birth frame so the first _draw() shows t=0.
+    Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
     for (auto &[key, td] : _types) {
         for (BatchData *batch : td->active_batches) {
-            if (batch->spawn_frames_remaining <= 0) continue;
-            if (batch->birth_frame == cur_frame) continue; // spawned this frame — don't decrement yet
-            --batch->spawn_frames_remaining;
-            if (batch->spawn_frames_remaining > 0) {
-                // Update scale and opacity for all instances in this batch.
-                float t  = 1.0f - (float)batch->spawn_frames_remaining / (float)batch->birth_delay;
-                float sc = td->starting_spawn_scale + (1.0f - td->starting_spawn_scale) * t;
-                float op = td->starting_spawn_opacity + (1.0f - td->starting_spawn_opacity) * t;
-                Color col(1.0f, 1.0f, 1.0f, op);
-                if (batch->spawn_multimesh != RID()) {
-                    for (int i = 0; i < batch->used; ++i) {
-                        BulletState *b = batch->slot_bullets[i];
-                        if (!b) continue;
+            if (batch->spawn_active_count <= 0) continue;
+            for (int i = 0; i < batch->used; ++i) {
+                BulletState *b = batch->slot_bullets[i];
+                if (!b || b->spawn_frames_remaining <= 0) continue;
+                if (b->spawn_frame == cur_frame) continue; // spawned this frame — don't decrement yet
+                --b->spawn_frames_remaining;
+                if (b->spawn_frames_remaining > 0) {
+                    float t  = 1.0f - (float)b->spawn_frames_remaining / (float)b->birth_delay;
+                    float sc = td->starting_spawn_scale + (1.0f - td->starting_spawn_scale) * t;
+                    float op = td->starting_spawn_opacity + (1.0f - td->starting_spawn_opacity) * t;
+                    if (batch->spawn_multimesh != RID()) {
                         float rot = b->rotates ? b->angle : 0.0f;
                         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                             batch->spawn_multimesh, i,
                             Transform2D(rot, Vector2(sc, -sc), 0.0f, b->position));
                         RenderingServer::get_singleton()->multimesh_instance_set_color(
-                            batch->spawn_multimesh, i, col);
+                            batch->spawn_multimesh, i, Color(1.0f, 1.0f, 1.0f, op));
                     }
-                }
-            } else {
-                // Spawn animation finished — enable physics and switch to normal multimesh.
-                for (int i = 0; i < batch->used; ++i) {
-                    BulletState *b = batch->slot_bullets[i];
-                    if (!b) continue;
+                } else {
+                    // This bullet's spawn animation finished — transition to normal multimesh.
+                    --batch->spawn_active_count;
                     float rot = b->rotates ? b->angle : 0.0f;
                     RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                         batch->multimesh, i,
@@ -839,12 +850,9 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                         b->area_rid, b->global_slot, Transform2D(0.0f, b->position));
                     PhysicsServer2D::get_singleton()->area_set_shape_disabled(
                         b->area_rid, b->global_slot, false);
-                    // Hide the corresponding spawn multimesh slot.
-                    if (batch->spawn_multimesh != RID()) {
-                        Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
+                    if (batch->spawn_multimesh != RID())
                         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                             batch->spawn_multimesh, i, offscreen);
-                    }
                 }
             }
         }
@@ -918,7 +926,7 @@ void TamaServerBulletPool::_draw() {
     for (auto &[key, td] : _types) {
         Ref<Texture2D> stex = td->spawn_texture.is_valid() ? td->spawn_texture : td->first_texture;
         for (BatchData *batch : td->active_batches) {
-            if (batch->spawn_frames_remaining <= 0) continue;
+            if (batch->spawn_active_count <= 0) continue;
             if (!batch->spawn_multimesh_res.is_valid()) continue;
             batch->spawn_multimesh_res->set_visible_instance_count(batch->used);
             draw_multimesh(batch->spawn_multimesh_res, stex);

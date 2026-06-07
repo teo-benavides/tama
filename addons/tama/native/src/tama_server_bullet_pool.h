@@ -39,10 +39,9 @@ class TamaServerBulletPool : public godot::Node2D {
         // local_slot -> BulletState*, so recycle can pull the last live slot into a
         // freed hole and keep the batch compact (used == active_count).
         std::vector<BulletState *> slot_bullets;
-        // Spawn animation: counts down from TypeData::spawn_delay to 0.
-        // While > 0, bullets in this batch are frozen (no movement, no physics).
-        int spawn_frames_remaining = 0;
-        int birth_delay            = 0; // spawn_frames_remaining value at batch open — used for t computation
+        // Number of bullets in this batch still in spawn animation (spawn_frames_remaining > 0).
+        // Spawn animation state is per-bullet (BulletState), not per-batch.
+        int spawn_active_count = 0;
         // Spawn multimesh — created lazily when first needed, reused across batch reuses.
         godot::Ref<godot::MultiMesh> spawn_multimesh_res;
         godot::RID spawn_multimesh;

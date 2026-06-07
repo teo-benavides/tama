@@ -87,6 +87,10 @@ struct BulletState {
     float last_rot_speed = 0.0f;
     TweenState1D rot_speed_tween;
 
+    // Spawn animation (per-bullet, independent of other bullets in the same batch)
+    int spawn_frames_remaining = 0;
+    int birth_delay            = 0;
+
     // Bounce state
     int bounces_left = 0;  // 0=no bouncing, -1=infinite, N>0=bounces remaining
     int bounces_axis = 0;  // 0=both walls, 1=x (left/right), 2=y (top/bottom)

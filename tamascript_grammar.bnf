@@ -48,8 +48,10 @@ KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "aim" | "abs" | "rel" | "seq"
    | "over" | "x" | "y"
    | "include" | "export"
-   | "bounces" | "delay"
+   | "bounces"
    | "true" | "false" ;
+             (* "delay" is a soft keyword: only meaningful as a fire-block statement.
+                it is NOT reserved and may be used freely as a variable or parameter name. *)
 
 DIR_TYPE   = "aim" | "abs" | "rel" | "seq" ;
 VALUE_TYPE = "abs" | "rel" | "seq" ;
