@@ -1,0 +1,45 @@
+main
+    repeat
+        act circle (-50, randf_range(0.0, (360.0/50.0)), changer_pink)
+        act circle (50, randf_range(0.0, (360.0/50.0)), changer_blue)
+        wait 0.8
+
+act circle(x_ofs, dirofs, b)
+    repeat 50 i
+        fire
+            dir abs (360.0/50.0)*i+dirofs
+            spd abs 500
+            offset
+                x abs x_ofs
+            delay 7
+            bul b
+                        
+bul changer_pink
+    type fatpink
+    act
+        chspd
+            spd abs 0
+            over 1.0
+        wait 1.0
+        fire
+            dir rel 0
+            spd abs 50
+            delay 7
+            bul
+                type fast
+        vanish
+
+bul changer_blue
+    type fatblue
+    act
+        chspd
+            spd abs 0
+            over 1.0
+        wait 1.0
+        fire
+            dir rel 0
+            spd abs 50
+            delay 7
+            bul
+                type blue
+        vanish

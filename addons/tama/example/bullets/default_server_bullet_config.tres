@@ -12,3 +12,4 @@ pool_size = 25000
 spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
 spawn_texture = ExtResource("2_th1mw")
+starting_spawn_scale = 3.0
