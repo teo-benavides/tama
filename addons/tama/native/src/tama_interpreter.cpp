@@ -658,6 +658,12 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
         data.rot_speed_value = _eval_float(rotspd_node->expr);
     }
 
+    _TamaASTNode *delay_node = node->delay.get();
+    if (delay_node) {
+        int d = (int)_eval_float(delay_node->expr);
+        data.spawn_delay_override = d < 0 ? 0 : d;
+    }
+
     _TamaASTNode *off_node = node->offset.get();
     if (off_node) {
         if (off_node->type_id == (int)TamaNodeType::OFFSET_INLINE) {

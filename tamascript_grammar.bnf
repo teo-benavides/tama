@@ -48,7 +48,7 @@ KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "aim" | "abs" | "rel" | "seq"
    | "over" | "x" | "y"
    | "include" | "export"
-   | "bounces"
+   | "bounces" | "delay"
    | "true" | "false" ;
 
 DIR_TYPE   = "aim" | "abs" | "rel" | "seq" ;
@@ -120,7 +120,18 @@ fire_stmt = dir_stmt
            | rotspd_stmt
            | offset_stmt
            | pos_stmt
+           | delay_stmt
            | bullet_call ;
+
+delay_stmt  = "delay" EXPR ;
+              (* overrides the bullet type's spawn_delay for this fire only.
+                 EXPR is evaluated to a non-negative integer (physics frames).
+                 only meaningful for server bullets; requires spawn animation
+                 properties (spawn_texture, starting_spawn_scale,
+                 starting_spawn_opacity) to be set on the TamaServerBulletConfig.
+                 when spawn_delay > 0 on the config, delay overrides that value;
+                 when spawn_delay = 0 on the config, delay enables the animation
+                 for this fire block only.                                         *)
 
 bullet_call = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
               (* reference to a named bullet definition, with optional args *)

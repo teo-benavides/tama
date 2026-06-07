@@ -85,7 +85,7 @@ repeat  repeatf wait    waitf   vanish  break
 chdir   chspd   chrotspd  chpos   accel   over
 dir     speed   spd     rotspd  offset  pos     mvmt
 aim     abs     rel     seq
-x       y       type    bounces
+x       y       type    bounces delay
 emitter emt     async
 if      elif    else    while
 var     true    false
@@ -614,7 +614,7 @@ The interpreter tracks async act count and waits for all async acts to finish be
 Valid inside `fire` definitions and inline `fire` blocks.
 
 ```
-fire_stmt = dir_stmt | speed_stmt | rotspd_stmt | offset_stmt | pos_stmt | bullet_call | inline_bullet
+fire_stmt = dir_stmt | speed_stmt | rotspd_stmt | offset_stmt | pos_stmt | delay_stmt | bullet_call | inline_bullet
 ```
 
 All properties are optional. A fire with no `bullet` uses the registry's default bullet. When both `offset` and `pos` are present, `pos` takes priority.
@@ -665,7 +665,26 @@ fire
     rotspd rel 30   ← 30°/sec added to last fired rotation speed
 ```
 
-### 7.4 Order
+### 7.4 `delay` *(server bullets only)*
+
+```
+delay_stmt = "delay" EXPR
+```
+
+Overrides the bullet type's `spawn_delay` (set in `TamaServerBulletConfig`) for this fire block only. `EXPR` is evaluated to a non-negative integer representing the spawn delay in **physics frames**.
+
+While the delay is active the bullet is frozen (no movement, no physics). A spawn animation plays during this period using the config's `spawn_texture`, `starting_spawn_scale`, and `starting_spawn_opacity` properties. When `spawn_delay = 0` on the config but `delay N` is set here, the animation still plays using those properties.
+
+`delay` has no effect on scene bullets.
+
+```
+fire
+    dir aim 0
+    spd 200
+    delay 10    ← freeze for 10 frames while spawn animation plays
+```
+
+### 7.5 Order
 
 Properties can appear in any order inside a fire block. Only one `bullet` call is permitted per fire block.
 
@@ -1244,6 +1263,7 @@ If `main` is absent (library file), `program.main` is null. The interpreter chec
 | `pos` | — | Fire stmt |
 | `mvmt` | — | Bullet stmt |
 | `bounces` | — | Bullet stmt — border reflection declaration |
+| `delay` | — | Fire stmt — per-fire spawn delay override (server bullets only) |
 | `chdir` | — | Action stmt |
 | `chspd` | — | Action stmt |
 | `chrotspd` | — | Action stmt — change bullet rotation speed (degrees/sec) |
@@ -1373,7 +1393,10 @@ inline_act    = "act"   NEWLINE action_block ;
 (* ---- Fire statements ---- *)
 
 fire_stmt     = dir_stmt | speed_stmt | rotspd_stmt | offset_stmt | pos_stmt
-              | bullet_call | inline_bullet ;
+              | delay_stmt | bullet_call | inline_bullet ;
+delay_stmt    = "delay" EXPR ;
+               (* overrides spawn_delay for this fire; server bullets only.
+                  EXPR = physics frames to freeze while spawn animation plays. *)
 bullet_call   = ( "bullet" | "bul" ) IDENT [ arg_list ] ;
 inline_bullet = ( "bullet" | "bul" ) NEWLINE bullet_block ;
 

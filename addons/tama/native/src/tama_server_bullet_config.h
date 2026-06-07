@@ -25,7 +25,13 @@ public:
     int    pool_size            = 1000;
     float  out_of_bounds_margin = 50.0f;
 
-    // Virtuals for conditional rect visibility
+    // Spawn animation
+    int    spawn_delay             = 0;
+    godot::Ref<godot::Texture2D> spawn_texture;
+    float  starting_spawn_scale    = 2.0f;
+    float  starting_spawn_opacity  = 0.0f;
+
+    // Virtuals for conditional property visibility
     bool _get(const godot::StringName &p_name, godot::Variant &r_ret) const;
     bool _set(const godot::StringName &p_name, const godot::Variant &p_value);
     void _get_property_list(godot::List<godot::PropertyInfo> *p_list) const;
@@ -54,4 +60,13 @@ public:
     void  set_pool_size(int v)                     { pool_size = v; }
     float get_out_of_bounds_margin()         const { return out_of_bounds_margin; }
     void  set_out_of_bounds_margin(float v)        { out_of_bounds_margin = v; }
+
+    int   get_spawn_delay()                  const { return spawn_delay; }
+    void  set_spawn_delay(int v)                   { spawn_delay = v; notify_property_list_changed(); }
+    godot::Ref<godot::Texture2D> get_spawn_texture()  const { return spawn_texture; }
+    void  set_spawn_texture(godot::Ref<godot::Texture2D> v) { spawn_texture = v; }
+    float get_starting_spawn_scale()         const { return starting_spawn_scale; }
+    void  set_starting_spawn_scale(float v)        { starting_spawn_scale = v; }
+    float get_starting_spawn_opacity()       const { return starting_spawn_opacity; }
+    void  set_starting_spawn_opacity(float v)      { starting_spawn_opacity = v; }
 };

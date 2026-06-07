@@ -487,6 +487,16 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_rotspd() {
     return n;
 }
 
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_delay() {
+    consume(TT::KW_DELAY);
+    std::string expr = collect_to_eol();
+    if (expr.empty()) error_at(peek(), "Expected expression after delay");
+    consume(TT::NEWLINE);
+    auto n = tama_make_node((int)NT::DELAY);
+    n->expr = expr;
+    return n;
+}
+
 std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_chrotspd() {
     TamaToken tok = consume(TT::KW_CHROTSPD);
     consume(TT::NEWLINE);
@@ -926,6 +936,7 @@ void TamaParserCpp::parse_fire_block(const std::shared_ptr<_TamaASTNode> &node, 
             case TT::KW_ROTSPD: node->rotspd = parse_rotspd(); break;
             case TT::KW_OFFSET: node->offset = parse_offset(); break;
             case TT::KW_POS:    node->pos    = parse_pos(); break;
+            case TT::KW_DELAY:  node->delay  = parse_delay(); break;
             case TT::KW_BULLET:
                 if (peek_type_at(1) == TT::NEWLINE)
                     node->bullet = parse_inline_bullet();

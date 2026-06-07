@@ -53,7 +53,7 @@ struct _TamaASTNode {
     std::vector<std::string> params;
     std::vector<TamaArgVal>  args;
 
-    std::shared_ptr<_TamaASTNode> dir, speed, rotspd, over, offset, pos, bullet;
+    std::shared_ptr<_TamaASTNode> dir, speed, rotspd, over, offset, pos, bullet, delay;
     std::shared_ptr<_TamaASTNode> x, y, emitter_act, act, mvmt, main;
 };
 

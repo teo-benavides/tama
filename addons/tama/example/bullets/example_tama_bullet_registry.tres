@@ -1,19 +1,15 @@
 [gd_resource type="TamaBulletRegistry" format=3 uid="uid://5xrka8pvror3"]
 
 [ext_resource type="PackedScene" uid="uid://cppbullet001" path="res://addons/tama/example/bullets/example_bullet.tscn" id="1_0v7u8"]
+[ext_resource type="TamaServerBulletConfig" uid="uid://cdalm65plotyt" path="res://addons/tama/example/bullets/default_server_bullet_config.tres" id="2_uxopc"]
 [ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama/example/bullets/small_bullet.png" id="2_wetqc"]
 [ext_resource type="Texture2D" uid="uid://5xunk2d2cj4n" path="res://addons/tama/example/bullets/small_bullet_blue.png" id="3_gulsf"]
+[ext_resource type="Texture2D" uid="uid://c340vutewp7ty" path="res://addons/tama/example/bullets/spawn_blue.png" id="4_6fimo"]
 [ext_resource type="Texture2D" uid="uid://da1dadyp1bofm" path="res://addons/tama/example/bullets/small_bullet_green.png" id="4_n53vu"]
 [ext_resource type="Texture2D" uid="uid://65p6f1ql1q4y" path="res://addons/tama/example/bullets/small_bullet_orange.png" id="5_d4i3m"]
 [ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama/example/bullets/example_bullet.png" id="6_gulsf"]
-
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_gulsf"]
-frames = Array[Texture2D]([ExtResource("2_wetqc")])
-shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
-pool_size = 20000
-rect = Rect2(-7, -4, 14, 8)
+[ext_resource type="Texture2D" uid="uid://cabx0lo7p5g18" path="res://addons/tama/example/bullets/spawn_green.png" id="7_bui8c"]
+[ext_resource type="Texture2D" uid="uid://cfl60futti5a3" path="res://addons/tama/example/bullets/spawn_orange.png" id="9_qvs4j"]
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_qlh80"]
 frames = Array[Texture2D]([ExtResource("3_gulsf")])
@@ -21,7 +17,9 @@ shape_radius = 1.0
 collision_layer = 2
 collision_mask = 1
 pool_size = 10000
+spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
+spawn_texture = ExtResource("4_6fimo")
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_n53vu"]
 frames = Array[Texture2D]([ExtResource("6_gulsf")])
@@ -33,21 +31,15 @@ rotates = false
 pool_size = 10000
 rect = Rect2(-64, -64, 128, 128)
 
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_4uqhx"]
-frames = Array[Texture2D]([ExtResource("2_wetqc")])
-shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
-pool_size = 25000
-rect = Rect2(-7, -4, 14, 8)
-
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_3xnr6"]
 frames = Array[Texture2D]([ExtResource("4_n53vu")])
 shape_radius = 1.0
 collision_layer = 2
 collision_mask = 1
 pool_size = 10000
+spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
+spawn_texture = ExtResource("7_bui8c")
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_d4i3m"]
 frames = Array[Texture2D]([ExtResource("5_d4i3m")])
@@ -55,7 +47,9 @@ shape_radius = 1.0
 collision_layer = 2
 collision_mask = 1
 pool_size = 10000
+spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
+spawn_texture = ExtResource("9_qvs4j")
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_i2sv8"]
 frames = Array[Texture2D]([ExtResource("2_wetqc"), ExtResource("3_gulsf"), ExtResource("4_n53vu"), ExtResource("5_d4i3m")])
@@ -63,18 +57,20 @@ fps = 30.0
 collision_layer = 2
 collision_mask = 1
 pool_size = 20000
+spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
+spawn_texture = ExtResource("9_qvs4j")
 
 [resource]
 default_scene_bullet = ExtResource("1_0v7u8")
-default_server_bullet = SubResource("TamaServerBulletConfig_gulsf")
+default_server_bullet = ExtResource("2_uxopc")
 scene_bullets = {
 "example": ExtResource("1_0v7u8")
 }
 server_bullets = {
 "blue": SubResource("TamaServerBulletConfig_qlh80"),
 "circle": SubResource("TamaServerBulletConfig_n53vu"),
-"fast": SubResource("TamaServerBulletConfig_4uqhx"),
+"fast": ExtResource("2_uxopc"),
 "green": SubResource("TamaServerBulletConfig_3xnr6"),
 "orange": SubResource("TamaServerBulletConfig_d4i3m"),
 "rainbow": SubResource("TamaServerBulletConfig_i2sv8")

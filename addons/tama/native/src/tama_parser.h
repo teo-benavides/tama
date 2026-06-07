@@ -100,6 +100,7 @@ private:
     std::shared_ptr<_TamaASTNode> parse_chspd();
     std::shared_ptr<_TamaASTNode> parse_chrotspd();
     std::shared_ptr<_TamaASTNode> parse_rotspd();
+    std::shared_ptr<_TamaASTNode> parse_delay();
     std::shared_ptr<_TamaASTNode> parse_chpos();
     std::shared_ptr<_TamaASTNode> parse_accel();
     std::shared_ptr<_TamaASTNode> parse_repeatf();

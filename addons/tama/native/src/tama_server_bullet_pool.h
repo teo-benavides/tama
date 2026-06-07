@@ -39,6 +39,13 @@ class TamaServerBulletPool : public godot::Node2D {
         // local_slot -> BulletState*, so recycle can pull the last live slot into a
         // freed hole and keep the batch compact (used == active_count).
         std::vector<BulletState *> slot_bullets;
+        // Spawn animation: counts down from TypeData::spawn_delay to 0.
+        // While > 0, bullets in this batch are frozen (no movement, no physics).
+        int spawn_frames_remaining = 0;
+        int birth_delay            = 0; // spawn_frames_remaining value at batch open — used for t computation
+        // Spawn multimesh — created lazily when first needed, reused across batch reuses.
+        godot::Ref<godot::MultiMesh> spawn_multimesh_res;
+        godot::RID spawn_multimesh;
     };
 
     struct TypeData {
@@ -59,6 +66,14 @@ class TamaServerBulletPool : public godot::Node2D {
         bool   face_velocity        = true;
         int    pool_size            = 1000;
         float  out_of_bounds_margin = 50.0f;
+
+        // Spawn animation config (read once at register_type)
+        int    spawn_delay             = 0;
+        float  starting_spawn_scale    = 2.0f;
+        float  starting_spawn_opacity  = 0.0f;
+        godot::Ref<godot::Texture2D> spawn_texture;
+        // QuadMesh sized to spawn_texture dimensions (created when spawn_delay > 0)
+        godot::Ref<godot::QuadMesh> spawn_quad;
 
         // GPU resources
         godot::Ref<godot::QuadMesh> quad;
@@ -98,6 +113,8 @@ class TamaServerBulletPool : public godot::Node2D {
 
     // Pre-allocated buffer for the composite draw path — reused across frames and types
     godot::PackedFloat32Array _composite_buf;
+    // Pre-allocated buffer for spawn animation draw path (transform + color per instance)
+    godot::PackedFloat32Array _spawn_buf;
 
     // Registrations queued before the node enters the scene tree
     struct PendingReg { godot::String key; godot::Object *config; };

@@ -71,6 +71,10 @@ Server bullets are a high-performance bullet type that uses `RenderingServer` (M
 | `face_velocity` | `bool` | `true` | Sprite faces the direction of movement (requires `rotates`). |
 | `pool_size` | `int` | `1000` | Maximum simultaneous bullets of this type. When the pool is full, new spawns are silently dropped. |
 | `out_of_bounds_margin` | `float` | `50` | Extra pixels past the screen edge before a bullet is recycled. |
+| `spawn_delay` | `int` | `0` | Physics frames to freeze the bullet before it starts moving. A spawn animation plays during this period. `0` = no delay (can still be overridden per-fire with `delay` in TamaScript). |
+| `spawn_texture` | `Texture2D` | `null` | Texture used for the spawn animation. Falls back to the first frame in `frames` if not set. |
+| `starting_spawn_scale` | `float` | `2.0` | Scale of the spawn animation sprite at t=0 (start). Lerps to 1.0 by the end of the delay. |
+| `starting_spawn_opacity` | `float` | `0.0` | Opacity of the spawn animation sprite at t=0. Lerps to 1.0 by the end of the delay. |
 
 ### Collision Detection
 
@@ -159,6 +163,7 @@ bullet tracker    ← named bullet definition
 | `offset` *(block)* | — | Per-axis spawn offset. Default qualifier `rel` (rotated by bullet angle); `abs`/`seq` add to spawner position in world space. |
 | `pos` *(block)* | — | Set spawn position directly. Default qualifier `abs` (world coords); `rel` adds to spawner position. Takes priority over `offset`. |
 | `bullet NAME` | registry default | Which bullet to spawn. |
+| `delay EXPR` | — | *(Server bullets only)* Overrides the bullet type's `spawn_delay` for this fire only. `EXPR` = physics frames to freeze while the spawn animation plays. |
 
 ```
 fire

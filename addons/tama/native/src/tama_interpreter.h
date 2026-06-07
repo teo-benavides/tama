@@ -27,7 +27,7 @@ enum class TamaNodeType : int {
     REPEAT_FRAME = 25, MVMT = 26, OVER = 27,
     INLINE_ACT = 28, INLINE_FIRE = 29, FIRE_CALL = 30,
     WHILE = 31, IF = 32, VAR_DECL = 33, ACT_CALL = 34,
-    CHROTSPD = 35,
+    CHROTSPD = 35, DELAY = 36,
 };
 
 // ---------------------------------------------------------------------------
@@ -123,6 +123,7 @@ struct TamaBulletFireData {
     float           rot_speed_value = 0.0f;
     int             bounces_max  = 0;  // 0=none, -1=infinite, N=N bounces
     int             bounces_axis = 0;  // 0=both, 1=x (left/right), 2=y (top/bottom)
+    int             spawn_delay_override = -1; // -1 = use TypeData default; >= 0 overrides it
     _TamaASTNode   *source_program = nullptr;
 };
 
