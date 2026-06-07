@@ -1,5 +1,6 @@
 #pragma once
 #include "tama_server_bullet.h"
+#include "tama_simd.h"
 
 #include <cstdint>
 #include <string>
@@ -45,6 +46,40 @@ class TamaServerBulletPool : public godot::Node2D {
         // Spawn multimesh — created lazily when first needed, reused across batch reuses.
         godot::Ref<godot::MultiMesh> spawn_multimesh_res;
         godot::RID spawn_multimesh;
+
+        // CPU-side mirror of the main multimesh transform buffer.
+        // Written every frame instead of N per-bullet multimesh_instance_set_transform_2d
+        // calls; flushed once per batch via multimesh_set_buffer at end of _physics_process.
+        // Size: BATCH_CHUNK * 8 floats (8 floats per 2D transform instance).
+        godot::PackedFloat32Array xform_pfa;
+        bool xform_dirty = false;
+    };
+
+    // Per-type SoA hot arrays for the SIMD position-update pass.
+    // Indexed by global_slot, same size as bullets[].
+    // simd_active[i] is set to 1 each frame for bullets that qualify for the
+    // SIMD path (constant velocity, no tweens, no script, no mvmt, no bounce).
+    struct BulletHotData {
+        float   *pos_x       = nullptr;
+        float   *pos_y       = nullptr;
+        float   *vel_x       = nullptr;
+        float   *vel_y       = nullptr;
+        uint8_t *simd_active = nullptr;
+
+        void alloc(int n) {
+            pos_x       = tama_simd_alloc(n);
+            pos_y       = tama_simd_alloc(n);
+            vel_x       = tama_simd_alloc(n);
+            vel_y       = tama_simd_alloc(n);
+            simd_active = new uint8_t[n]();
+        }
+        void free_all() {
+            tama_simd_free(pos_x);  pos_x = nullptr;
+            tama_simd_free(pos_y);  pos_y = nullptr;
+            tama_simd_free(vel_x);  vel_x = nullptr;
+            tama_simd_free(vel_y);  vel_y = nullptr;
+            delete[] simd_active;   simd_active = nullptr;
+        }
     };
 
     struct TypeData {
@@ -84,6 +119,9 @@ class TamaServerBulletPool : public godot::Node2D {
         // Bullet state flat array (indexed by global slot)
         std::vector<BulletState>        bullets;
         std::vector<TamaServerBullet *> wrappers;
+
+        // SoA hot arrays for the SIMD position-update pass
+        BulletHotData hot;
 
         // FIFO ring buffer for slot allocation
         std::vector<int32_t> ring;

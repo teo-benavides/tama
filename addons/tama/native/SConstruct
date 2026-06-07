@@ -7,6 +7,13 @@ env = SConscript("godot-cpp/SConstruct")
 # C++17 for std::variant, std::string_view, etc.
 env.Append(CXXFLAGS=["-std=c++17"] if env["platform"] == "windows" else ["-std=c++17"])
 
+# AVX2 + FMA for the SIMD position-update pass in tama_simd.h.
+# Both GCC (Linux) and MinGW cross-compile (Windows) support these flags.
+# Falls back gracefully to SSE2 (always present on x86-64) at compile time
+# if the flags are ever removed — no code change needed.
+if env["platform"] in ("windows", "linux"):
+    env.Append(CXXFLAGS=["-mavx2", "-mfma"])
+
 env.Append(CPPPATH=["src/"])
 sources = Glob("src/*.cpp")
 

@@ -81,6 +81,7 @@ TamaServerBulletPool::~TamaServerBulletPool() {
         for (auto *b : td->free_batches)   delete b;
         // RIDs are not freed in _exit_tree (see comment there); the servers own them.
         for (auto *w : td->wrappers) memdelete(w);
+        td->hot.free_all();
         delete td;
     }
 }
@@ -89,6 +90,24 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Multimesh 2D buffer format — row-major 2x4 matrix (8 floats per instance):
+//   row0: [col0.x, col1.x, 0, origin.x]   i.e. [a, c, 0, tx]
+//   row1: [col0.y, col1.y, 0, origin.y]   i.e. [b, d, 0, ty]
+// For Transform2D(rot, scale, skew=0, pos):
+//   a=cos*sx  b=sin*sx  c=-sin*sy  d=cos*sy  tx=pos.x  ty=pos.y
+// (matches godot mesh_storage.cpp multimesh_instance_set_transform_2d layout)
+static inline void xform_write(float *d,
+        float rot, float sx, float sy, float tx, float ty) {
+    float c = std::cos(rot), s = std::sin(rot);
+    d[0]= c*sx; d[1]=-s*sy; d[2]=0.0f; d[3]=tx;
+    d[4]= s*sx; d[5]= c*sy; d[6]=0.0f; d[7]=ty;
+}
+
+// Transform2D(0, {-100000,-100000}) → identity rotation, offscreen origin
+static inline void xform_write_offscreen(float *d) {
+    d[0]=1.0f; d[1]=0.0f; d[2]=0.0f; d[3]=-100000.0f;
+    d[4]=0.0f; d[5]=1.0f; d[6]=0.0f; d[7]=-100000.0f;
+}
 
 // ---------------------------------------------------------------------------
 // Godot virtuals
@@ -199,9 +218,10 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
                       .bind(this, p_key);
     PhysicsServer2D::get_singleton()->area_set_monitor_callback(td->area, cb);
 
-    // Pre-allocate bullet states and wrapper objects
+    // Pre-allocate bullet states, wrapper objects, and SoA hot arrays
     td->bullets.resize(n);
     td->wrappers.resize(n);
+    td->hot.alloc(n);
     for (int i = 0; i < n; ++i) {
         td->bullets[i].global_slot = i;
         td->bullets[i].area_rid    = td->area;
@@ -255,23 +275,31 @@ TamaServerBulletPool::BatchData *TamaServerBulletPool::_get_batch(TypeData &td) 
         b->multimesh_res->set_instance_count(BATCH_CHUNK);
         b->multimesh = b->multimesh_res->get_rid();
         b->slot_bullets.assign(BATCH_CHUNK, nullptr);
-        Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
+        // Initialise CPU transform buffer; all slots start offscreen.
+        // Flushed to GPU via multimesh_set_buffer at end of _physics_process.
+        b->xform_pfa.resize(BATCH_CHUNK * 8);
+        float *buf = b->xform_pfa.ptrw();
         for (int i = 0; i < BATCH_CHUNK; ++i)
-            RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(b->multimesh, i, offscreen);
+            xform_write_offscreen(buf + i * 8);
     }
     // Each batch starts at frame 0 of the animation, independent of other batches
     b->anim_time       = 0.0f;
     b->anim_frame      = 0;
     b->current_texture = td.first_texture;
     b->spawn_active_count = 0;
+    b->xform_dirty = false;
     return b;
 }
 
 void TamaServerBulletPool::_recycle_batch(TypeData &td, BatchData *batch) {
     if (td.cur_batch == batch) td.cur_batch = nullptr;
-    Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
+    // Reset active slots to offscreen in the CPU buffer.
+    // No GPU flush needed here — the batch is leaving active_batches so it won't
+    // be drawn; the CPU buffer will be flushed correctly when the batch is reused.
+    float *buf = batch->xform_pfa.ptrw();
     for (int i = 0; i < batch->used; ++i)
-        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(batch->multimesh, i, offscreen);
+        xform_write_offscreen(buf + i * 8);
+    batch->xform_dirty = false; // nothing to flush — batch is going to free_batches
     batch->used         = 0;
     batch->active_count = 0;
     batch->birth_frame  = -1;
@@ -385,6 +413,13 @@ Object *TamaServerBulletPool::spawn(
     b.rot_speed_tween.active = false;
     b.vel_dirty              = true;
 
+    // Init hot arrays for this slot (vel will be set when vel_dirty is cleared, frame 1+)
+    td.hot.pos_x[global_slot]       = position.x;
+    td.hot.pos_y[global_slot]       = position.y;
+    td.hot.vel_x[global_slot]       = 0.0f;
+    td.hot.vel_y[global_slot]       = 0.0f;
+    td.hot.simd_active[global_slot] = 0;
+
     b.spawn_frames_remaining = eff_delay;
     b.birth_delay            = eff_delay;
 
@@ -447,9 +482,8 @@ Object *TamaServerBulletPool::spawn(
     if (eff_delay > 0) {
         // Bullet is frozen during spawn animation — hide in regular multimesh.
         ++batch->spawn_active_count;
-        Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
-        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-            batch->multimesh, local_slot, offscreen);
+        xform_write_offscreen(batch->xform_pfa.ptrw() + local_slot * 8);
+        batch->xform_dirty = true;
 
         // Ensure spawn_quad exists (may be null if spawn_delay=0 in config but delay overridden here).
         if (!td.spawn_quad.is_valid()) {
@@ -472,6 +506,7 @@ Object *TamaServerBulletPool::spawn(
             batch->spawn_multimesh_res->set_instance_count(BATCH_CHUNK);
             batch->spawn_multimesh = batch->spawn_multimesh_res->get_rid();
             // All instances start offscreen.
+            Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
             for (int si = 0; si < BATCH_CHUNK; ++si)
                 RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                     batch->spawn_multimesh, si, offscreen);
@@ -492,9 +527,10 @@ Object *TamaServerBulletPool::spawn(
         PhysicsServer2D::get_singleton()->area_set_shape_transform(
             td.area, global_slot, Transform2D(0.0f, position));
     } else {
-        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-            batch->multimesh, local_slot,
-            Transform2D(rot, b.texture_scale, 0.0f, position));
+        xform_write(batch->xform_pfa.ptrw() + local_slot * 8,
+                    rot, b.texture_scale.x, b.texture_scale.y,
+                    position.x, position.y);
+        batch->xform_dirty = true;
 
         // Physics transform
         PhysicsServer2D::get_singleton()->area_set_shape_transform(
@@ -588,8 +624,8 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
             if (moved->spawn_frames_remaining > 0) {
                 // Moved bullet is still in spawn animation: keep regular MM offscreen,
                 // update spawn MM to reflect its current animated position.
-                RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-                    batch->multimesh, s, offscreen);
+                xform_write_offscreen(batch->xform_pfa.ptrw() + s * 8);
+                batch->xform_dirty = true;
                 if (batch->spawn_multimesh != RID() && td_owner) {
                     float t  = moved->birth_delay > 0
                         ? 1.0f - (float)moved->spawn_frames_remaining / (float)moved->birth_delay
@@ -612,17 +648,18 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
                     else
                         rot = moved->angle;
                 }
-                RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-                    batch->multimesh, s,
-                    Transform2D(rot, moved->texture_scale, 0.0f, moved->position));
+                xform_write(batch->xform_pfa.ptrw() + s * 8,
+                            rot, moved->texture_scale.x, moved->texture_scale.y,
+                            moved->position.x, moved->position.y);
+                batch->xform_dirty = true;
                 if (batch->spawn_multimesh != RID())
                     RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                         batch->spawn_multimesh, s, offscreen);
             }
         }
         // Hide the vacated last slot in both multimeshes.
-        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-            batch->multimesh, last, offscreen);
+        xform_write_offscreen(batch->xform_pfa.ptrw() + last * 8);
+        batch->xform_dirty = true;
         if (batch->spawn_multimesh != RID())
             RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                 batch->spawn_multimesh, last, offscreen);
@@ -648,6 +685,8 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
         td_owner->ring[td_owner->ring_w] = b->global_slot;
         td_owner->ring_w = (td_owner->ring_w + 1) % ring_n;
         ++td_owner->ring_count;
+        // Clear SIMD flag so the hot pass won't integrate a recycled slot
+        td_owner->hot.simd_active[b->global_slot] = 0;
     }
 
     PhysicsServer2D::get_singleton()->area_set_shape_disabled(b->area_rid, b->global_slot, true);
@@ -691,40 +730,52 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
     // of recycle history; the active flag skips empty slots (cheap, prefetched).
     int64_t cur_frame = Engine::get_singleton()->get_physics_frames();
     for (auto &[key, td_iter] : _types) {
-      std::vector<BulletState> &arr = td_iter->bullets;
+      TypeData &td = *td_iter;
+      std::vector<BulletState> &arr = td.bullets;
       const int sz = (int)arr.size();
+      BulletHotData &hot = td.hot;
+
+      // ── Phase A: serial work ────────────────────────────────────────────
+      // Runner, tweens, rot_speed, mvmt expressions, bounce.  Bullets with
+      // only constant velocity are marked simd_active=1 so Phase B can
+      // integrate them without any per-bullet branching.
       for (int i = 0; i < sz; ++i) {
         BulletState *b = &arr[i];
-        if (!b->active) continue;
-        // A bullet spawned on this physics frame is simulated starting next frame (its
-        // initial transform was already written by spawn()). This also prevents a
-        // freshly fired runner from cascading spawns within a single frame.
-        if (b->spawn_frame == cur_frame) continue;
+        if (!b->active) { hot.simd_active[i] = 0; continue; }
+        if (b->spawn_frame == cur_frame) { hot.simd_active[i] = 0; continue; }
+        if (b->spawn_frames_remaining > 0) { hot.simd_active[i] = 0; continue; }
 
-        // Bullet is frozen during spawn animation — skip movement and runner.
-        if (b->spawn_frames_remaining > 0) continue;
-
-        // Step runner before this bullet's position update so script changes
-        // take effect in the same frame they are issued.
         if (b->runner && b->runner->is_running()) b->runner->step(delta);
+        if (!b->active) { hot.simd_active[i] = 0; continue; }
 
-        // The runner may have recycled this bullet (e.g. vanish command). Skip it.
-        if (!b->active) continue;
-
-        // Mark velocity dirty when any relevant tween is active this frame.
         bool tween_was_active = b->angle_tween.active || b->speed_tween.active
                              || b->sx_tween.active    || b->sy_tween.active
                              || b->rot_speed_tween.active;
         _step_tweens(*b, delta);
         if (tween_was_active) b->vel_dirty = true;
 
-        // Apply rotation speed (degrees/sec → angle accumulates each frame).
         if (b->rot_speed != 0.0f) {
             static constexpr float DEG2RAD = 3.14159265f / 180.0f;
             b->angle += b->rot_speed * DEG2RAD * delta;
             b->vel_dirty = true;
         }
 
+        // A bullet qualifies for the SIMD pass when nothing changed its
+        // velocity or position this frame: no dirty flag, no mvmt expressions,
+        // no bounce physics, no pos tween (which updates position directly).
+        bool is_simple = !b->vel_dirty
+                      && !b->mvmt_x_set && !b->mvmt_y_set
+                      && b->bounces_left == 0
+                      && !b->pos_tween.active;
+
+        if (is_simple) {
+            // Velocity already current in hot arrays from the last dirty clear.
+            hot.simd_active[i] = 1;
+            continue; // position update deferred to Phase B
+        }
+
+        // Complex path — compute position fully this frame.
+        hot.simd_active[i] = 0;
         Vector2 pos_before = b->position;
 
         if (b->mvmt_x_set || b->mvmt_y_set) {
@@ -732,22 +783,24 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             size_t        cnt  = b->mvmt_values.size();
             if (b->mvmt_x_set && b->mvmt_x_chunk && er) {
                 double vx = er->eval_chunk(*b->mvmt_x_chunk, vals, cnt, ctx);
-                b->position.x = (b->mvmt_x_type == 0) // ABS
+                b->position.x = (b->mvmt_x_type == 0)
                     ? (float)vx
                     : b->initial_position.x + (float)vx;
             }
             if (b->mvmt_y_set && b->mvmt_y_chunk && er) {
                 double vy = er->eval_chunk(*b->mvmt_y_chunk, vals, cnt, ctx);
-                b->position.y = (b->mvmt_y_type == 0) // ABS
+                b->position.y = (b->mvmt_y_type == 0)
                     ? (float)vy
                     : b->initial_position.y + (float)vy;
             }
         } else {
-            // Recompute cached velocity only when dirty (angle/speed/speed_x/speed_y changed).
             if (b->vel_dirty) {
                 b->cached_vx = std::cos(b->angle) * b->speed + b->speed_x;
                 b->cached_vy = std::sin(b->angle) * b->speed + b->speed_y;
                 b->vel_dirty = false;
+                // Keep hot velocity in sync for next frame (bullet may become simple again)
+                hot.vel_x[i] = b->cached_vx;
+                hot.vel_y[i] = b->cached_vy;
             }
             b->position.x += b->cached_vx * delta;
             b->position.y += b->cached_vy * delta;
@@ -755,7 +808,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
             if (b->bounces_left != 0) {
                 static constexpr float PI = 3.14159265f;
                 bool hit_x = false, hit_y = false;
-                if (b->bounces_axis != 2) { // not y-only
+                if (b->bounces_axis != 2) {
                     if (b->position.x < world.position.x) {
                         b->position.x = 2.0f * world.position.x - b->position.x;
                         hit_x = true;
@@ -764,7 +817,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                         hit_x = true;
                     }
                 }
-                if (b->bounces_axis != 1) { // not x-only
+                if (b->bounces_axis != 1) {
                     if (b->position.y < world.position.y) {
                         b->position.y = 2.0f * world.position.y - b->position.y;
                         hit_y = true;
@@ -777,11 +830,14 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                     if (hit_x) { b->angle = PI - b->angle; b->speed_x = -b->speed_x; }
                     if (hit_y) { b->angle = -b->angle;     b->speed_y = -b->speed_y; }
                     b->vel_dirty = true;
-                    if (b->bounces_left > 0)
-                        --b->bounces_left;
+                    if (b->bounces_left > 0) --b->bounces_left;
                 }
             }
         }
+
+        // Keep hot position in sync for complex bullets
+        hot.pos_x[i] = b->position.x;
+        hot.pos_y[i] = b->position.y;
 
         float rot = 0.0f;
         if (b->rotates) {
@@ -790,7 +846,6 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                     Vector2 dp = b->position - pos_before;
                     rot = dp.length_squared() > 1e-8f ? std::atan2(dp.y, dp.x) : b->angle;
                 } else {
-                    // Reuse cached velocity — no extra trig needed.
                     rot = (b->cached_vx != 0.0f || b->cached_vy != 0.0f)
                         ? std::atan2(b->cached_vy, b->cached_vx) : b->angle;
                 }
@@ -798,9 +853,50 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                 rot = b->angle;
             }
         }
-        RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-            b->multimesh_rid, b->local_slot,
-            Transform2D(rot, b->texture_scale, 0.0f, b->position));
+        {
+            BatchData *batch = static_cast<BatchData *>(b->batch_ptr);
+            xform_write(batch->xform_pfa.ptrw() + b->local_slot * 8,
+                        rot, b->texture_scale.x, b->texture_scale.y,
+                        b->position.x, b->position.y);
+            batch->xform_dirty = true;
+        }
+        PhysicsServer2D::get_singleton()->area_set_shape_transform(
+            b->area_rid, b->global_slot, Transform2D(0.0f, b->position));
+
+        float m = (global_margin >= 0.0f) ? global_margin : b->out_of_bounds_margin;
+        if (b->position.x < world.position.x - m ||
+            b->position.y < world.position.y - m ||
+            b->position.x > world.get_end().x   + m ||
+            b->position.y > world.get_end().y   + m)
+            _to_recycle.push_back(b);
+      }
+
+      // ── Phase B: SIMD position integration for simple bullets ───────────
+      // Processes all pool slots in one vectorised sweep; inactive lanes
+      // (simd_active[i]==0) are skipped without branching overhead.
+      tama_pos_update(hot.pos_x, hot.pos_y, hot.vel_x, hot.vel_y,
+                      hot.simd_active, sz, delta);
+
+      // ── Phase C: sync position back + render/physics API for simple bullets
+      for (int i = 0; i < sz; ++i) {
+        if (!hot.simd_active[i]) continue;
+        BulletState *b = &arr[i];
+        b->position.x = hot.pos_x[i];
+        b->position.y = hot.pos_y[i];
+
+        float rot = 0.0f;
+        if (b->rotates) {
+            rot = (b->face_velocity && (b->cached_vx != 0.0f || b->cached_vy != 0.0f))
+                ? std::atan2(b->cached_vy, b->cached_vx)
+                : b->angle;
+        }
+        {
+            BatchData *batch = static_cast<BatchData *>(b->batch_ptr);
+            xform_write(batch->xform_pfa.ptrw() + b->local_slot * 8,
+                        rot, b->texture_scale.x, b->texture_scale.y,
+                        b->position.x, b->position.y);
+            batch->xform_dirty = true;
+        }
         PhysicsServer2D::get_singleton()->area_set_shape_transform(
             b->area_rid, b->global_slot, Transform2D(0.0f, b->position));
 
@@ -843,9 +939,10 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                     // This bullet's spawn animation finished — transition to normal multimesh.
                     --batch->spawn_active_count;
                     float rot = b->rotates ? b->angle : 0.0f;
-                    RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
-                        batch->multimesh, i,
-                        Transform2D(rot, b->texture_scale, 0.0f, b->position));
+                    xform_write(batch->xform_pfa.ptrw() + i * 8,
+                                rot, b->texture_scale.x, b->texture_scale.y,
+                                b->position.x, b->position.y);
+                    batch->xform_dirty = true;
                     PhysicsServer2D::get_singleton()->area_set_shape_transform(
                         b->area_rid, b->global_slot, Transform2D(0.0f, b->position));
                     PhysicsServer2D::get_singleton()->area_set_shape_disabled(
@@ -870,6 +967,17 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                 batch->current_texture = Ref<Texture2D>(
                     Object::cast_to<Texture2D>(td->frames[batch->anim_frame].operator Object *()));
             }
+        }
+    }
+
+    // Flush dirty CPU transform buffers — one multimesh_set_buffer call per batch instead
+    // of N per-bullet multimesh_instance_set_transform_2d calls, eliminating N-1 mutex
+    // acquire/release cycles through the rendering server.
+    for (auto &[key, td] : _types) {
+        for (BatchData *batch : td->active_batches) {
+            if (!batch->xform_dirty) continue;
+            RenderingServer::get_singleton()->multimesh_set_buffer(batch->multimesh, batch->xform_pfa);
+            batch->xform_dirty = false;
         }
     }
 
@@ -906,13 +1014,11 @@ void TamaServerBulletPool::_draw() {
             int offset = 0;
             for (BatchData *batch : td->active_batches) {
                 if (batch->used <= 0) continue;
-                PackedFloat32Array src = RenderingServer::get_singleton()
-                    ->multimesh_get_buffer(batch->multimesh);
+                // Read directly from the CPU-side buffer — avoids the GPU readback
+                // (multimesh_get_buffer) that the original composite path required.
                 int count = batch->used * 8;
-                if (src.size() >= count) {
-                    std::memcpy(dst + offset, src.ptr(), count * sizeof(float));
-                    offset += count;
-                }
+                std::memcpy(dst + offset, batch->xform_pfa.ptr(), count * sizeof(float));
+                offset += count;
             }
             if (offset == 0) continue;
             td->composite_res->set_instance_count(offset / 8);
