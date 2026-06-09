@@ -1,0 +1,15 @@
+main
+    var amt 200
+    var scale 30
+    repeat
+        repeat amt i
+            var t (4.0 * PI / amt) * i
+            var r exp(sin(t)) - 2*cos(4*t) + pow(sin((2*t - PI) / 24), 5)
+            fire
+                dir abs rad_to_deg(atan2(-r*sin(t), r*cos(t)))
+                spd abs 200
+                delay 30
+                offset
+                    x abs scale * r * cos(t)
+                    y abs -scale * r * sin(t)
+        wait 0.5

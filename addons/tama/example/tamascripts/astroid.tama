@@ -1,0 +1,13 @@
+main
+    var amt 100
+    repeat
+        repeat amt i
+            var theta (360.0/amt)*i
+            fire
+                dir abs rad_to_deg(atan2(pow(sin(theta), 3), pow(cos(theta), 3)))
+                spd abs 200
+                delay 30
+                offset
+                    x abs 120*pow(cos(theta), 3)
+                    y abs 120*pow(sin(theta), 3)
+        wait 0.5
