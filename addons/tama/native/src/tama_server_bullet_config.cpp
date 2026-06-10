@@ -52,13 +52,12 @@ void TamaServerBulletConfig::_get_property_list(List<PropertyInfo> *p_list) cons
         : (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_READ_ONLY);
     p_list->push_back(PropertyInfo(Variant::BOOL, "face_velocity", PROPERTY_HINT_NONE, "", fv_usage));
 
-    uint32_t spawn_anim_usage = PROPERTY_USAGE_DEFAULT;
     p_list->push_back(PropertyInfo(Variant::OBJECT, "spawn_texture",
-        PROPERTY_HINT_RESOURCE_TYPE, "Texture2D", spawn_anim_usage));
+        PROPERTY_HINT_RESOURCE_TYPE, "Texture2D", PROPERTY_USAGE_DEFAULT));
     p_list->push_back(PropertyInfo(Variant::FLOAT, "starting_spawn_scale",
-        PROPERTY_HINT_RANGE, "0.01,10,0.01,or_greater", spawn_anim_usage));
+        PROPERTY_HINT_RANGE, "0.01,10,0.01,or_greater", PROPERTY_USAGE_DEFAULT));
     p_list->push_back(PropertyInfo(Variant::FLOAT, "starting_spawn_opacity",
-        PROPERTY_HINT_RANGE, "0,1,0.01", spawn_anim_usage));
+        PROPERTY_HINT_RANGE, "0,1,0.01", PROPERTY_USAGE_DEFAULT));
 }
 
 void TamaServerBulletConfig::_bind_methods() {
@@ -74,18 +73,10 @@ void TamaServerBulletConfig::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_texture_scale","v"),&TamaServerBulletConfig::set_texture_scale);
     ClassDB::bind_method(D_METHOD("get_shape_radius"),     &TamaServerBulletConfig::get_shape_radius);
     ClassDB::bind_method(D_METHOD("set_shape_radius","v"), &TamaServerBulletConfig::set_shape_radius);
-    ClassDB::bind_method(D_METHOD("get_collision_layer"),  &TamaServerBulletConfig::get_collision_layer);
-    ClassDB::bind_method(D_METHOD("set_collision_layer","v"),&TamaServerBulletConfig::set_collision_layer);
-    ClassDB::bind_method(D_METHOD("get_collision_mask"),   &TamaServerBulletConfig::get_collision_mask);
-    ClassDB::bind_method(D_METHOD("set_collision_mask","v"),&TamaServerBulletConfig::set_collision_mask);
     ClassDB::bind_method(D_METHOD("get_rotates"),          &TamaServerBulletConfig::get_rotates);
     ClassDB::bind_method(D_METHOD("set_rotates","v"),      &TamaServerBulletConfig::set_rotates);
     ClassDB::bind_method(D_METHOD("get_face_velocity"),    &TamaServerBulletConfig::get_face_velocity);
     ClassDB::bind_method(D_METHOD("set_face_velocity","v"),&TamaServerBulletConfig::set_face_velocity);
-    ClassDB::bind_method(D_METHOD("get_pool_size"),                    &TamaServerBulletConfig::get_pool_size);
-    ClassDB::bind_method(D_METHOD("set_pool_size","v"),                &TamaServerBulletConfig::set_pool_size);
-    ClassDB::bind_method(D_METHOD("get_out_of_bounds_margin"),         &TamaServerBulletConfig::get_out_of_bounds_margin);
-    ClassDB::bind_method(D_METHOD("set_out_of_bounds_margin","v"),     &TamaServerBulletConfig::set_out_of_bounds_margin);
     ClassDB::bind_method(D_METHOD("get_spawn_delay"),                  &TamaServerBulletConfig::get_spawn_delay);
     ClassDB::bind_method(D_METHOD("set_spawn_delay","v"),              &TamaServerBulletConfig::set_spawn_delay);
     ClassDB::bind_method(D_METHOD("get_spawn_texture"),                &TamaServerBulletConfig::get_spawn_texture);
@@ -103,14 +94,8 @@ void TamaServerBulletConfig::_bind_methods() {
     // "rect" is added dynamically via _get_property_list so it can be read-only when auto_rect is true
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR2,"texture_scale"), "set_texture_scale", "get_texture_scale");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT,  "shape_radius"),  "set_shape_radius",  "get_shape_radius");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "collision_layer", PROPERTY_HINT_LAYERS_2D_PHYSICS),
-                 "set_collision_layer", "get_collision_layer");
-    ADD_PROPERTY(PropertyInfo(Variant::INT,    "collision_mask",  PROPERTY_HINT_LAYERS_2D_PHYSICS),
-                 "set_collision_mask",  "get_collision_mask");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rotates"),       "set_rotates",       "get_rotates");
     // "face_velocity" is dynamic via _get_property_list so it can be read-only when rotates is false
-    ADD_PROPERTY(PropertyInfo(Variant::INT,   "pool_size"),              "set_pool_size",              "get_pool_size");
-    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "out_of_bounds_margin"),   "set_out_of_bounds_margin",   "get_out_of_bounds_margin");
     ADD_PROPERTY(PropertyInfo(Variant::INT,   "spawn_delay", PROPERTY_HINT_RANGE, "0,300,1,or_greater"),
                  "set_spawn_delay", "get_spawn_delay");
     // spawn_texture, starting_spawn_scale, starting_spawn_opacity are dynamic (via _get_property_list)

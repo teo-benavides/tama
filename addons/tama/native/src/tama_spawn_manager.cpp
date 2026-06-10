@@ -1,6 +1,7 @@
 #include "tama_spawn_manager.h"
 #include "tama_emitter.h"
 #include "tama_manager.h"
+#include "tama_server_straight_laser_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -133,29 +134,50 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         }
     }
 
-    // Fast path: server bullet
-    if (registry.is_valid() && _server_pool) {
-        TamaServerBulletConfig *srv_cfg = registry->get_server_config(bullet_type);
-        if (!srv_cfg && registry->default_to_server_bullets && registry->default_server_bullet.is_valid()) {
-            // Only fall back to default server bullet when the type isn't in scene_bullets either.
+    // Fast path: server object (bullet or laser)
+    if (registry.is_valid()) {
+        TamaServerObjectConfig *obj_cfg = registry->get_object_config(bullet_type);
+
+        // Fall back to default server bullet when type is unknown and not in scene_bullets
+        TamaServerBulletConfig *default_bullet = nullptr;
+        if (!obj_cfg && registry->default_to_server_bullets && registry->default_server_bullet.is_valid()) {
             bool in_scene = !bullet_type.is_empty() && registry->scene_bullets.has(bullet_type);
             if (!in_scene)
-                srv_cfg = registry->default_server_bullet.ptr();
+                default_bullet = registry->default_server_bullet.ptr();
         }
-        if (srv_cfg) {
-            float angle    = _resolve_angle(data, spawner);
-            float speed    = _resolve_speed(data, spawner);
-            Vector2 pos    = _resolve_position(data, spawner, angle);
-            spawner_set_last_angle(spawner, angle);
-            spawner_set_last_speed(spawner, speed);
-            auto *wrapper = godot::Object::cast_to<TamaServerBullet>(
-                _server_pool->spawn(data, srv_cfg, angle, speed, pos, context.ptr()));
-            if (wrapper && wrapper->_state && data.has_rot_speed) {
-                float rot_spd = _resolve_rot_speed(data, spawner);
-                spawner_set_last_rot_speed(spawner, rot_spd);
-                wrapper->_state->rot_speed = rot_spd;
+
+        // Laser path
+        if (_laser_pool) {
+            TamaServerStraightLaserConfig *laser_cfg =
+                Object::cast_to<TamaServerStraightLaserConfig>(obj_cfg);
+            if (laser_cfg) {
+                float angle = _resolve_angle(data, spawner);
+                Vector2 pos = _resolve_position(data, spawner, angle);
+                spawner_set_last_angle(spawner, angle);
+                _laser_pool->spawn(data, laser_cfg, angle, pos, context.ptr());
+                return;
             }
-            return;
+        }
+
+        // Bullet path
+        if (_server_pool) {
+            TamaServerBulletConfig *srv_cfg = Object::cast_to<TamaServerBulletConfig>(obj_cfg);
+            if (!srv_cfg) srv_cfg = default_bullet;
+            if (srv_cfg) {
+                float angle = _resolve_angle(data, spawner);
+                float speed = _resolve_speed(data, spawner);
+                Vector2 pos = _resolve_position(data, spawner, angle);
+                spawner_set_last_angle(spawner, angle);
+                spawner_set_last_speed(spawner, speed);
+                auto *wrapper = godot::Object::cast_to<TamaServerBullet>(
+                    _server_pool->spawn(data, srv_cfg, angle, speed, pos, context.ptr()));
+                if (wrapper && wrapper->_state && data.has_rot_speed) {
+                    float rot_spd = _resolve_rot_speed(data, spawner);
+                    spawner_set_last_rot_speed(spawner, rot_spd);
+                    wrapper->_state->rot_speed = rot_spd;
+                }
+                return;
+            }
         }
     }
 

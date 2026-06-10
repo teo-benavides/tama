@@ -1,0 +1,21 @@
+main
+    repeat
+        repeat 5 i
+            fire
+                dir abs 90
+                spd abs 100
+                bul laser((360/5)*i)
+
+        wait 5.0
+
+bul laser(ofs)
+    type laser
+    act
+        var radius 100.0
+        var speed_mult 0.2
+        repeatf -1 i
+            chpos
+                x abs spawn_x - radius * cos(deg_to_rad(ofs+i*speed_mult))
+                y abs spawn_y -  radius * sin(deg_to_rad(ofs+i*speed_mult))
+            chdir
+                dir abs ofs+i*speed_mult+180

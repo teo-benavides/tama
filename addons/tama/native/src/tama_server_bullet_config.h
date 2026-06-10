@@ -1,5 +1,5 @@
 #pragma once
-#include <godot_cpp/classes/resource.hpp>
+#include "tama_server_object_config.h"
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/templates/list.hpp>
 #include <godot_cpp/variant/rect2.hpp>
@@ -7,8 +7,8 @@
 #include <godot_cpp/variant/vector2.hpp>
 #include <godot_cpp/variant/vector2i.hpp>
 
-class TamaServerBulletConfig : public godot::Resource {
-    GDCLASS(TamaServerBulletConfig, godot::Resource)
+class TamaServerBulletConfig : public TamaServerObjectConfig {
+    GDCLASS(TamaServerBulletConfig, TamaServerObjectConfig)
 protected:
     static void _bind_methods();
 public:
@@ -18,12 +18,8 @@ public:
     godot::Vector2 texture_scale  = {1.0f, 1.0f};
     bool           auto_rect      = true;
     float  shape_radius    = 6.0f;
-    int    collision_layer = 1;
-    int    collision_mask  = 2;
     bool   rotates              = true;
     bool   face_velocity        = true;
-    int    pool_size            = 1000;
-    float  out_of_bounds_margin = 50.0f;
 
     // Spawn animation
     int    spawn_delay             = 0;
@@ -48,18 +44,10 @@ public:
     void set_texture_scale(godot::Vector2 v)  { texture_scale = v; }
     float get_shape_radius()            const { return shape_radius; }
     void set_shape_radius(float v)            { shape_radius = v; }
-    int  get_collision_layer()          const { return collision_layer; }
-    void set_collision_layer(int v)           { collision_layer = v; }
-    int  get_collision_mask()           const { return collision_mask; }
-    void set_collision_mask(int v)            { collision_mask = v; }
     bool get_rotates()                  const { return rotates; }
     void set_rotates(bool v)                  { rotates = v; notify_property_list_changed(); }
     bool get_face_velocity()            const { return face_velocity; }
     void set_face_velocity(bool v)            { face_velocity = v; }
-    int   get_pool_size()                    const { return pool_size; }
-    void  set_pool_size(int v)                     { pool_size = v; }
-    float get_out_of_bounds_margin()         const { return out_of_bounds_margin; }
-    void  set_out_of_bounds_margin(float v)        { out_of_bounds_margin = v; }
 
     int   get_spawn_delay()                  const { return spawn_delay; }
     void  set_spawn_delay(int v)                   { spawn_delay = v; notify_property_list_changed(); }

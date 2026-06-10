@@ -13,80 +13,92 @@
 [ext_resource type="Texture2D" uid="uid://cutiv2a1n4bv2" path="res://addons/tama/example/bullets/fat_bullet_pink.png" id="11_qvs4j"]
 [ext_resource type="Texture2D" uid="uid://t5epag1gjhj1" path="res://addons/tama/example/bullets/spawn_pink.png" id="12_rspsb"]
 [ext_resource type="Texture2D" uid="uid://bhooqy6yqths5" path="res://addons/tama/example/bullets/fat_bullet_blue.png" id="13_1tfb7"]
+[ext_resource type="Texture2D" uid="uid://dsq05rivmolx7" path="res://addons/tama/example/bullets/laser_pink_base.png" id="14_1tfb7"]
+[ext_resource type="Texture2D" uid="uid://bv68vc421liva" path="res://addons/tama/example/bullets/laser_pink.png" id="15_j5dk6"]
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_qlh80"]
 frames = Array[Texture2D]([ExtResource("3_gulsf")])
 shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
-pool_size = 10000
 spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
 spawn_texture = ExtResource("4_6fimo")
 starting_spawn_scale = 3.0
+pool_size = 10000
+collision_layer = 2
+collision_mask = 1
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_n53vu"]
 frames = Array[Texture2D]([ExtResource("6_gulsf")])
 texture_scale = Vector2(0.2, 0.2)
 shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
 rotates = false
-pool_size = 10000
 rect = Rect2(-64, -64, 128, 128)
-
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_3xnr6"]
-frames = Array[Texture2D]([ExtResource("4_n53vu")])
-shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
 pool_size = 10000
-spawn_delay = 13
-rect = Rect2(-7, -4, 14, 8)
-spawn_texture = ExtResource("7_bui8c")
-starting_spawn_scale = 3.0
-
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_d4i3m"]
-frames = Array[Texture2D]([ExtResource("5_d4i3m")])
-shape_radius = 1.0
 collision_layer = 2
 collision_mask = 1
-pool_size = 10000
-spawn_delay = 13
-rect = Rect2(-7, -4, 14, 8)
-spawn_texture = ExtResource("9_qvs4j")
-starting_spawn_scale = 3.0
-
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_i2sv8"]
-frames = Array[Texture2D]([ExtResource("2_wetqc"), ExtResource("3_gulsf"), ExtResource("4_n53vu"), ExtResource("5_d4i3m")])
-fps = 30.0
-collision_layer = 2
-collision_mask = 1
-pool_size = 20000
-spawn_delay = 13
-rect = Rect2(-7, -4, 14, 8)
-spawn_texture = ExtResource("9_qvs4j")
-starting_spawn_scale = 3.0
-
-[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_j5dk6"]
-frames = Array[Texture2D]([ExtResource("11_qvs4j")])
-shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
-pool_size = 10000
-rect = Rect2(-14, -8, 28, 16)
-spawn_texture = ExtResource("12_rspsb")
-starting_spawn_scale = 3.0
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_okdsw"]
 frames = Array[Texture2D]([ExtResource("13_1tfb7")])
 shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
-pool_size = 10000
 rect = Rect2(-14, -8, 28, 16)
 spawn_texture = ExtResource("4_6fimo")
 starting_spawn_scale = 3.0
+pool_size = 10000
+collision_layer = 2
+collision_mask = 1
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_j5dk6"]
+frames = Array[Texture2D]([ExtResource("11_qvs4j")])
+shape_radius = 1.0
+rect = Rect2(-14, -8, 28, 16)
+spawn_texture = ExtResource("12_rspsb")
+starting_spawn_scale = 3.0
+pool_size = 10000
+collision_layer = 2
+collision_mask = 1
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_3xnr6"]
+frames = Array[Texture2D]([ExtResource("4_n53vu")])
+shape_radius = 1.0
+spawn_delay = 13
+rect = Rect2(-7, -4, 14, 8)
+spawn_texture = ExtResource("7_bui8c")
+starting_spawn_scale = 3.0
+pool_size = 10000
+collision_layer = 2
+collision_mask = 1
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_d4i3m"]
+frames = Array[Texture2D]([ExtResource("5_d4i3m")])
+shape_radius = 1.0
+spawn_delay = 13
+rect = Rect2(-7, -4, 14, 8)
+spawn_texture = ExtResource("9_qvs4j")
+starting_spawn_scale = 3.0
+pool_size = 10000
+collision_layer = 2
+collision_mask = 1
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_i2sv8"]
+frames = Array[Texture2D]([ExtResource("2_wetqc"), ExtResource("3_gulsf"), ExtResource("4_n53vu"), ExtResource("5_d4i3m")])
+fps = 30.0
+spawn_delay = 13
+rect = Rect2(-7, -4, 14, 8)
+spawn_texture = ExtResource("9_qvs4j")
+starting_spawn_scale = 3.0
+pool_size = 20000
+collision_layer = 2
+collision_mask = 1
+
+[sub_resource type="TamaServerStraightLaserConfig" id="TamaServerStraightLaserConfig_okdsw"]
+width = 80.0
+texture = ExtResource("15_j5dk6")
+tile = false
+base_texture = ExtResource("14_1tfb7")
+expand_frames = 30
+pool_size = 200
+collision_layer = 2
+collision_mask = 1
 
 [resource]
 default_scene_bullet = ExtResource("1_0v7u8")
@@ -94,13 +106,14 @@ default_server_bullet = ExtResource("2_uxopc")
 scene_bullets = {
 "example": ExtResource("1_0v7u8")
 }
-server_bullets = {
+objects = {
 "blue": SubResource("TamaServerBulletConfig_qlh80"),
 "circle": SubResource("TamaServerBulletConfig_n53vu"),
 "fast": ExtResource("2_uxopc"),
 "fatblue": SubResource("TamaServerBulletConfig_okdsw"),
 "fatpink": SubResource("TamaServerBulletConfig_j5dk6"),
 "green": SubResource("TamaServerBulletConfig_3xnr6"),
+"laser": SubResource("TamaServerStraightLaserConfig_okdsw"),
 "orange": SubResource("TamaServerBulletConfig_d4i3m"),
 "rainbow": SubResource("TamaServerBulletConfig_i2sv8")
 }

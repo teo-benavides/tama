@@ -5,6 +5,7 @@
 #include "tama_interpreter.h"
 #include "tama_script_repository.h"
 #include "tama_server_bullet_pool.h"
+#include "tama_server_laser_pool.h"
 
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/node2d.hpp>
@@ -18,8 +19,9 @@ protected:
 
 public:
     godot::Ref<TamaBulletRegistry> registry;
-    _TamaScriptRepository*_repository  = nullptr;
-    TamaServerBulletPool*_server_pool = nullptr;
+    _TamaScriptRepository  *_repository  = nullptr;
+    TamaServerBulletPool   *_server_pool = nullptr;
+    TamaServerLaserPool    *_laser_pool  = nullptr;
     godot::Ref<TamaContext> context;
     godot::Vector2 player_position;
     godot::NodePath spawn_parent;

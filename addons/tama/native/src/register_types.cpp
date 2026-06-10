@@ -11,6 +11,10 @@
 #include "tama_server_bullet.h"
 #include "tama_server_bullet_config.h"
 #include "tama_server_bullet_pool.h"
+#include "tama_server_laser.h"
+#include "tama_server_laser_pool.h"
+#include "tama_server_object_config.h"
+#include "tama_server_straight_laser_config.h"
 #include "tama_spawn_manager.h"
 
 #include <godot_cpp/classes/engine.hpp>
@@ -32,11 +36,15 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     ClassDB::register_internal_class<_TamaSpawnManager>();
     ClassDB::register_internal_class<_TamaExprRuntime>();
     ClassDB::register_internal_class<TamaServerBulletPool>();
+    ClassDB::register_internal_class<TamaServerLaserPool>();
 
-    // User-facing classes
-    ClassDB::register_class<TamaServerBullet>();
-    ClassDB::register_class<TamaContext>();
+    // User-facing classes — base before derived
+    ClassDB::register_class<TamaServerObjectConfig>();
     ClassDB::register_class<TamaServerBulletConfig>();
+    ClassDB::register_class<TamaServerStraightLaserConfig>();
+    ClassDB::register_class<TamaServerBullet>();
+    ClassDB::register_class<TamaServerLaser>();
+    ClassDB::register_class<TamaContext>();
     ClassDB::register_class<TamaBulletRegistry>();
     ClassDB::register_class<TamaBullet>();
     ClassDB::register_class<TamaEmitter>();

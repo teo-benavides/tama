@@ -1,5 +1,6 @@
 #include "tama_manager.h"
 #include "tama_ast_nodes.h"
+#include "tama_server_straight_laser_config.h"
 
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/packed_scene.hpp>
@@ -32,6 +33,7 @@ void TamaManager::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_registry"),                     &TamaManager::get_registry);
     ClassDB::bind_method(D_METHOD("set_registry","v"),                 &TamaManager::set_registry);
     ClassDB::bind_method(D_METHOD("get_server_bullet_pool"),                 &TamaManager::get_server_bullet_pool);
+    ClassDB::bind_method(D_METHOD("get_laser_pool"),                         &TamaManager::get_laser_pool);
     ClassDB::bind_method(D_METHOD("destroy_server_bullet","bullet"),         &TamaManager::destroy_server_bullet);
     ClassDB::bind_method(D_METHOD("get_global_out_of_bounds_margin"),        &TamaManager::get_global_out_of_bounds_margin);
     ClassDB::bind_method(D_METHOD("set_global_out_of_bounds_margin","v"),    &TamaManager::set_global_out_of_bounds_margin);
@@ -58,18 +60,22 @@ void TamaManager::_ensure_scene_nodes() {
     if (!tree || !tree->get_root()) return;
     _spawn_manager = memnew(_TamaSpawnManager);
     _server_pool   = memnew(TamaServerBulletPool);
+    _laser_pool    = memnew(TamaServerLaserPool);
     _spawn_manager->_repository  = _repository;
     _spawn_manager->_server_pool = _server_pool;
+    _spawn_manager->_laser_pool  = _laser_pool;
     _spawn_manager->context = Ref<TamaContext>(memnew(TamaContext));
     _server_pool->connect("bullet_hit", callable_mp(this, &TamaManager::_on_pool_bullet_hit));
     tree->get_root()->call_deferred("add_child", _spawn_manager);
     tree->get_root()->call_deferred("add_child", _server_pool);
+    tree->get_root()->call_deferred("add_child", _laser_pool);
     _nodes_injected = true;
 }
 
 void TamaManager::_shutdown() {
     _spawn_manager  = nullptr;
     _server_pool    = nullptr;
+    _laser_pool     = nullptr;
     _nodes_injected = false;
     if (_repository) {
         memdelete(_repository);
@@ -81,6 +87,7 @@ void TamaManager::_shutdown() {
 void TamaManager::_on_scene_nodes_freed() {
     _spawn_manager  = nullptr;
     _server_pool    = nullptr;
+    _laser_pool     = nullptr;
     _nodes_injected = false;
 }
 
@@ -124,7 +131,7 @@ void TamaManager::register_server_bullet(const String &type, TamaServerBulletCon
     _ensure_scene_nodes();
     if (!_spawn_manager || !_server_pool) return;
     _ensure_registry();
-    _spawn_manager->registry->server_bullets[type] = Variant(config);
+    _spawn_manager->registry->objects[type] = Variant(config);
     _server_pool->register_type(type, config);
 }
 
@@ -165,20 +172,25 @@ void TamaManager::set_registry(TamaBulletRegistry *v) {
     _ensure_scene_nodes();
     if (!_spawn_manager) return;
     _spawn_manager->set_registry(v);
-    if (!v || !_server_pool) return;
-    // Register any server bullet types already in the registry with the pool.
-    Dictionary cfgs = v->server_bullets;
-    Array keys = cfgs.keys();
+    if (!v) return;
+    // Route each entry in the objects dict to the appropriate pool.
+    Dictionary objs = v->objects;
+    Array keys = objs.keys();
     for (int i = 0; i < keys.size(); ++i) {
         String type = keys[i];
-        Object *cfg = Object::cast_to<Object>(cfgs[type].operator Object *());
-        if (cfg) _server_pool->register_type(type, cfg);
+        Object *cfg = Object::cast_to<Object>(objs[type].operator Object *());
+        if (!cfg) continue;
+        if (_laser_pool && Object::cast_to<TamaServerStraightLaserConfig>(cfg))
+            _laser_pool->register_type(type, cfg);
+        else if (_server_pool && Object::cast_to<TamaServerBulletConfig>(cfg))
+            _server_pool->register_type(type, cfg);
     }
     // Register default_server_bullet under "" so typeless bullets can find its TypeData.
-    if (v->default_server_bullet.is_valid())
+    if (_server_pool && v->default_server_bullet.is_valid())
         _server_pool->register_type(String(""), v->default_server_bullet.ptr());
 }
 Object *TamaManager::get_server_bullet_pool() const { return _server_pool; }
+Object *TamaManager::get_laser_pool()         const { return _laser_pool; }
 
 void TamaManager::destroy_server_bullet(Object *p_bullet) {
     // call_deferred so this is safe to call from inside the bullet_hit signal handler,
