@@ -3,13 +3,18 @@
 [ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama/example/bullets/small_bullet.png" id="1_ficw2"]
 [ext_resource type="Texture2D" uid="uid://t5epag1gjhj1" path="res://addons/tama/example/bullets/spawn_pink.png" id="2_th1mw"]
 
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_default"]
+frame_count = 1
+frame_0/texture = ExtResource("1_ficw2")
+frame_0/duration = 1
+
 [resource]
-frames = Array[Texture2D]([ExtResource("1_ficw2")])
+animation = SubResource("TamaAnimatedTexture_default")
 shape_radius = 1.0
-collision_layer = 2
-collision_mask = 1
-pool_size = 25000
 spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
 spawn_texture = ExtResource("2_th1mw")
 starting_spawn_scale = 3.0
+pool_size = 25000
+collision_layer = 2
+collision_mask = 1

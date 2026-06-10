@@ -75,7 +75,8 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     td->config_obj  = p_config;
     td->width           = (float)p_config->get("width");
     td->length          = (float)p_config->get("length");
-    td->tile            = (bool) p_config->get("tile");
+    td->tile_x          = (bool) p_config->get("tile_x");
+    td->tile_y          = (bool) p_config->get("tile_y");
     td->delay_frames    = (int)  p_config->get("delay_frames");
     td->expand_frames   = (int)  p_config->get("expand_frames");
     td->duration_frames = (int)  p_config->get("duration_frames");
@@ -84,12 +85,14 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     td->collision_layer = (int)  p_config->get("collision_layer");
     td->collision_mask  = (int)  p_config->get("collision_mask");
     {
-        Variant tv = p_config->get("texture");
-        if (tv.get_type() == Variant::OBJECT)
-            td->texture = Ref<Texture2D>(Object::cast_to<Texture2D>(tv.operator Object *()));
-        Variant btv = p_config->get("base_texture");
-        if (btv.get_type() == Variant::OBJECT)
-            td->base_texture = Ref<Texture2D>(Object::cast_to<Texture2D>(btv.operator Object *()));
+        auto load_anim = [](Object *cfg, const char *prop) -> std::vector<TamaAnimFrame> {
+            Variant v = cfg->get(prop);
+            if (v.get_type() != Variant::OBJECT) return {};
+            TamaAnimatedTexture *anim = Object::cast_to<TamaAnimatedTexture>(v.operator Object *());
+            return anim ? anim->build_anim_frames() : std::vector<TamaAnimFrame>{};
+        };
+        td->texture_frames      = load_anim(p_config, "texture");
+        td->base_texture_frames = load_anim(p_config, "base_texture");
     }
 
     int n = td->pool_size;
@@ -201,6 +204,10 @@ Object *TamaServerLaserPool::spawn(
     l.current_width   = 1.0f;
     l.current_opacity = 1.0f;
     l.angle_tween.active = false;
+    l.tex_anim_frame  = 0;
+    l.tex_anim_time   = 0.0f;
+    l.base_anim_frame = 0;
+    l.base_anim_time  = 0.0f;
 
     // If delay is zero, jump straight to expand and activate hitbox immediately
     if (td.delay_frames == 0) {
@@ -373,6 +380,22 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
                     break;
                 }
             }
+
+            // Advance per-laser texture animations
+            if (td->texture_frames.size() > 1) {
+                l.tex_anim_time += delta;
+                while (l.tex_anim_time >= td->texture_frames[l.tex_anim_frame].duration_sec) {
+                    l.tex_anim_time -= td->texture_frames[l.tex_anim_frame].duration_sec;
+                    l.tex_anim_frame = (l.tex_anim_frame + 1) % (int)td->texture_frames.size();
+                }
+            }
+            if (td->base_texture_frames.size() > 1) {
+                l.base_anim_time += delta;
+                while (l.base_anim_time >= td->base_texture_frames[l.base_anim_frame].duration_sec) {
+                    l.base_anim_time -= td->base_texture_frames[l.base_anim_frame].duration_sec;
+                    l.base_anim_frame = (l.base_anim_frame + 1) % (int)td->base_texture_frames.size();
+                }
+            }
         }
     }
 
@@ -396,22 +419,60 @@ void TamaServerLaserPool::_draw() {
             Color modulate(1.0f, 1.0f, 1.0f, l.current_opacity);
             float half_w = l.current_width * 0.5f;
 
+            Ref<Texture2D> tex = td->texture_frames.empty()
+                ? Ref<Texture2D>()
+                : td->texture_frames[l.tex_anim_frame].texture;
+            Ref<Texture2D> base_tex = td->base_texture_frames.empty()
+                ? Ref<Texture2D>()
+                : td->base_texture_frames[l.base_anim_frame].texture;
+
             // All drawing in the laser's local frame: origin at base, +X along the beam
             draw_set_transform(l.position, l.angle, Vector2(1.0f, 1.0f));
 
-            // Laser body
-            if (td->texture.is_valid()) {
-                draw_texture_rect(td->texture,
-                    Rect2(0.0f, -half_w, td->length, l.current_width),
-                    td->tile, modulate);
+            // Laser body — 4 tiling modes
+            const Rect2 body_rect(0.0f, -half_w, td->length, l.current_width);
+            if (tex.is_valid()) {
+                if (!td->tile_x && !td->tile_y) {
+                    draw_texture_rect(tex, body_rect, false, modulate);
+                } else if (td->tile_x && td->tile_y) {
+                    draw_texture_rect(tex, body_rect, true, modulate);
+                } else if (td->tile_x) {
+                    // Tile along length, stretch across width
+                    Vector2i tsz = tex->get_size();
+                    if (tsz.x > 0) {
+                        float x = 0.0f, rem = td->length;
+                        while (rem > 0.0f) {
+                            float w = std::min((float)tsz.x, rem);
+                            draw_texture_rect_region(tex,
+                                Rect2(x, -half_w, w, l.current_width),
+                                Rect2(0, 0, w, (float)tsz.y), modulate);
+                            x   += (float)tsz.x;
+                            rem -= (float)tsz.x;
+                        }
+                    }
+                } else {
+                    // Stretch along length, tile across width
+                    Vector2i tsz = tex->get_size();
+                    if (tsz.y > 0) {
+                        float y = -half_w, rem = l.current_width;
+                        while (rem > 0.0f) {
+                            float h = std::min((float)tsz.y, rem);
+                            draw_texture_rect_region(tex,
+                                Rect2(0.0f, y, td->length, h),
+                                Rect2(0, 0, (float)tsz.x, h), modulate);
+                            y   += (float)tsz.y;
+                            rem -= (float)tsz.y;
+                        }
+                    }
+                }
             } else {
-                draw_rect(Rect2(0.0f, -half_w, td->length, l.current_width), modulate);
+                draw_rect(body_rect, modulate);
             }
 
             // Base texture centered at origin
-            if (td->base_texture.is_valid()) {
-                Vector2i bsz = td->base_texture->get_size();
-                draw_texture_rect(td->base_texture,
+            if (base_tex.is_valid()) {
+                Vector2i bsz = base_tex->get_size();
+                draw_texture_rect(base_tex,
                     Rect2(-bsz.x * 0.5f, -bsz.y * 0.5f, (float)bsz.x, (float)bsz.y),
                     false, modulate);
             }

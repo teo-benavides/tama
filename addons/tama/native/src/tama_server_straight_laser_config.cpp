@@ -10,8 +10,10 @@ void TamaServerStraightLaserConfig::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_length","v"),      &TamaServerStraightLaserConfig::set_length);
     ClassDB::bind_method(D_METHOD("get_texture"),         &TamaServerStraightLaserConfig::get_texture);
     ClassDB::bind_method(D_METHOD("set_texture","v"),     &TamaServerStraightLaserConfig::set_texture);
-    ClassDB::bind_method(D_METHOD("get_tile"),            &TamaServerStraightLaserConfig::get_tile);
-    ClassDB::bind_method(D_METHOD("set_tile","v"),        &TamaServerStraightLaserConfig::set_tile);
+    ClassDB::bind_method(D_METHOD("get_tile_x"),          &TamaServerStraightLaserConfig::get_tile_x);
+    ClassDB::bind_method(D_METHOD("set_tile_x","v"),      &TamaServerStraightLaserConfig::set_tile_x);
+    ClassDB::bind_method(D_METHOD("get_tile_y"),          &TamaServerStraightLaserConfig::get_tile_y);
+    ClassDB::bind_method(D_METHOD("set_tile_y","v"),      &TamaServerStraightLaserConfig::set_tile_y);
     ClassDB::bind_method(D_METHOD("get_base_texture"),    &TamaServerStraightLaserConfig::get_base_texture);
     ClassDB::bind_method(D_METHOD("set_base_texture","v"),&TamaServerStraightLaserConfig::set_base_texture);
     ClassDB::bind_method(D_METHOD("get_delay_frames"),    &TamaServerStraightLaserConfig::get_delay_frames);
@@ -27,11 +29,13 @@ void TamaServerStraightLaserConfig::_bind_methods() {
                  "set_width",  "get_width");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "length", PROPERTY_HINT_RANGE, "1,5000,1,or_greater"),
                  "set_length", "get_length");
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture",      PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"),
-                 "set_texture",      "get_texture");
-    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "tile"),
-                 "set_tile", "get_tile");
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "base_texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"),
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture",
+                 PROPERTY_HINT_RESOURCE_TYPE, "TamaAnimatedTexture"),
+                 "set_texture", "get_texture");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "tile_x"), "set_tile_x", "get_tile_x");
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "tile_y"), "set_tile_y", "get_tile_y");
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "base_texture",
+                 PROPERTY_HINT_RESOURCE_TYPE, "TamaAnimatedTexture"),
                  "set_base_texture", "get_base_texture");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "delay_frames",    PROPERTY_HINT_RANGE, "0,600,1,or_greater"),
                  "set_delay_frames",    "get_delay_frames");

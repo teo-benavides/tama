@@ -1,4 +1,5 @@
 #include "tama_server_bullet_pool.h"
+#include "tama_animated_texture.h"
 #include "tama_interpreter.h"
 #include "tama_manager.h"
 
@@ -132,11 +133,14 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     TypeData *td = new TypeData();
     td->config_obj     = p_config;
 
-    td->frames         = (TypedArray<Texture2D>)p_config->get("frames");
-    td->fps            = (float)p_config->get("fps");
-    td->first_texture  = td->frames.size() > 0
-        ? Ref<Texture2D>(Object::cast_to<Texture2D>(td->frames[0].operator Object *()))
-        : Ref<Texture2D>();
+    {
+        Variant anim_var = p_config->get("animation");
+        TamaAnimatedTexture *anim = (anim_var.get_type() == Variant::OBJECT)
+            ? Object::cast_to<TamaAnimatedTexture>(anim_var.operator Object *())
+            : nullptr;
+        td->anim_frames = anim ? anim->build_anim_frames() : std::vector<TamaAnimFrame>{};
+    }
+    td->first_texture = td->anim_frames.empty() ? Ref<Texture2D>() : td->anim_frames[0].texture;
     td->rect           = (Rect2)p_config->get("rect");
     td->texture_scale  = (Vector2)p_config->get("texture_scale");
     td->shape_radius   = (float)p_config->get("shape_radius");
@@ -330,7 +334,7 @@ Object *TamaServerBulletPool::spawn(
     // seen when spawning and recycling at the pool limit. Filling across frames keeps
     // static-type batches dense (~pool_size/256) regardless of the spawn cadence.
     int64_t frame    = Engine::get_singleton()->get_physics_frames();
-    bool    animated = td.fps > 0.0f && td.frames.size() > 1;
+    bool    animated = td.anim_frames.size() > 1;
     // Resolve effective spawn delay: fire-block override takes priority.
     int eff_delay = (p_data.spawn_delay_override >= 0) ? p_data.spawn_delay_override : td.spawn_delay;
     // Spawn animation state is per-bullet, so spawn-delay types no longer need per-frame batches.
@@ -860,15 +864,13 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 
     // Advance per-batch sprite animations (each batch has its own independent frame offset)
     for (auto &[key, td] : _types) {
-        if (td->frames.size() <= 1 || td->fps <= 0.0f) continue;
-        float frame_dur = 1.0f / td->fps;
+        if (td->anim_frames.size() <= 1) continue;
         for (BatchData *batch : td->active_batches) {
             batch->anim_time += delta;
-            while (batch->anim_time >= frame_dur) {
-                batch->anim_time -= frame_dur;
-                batch->anim_frame = (batch->anim_frame + 1) % (int)td->frames.size();
-                batch->current_texture = Ref<Texture2D>(
-                    Object::cast_to<Texture2D>(td->frames[batch->anim_frame].operator Object *()));
+            while (batch->anim_time >= td->anim_frames[batch->anim_frame].duration_sec) {
+                batch->anim_time -= td->anim_frames[batch->anim_frame].duration_sec;
+                batch->anim_frame = (batch->anim_frame + 1) % (int)td->anim_frames.size();
+                batch->current_texture = td->anim_frames[batch->anim_frame].texture;
             }
         }
     }
@@ -885,7 +887,7 @@ void TamaServerBulletPool::_draw() {
     // Pass 1: regular bullets (all types).
     for (auto &[key, td] : _types) {
         if (td->active_batches.empty()) continue;
-        bool animated = td->fps > 0.0f && td->frames.size() > 1;
+        bool animated = td->anim_frames.size() > 1;
         if (animated || (int)_active.size() <= _composite_threshold) {
             // Animated types always draw per-batch (each batch has a different texture).
             // Static types use per-batch draws when below the composite threshold.

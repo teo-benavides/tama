@@ -30,6 +30,12 @@ struct LaserState {
     // Angle tween (for chdir with over > 0)
     TweenState1D angle_tween;
 
+    // Texture animation state (per-laser, advances during active phases)
+    int   tex_anim_frame  = 0;
+    float tex_anim_time   = 0.0f;
+    int   base_anim_frame = 0;
+    float base_anim_time  = 0.0f;
+
     // Per-frame computed render values
     float current_width   = 1.0f;
     float current_opacity = 1.0f;

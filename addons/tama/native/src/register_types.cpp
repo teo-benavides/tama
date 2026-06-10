@@ -1,4 +1,5 @@
 #include "register_types.h"
+#include "tama_animated_texture.h"
 #include "tama_ast_nodes.h"
 #include "tama_bullet.h"
 #include "tama_bullet_registry.h"
@@ -39,6 +40,7 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     ClassDB::register_internal_class<TamaServerLaserPool>();
 
     // User-facing classes — base before derived
+    ClassDB::register_class<TamaAnimatedTexture>();
     ClassDB::register_class<TamaServerObjectConfig>();
     ClassDB::register_class<TamaServerBulletConfig>();
     ClassDB::register_class<TamaServerStraightLaserConfig>();

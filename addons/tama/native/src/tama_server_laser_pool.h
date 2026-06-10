@@ -1,4 +1,5 @@
 #pragma once
+#include "tama_animated_texture.h"
 #include "tama_interpreter.h"
 #include "tama_server_laser.h"
 
@@ -8,7 +9,6 @@
 #include <vector>
 
 #include <godot_cpp/classes/node2d.hpp>
-#include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/variant/callable.hpp>
 #include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/string.hpp>
@@ -27,9 +27,10 @@ class TamaServerLaserPool : public godot::Node2D {
         // Config snapshot (read once at register_type)
         float  width            = 20.0f;
         float  length           = 1000.0f;
-        godot::Ref<godot::Texture2D> texture;
-        bool   tile             = true;
-        godot::Ref<godot::Texture2D> base_texture;
+        std::vector<TamaAnimFrame> texture_frames;      // empty = no texture; size>1 = animated
+        bool   tile_x           = false;
+        bool   tile_y           = false;
+        std::vector<TamaAnimFrame> base_texture_frames; // empty = no base texture; size>1 = animated
         int    delay_frames     = 120;
         int    expand_frames    = 10;
         int    duration_frames  = 120;

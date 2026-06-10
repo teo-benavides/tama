@@ -1,4 +1,5 @@
 #pragma once
+#include "tama_animated_texture.h"
 #include "tama_server_bullet.h"
 
 #include <cstdint>
@@ -10,7 +11,6 @@
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/quad_mesh.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
-#include <godot_cpp/variant/typed_array.hpp>
 #include <godot_cpp/variant/callable.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/rid.hpp>
@@ -52,9 +52,8 @@ class TamaServerBulletPool : public godot::Node2D {
         godot::Object *config_obj = nullptr;
 
         // Config properties (read once at register_type)
-        godot::TypedArray<godot::Texture2D> frames;
-        float  fps             = 0.0f;
-        godot::Ref<godot::Texture2D> first_texture; // frames[0], used for static/composite draws
+        std::vector<TamaAnimFrame> anim_frames;       // empty = no texture; size>1 = animated
+        godot::Ref<godot::Texture2D> first_texture;   // anim_frames[0].texture, for static/composite draws
 
         godot::Rect2    rect         = {-8.0f, -8.0f, 16.0f, 16.0f};
         godot::Vector2  texture_scale = {1.0f, 1.0f};

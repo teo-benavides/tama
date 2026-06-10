@@ -1,19 +1,16 @@
 #pragma once
+#include "tama_animated_texture.h"
 #include "tama_server_object_config.h"
-#include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/templates/list.hpp>
 #include <godot_cpp/variant/rect2.hpp>
-#include <godot_cpp/variant/typed_array.hpp>
 #include <godot_cpp/variant/vector2.hpp>
-#include <godot_cpp/variant/vector2i.hpp>
 
 class TamaServerBulletConfig : public TamaServerObjectConfig {
     GDCLASS(TamaServerBulletConfig, TamaServerObjectConfig)
 protected:
     static void _bind_methods();
 public:
-    godot::TypedArray<godot::Texture2D> frames;
-    float  fps             = 0.0f;
+    godot::Ref<TamaAnimatedTexture> animation;
     godot::Rect2   rect           = {-8.0f, -8.0f, 16.0f, 16.0f};
     godot::Vector2 texture_scale  = {1.0f, 1.0f};
     bool           auto_rect      = true;
@@ -32,10 +29,8 @@ public:
     bool _set(const godot::StringName &p_name, const godot::Variant &p_value);
     void _get_property_list(godot::List<godot::PropertyInfo> *p_list) const;
 
-    godot::TypedArray<godot::Texture2D> get_frames()  const { return frames; }
-    void set_frames(godot::TypedArray<godot::Texture2D> v);
-    float get_fps()                      const { return fps; }
-    void  set_fps(float v)                     { fps = v; }
+    godot::Ref<TamaAnimatedTexture> get_animation() const { return animation; }
+    void set_animation(godot::Ref<TamaAnimatedTexture> v);
     godot::Rect2   get_rect()           const { return rect; }
     void set_rect(godot::Rect2 v)             { rect = v; }
     bool get_auto_rect()                const { return auto_rect; }
