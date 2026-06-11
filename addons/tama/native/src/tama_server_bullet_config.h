@@ -20,7 +20,7 @@ public:
 
     // Spawn animation
     int    spawn_delay             = 0;
-    godot::Ref<godot::Texture2D> spawn_texture;
+    godot::Ref<TamaAnimatedTexture> spawn_texture;
     float  starting_spawn_scale    = 2.0f;
     float  starting_spawn_opacity  = 0.0f;
 
@@ -46,8 +46,8 @@ public:
 
     int   get_spawn_delay()                  const { return spawn_delay; }
     void  set_spawn_delay(int v)                   { spawn_delay = v; notify_property_list_changed(); }
-    godot::Ref<godot::Texture2D> get_spawn_texture()  const { return spawn_texture; }
-    void  set_spawn_texture(godot::Ref<godot::Texture2D> v) { spawn_texture = v; }
+    godot::Ref<TamaAnimatedTexture> get_spawn_texture()  const { return spawn_texture; }
+    void  set_spawn_texture(godot::Ref<TamaAnimatedTexture> v) { spawn_texture = v; }
     float get_starting_spawn_scale()         const { return starting_spawn_scale; }
     void  set_starting_spawn_scale(float v)        { starting_spawn_scale = v; }
     float get_starting_spawn_opacity()       const { return starting_spawn_opacity; }

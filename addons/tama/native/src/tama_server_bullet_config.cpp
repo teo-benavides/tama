@@ -53,7 +53,7 @@ void TamaServerBulletConfig::_get_property_list(List<PropertyInfo> *p_list) cons
     p_list->push_back(PropertyInfo(Variant::BOOL, "face_velocity", PROPERTY_HINT_NONE, "", fv_usage));
 
     p_list->push_back(PropertyInfo(Variant::OBJECT, "spawn_texture",
-        PROPERTY_HINT_RESOURCE_TYPE, "Texture2D", PROPERTY_USAGE_DEFAULT));
+        PROPERTY_HINT_RESOURCE_TYPE, "TamaAnimatedTexture", PROPERTY_USAGE_DEFAULT));
     p_list->push_back(PropertyInfo(Variant::FLOAT, "starting_spawn_scale",
         PROPERTY_HINT_RANGE, "0.01,10,0.01,or_greater", PROPERTY_USAGE_DEFAULT));
     p_list->push_back(PropertyInfo(Variant::FLOAT, "starting_spawn_opacity",

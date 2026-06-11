@@ -23,14 +23,27 @@ public:
 private:
     float fps         = 60.0f;
     int   frame_count = 0;
+    int   blend_mode  = 0;
     std::vector<Frame> _frames;
 
 protected:
     static void _bind_methods();
 
 public:
+    // Mirrors CanvasItemMaterial::BlendMode
+    enum BlendMode {
+        BLEND_MODE_MIX           = 0,
+        BLEND_MODE_ADD           = 1,
+        BLEND_MODE_SUB           = 2,
+        BLEND_MODE_MUL           = 3,
+        BLEND_MODE_PREMULT_ALPHA = 4,
+    };
+
     float get_fps()  const { return fps; }
     void  set_fps(float v) { fps = v; }
+
+    int  get_blend_mode()  const { return blend_mode; }
+    void set_blend_mode(int v)   { blend_mode = v; }
 
     int  get_frame_count() const { return frame_count; }
     void set_frame_count(int v);

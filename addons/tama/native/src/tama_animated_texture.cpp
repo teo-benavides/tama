@@ -96,6 +96,12 @@ void TamaAnimatedTexture::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_frame_duration", "i", "v"), &TamaAnimatedTexture::set_frame_duration);
     ClassDB::bind_method(D_METHOD("get_first_texture"), &TamaAnimatedTexture::get_first_texture);
 
+    ClassDB::bind_method(D_METHOD("get_blend_mode"),      &TamaAnimatedTexture::get_blend_mode);
+    ClassDB::bind_method(D_METHOD("set_blend_mode", "v"), &TamaAnimatedTexture::set_blend_mode);
+
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "blend_mode", PROPERTY_HINT_ENUM,
+                              "Mix,Add,Subtract,Multiply,Premultiplied Alpha"),
+                 "set_blend_mode", "get_blend_mode");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "fps", PROPERTY_HINT_RANGE, "0,240,1,or_greater"),
                  "set_fps", "get_fps");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "frame_count", PROPERTY_HINT_RANGE, "0,64,1,or_greater"),

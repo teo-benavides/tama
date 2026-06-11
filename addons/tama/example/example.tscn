@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cppexample001"]
 
 [ext_resource type="Script" uid="uid://cit8qf228utpc" path="res://addons/tama/example/example.gd" id="1_ig7tw"]
+[ext_resource type="Texture2D" uid="uid://pc1srkkemdfj" path="res://addons/tama/example/sky.png" id="2_pq7m2"]
 [ext_resource type="Script" uid="uid://clx0bbmru0ksk" path="res://addons/tama/example/bullets_label.gd" id="3_cx0jo"]
 [ext_resource type="PackedScene" uid="uid://cppplayer001" path="res://addons/tama/example/player/example_player.tscn" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://cvsmm0ofq3fnv" path="res://addons/tama/example/fps_label.gd" id="4_bjbng"]
@@ -15,6 +16,13 @@ outline_color = Color(0, 0, 0, 1)
 
 [node name="TamaExample" type="Node2D" unique_id=1817544635]
 script = ExtResource("1_ig7tw")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1819543008]
+modulate = Color(1, 0, 0, 1)
+z_index = -2
+position = Vector2(583, 271)
+scale = Vector2(0.41822222, 0.41822222)
+texture = ExtResource("2_pq7m2")
 
 [node name="EmitterPosition" type="Marker2D" parent="." unique_id=1648329798]
 position = Vector2(523, 295)

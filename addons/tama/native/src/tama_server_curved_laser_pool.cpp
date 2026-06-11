@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/viewport.hpp>
@@ -82,12 +83,24 @@ void TamaServerCurvedLaserPool::register_type(const String &p_key, Object *p_con
         Variant v = p_config->get("texture");
         if (v.get_type() == Variant::OBJECT) {
             TamaAnimatedTexture *anim = Object::cast_to<TamaAnimatedTexture>(v.operator Object *());
-            if (anim) td->texture_frames = anim->build_anim_frames();
+            if (anim) {
+                td->texture_frames = anim->build_anim_frames();
+                td->blend_mode     = anim->get_blend_mode();
+            }
         }
     }
 
     int n = td->pool_size;
     _types[key] = td;
+
+    // Per-type draw node for blend mode isolation (same pattern as TamaServerBulletPool).
+    td->draw_node = memnew(Node2D);
+    add_child(td->draw_node);
+    if (td->blend_mode != 0) {
+        td->material.instantiate();
+        td->material->set_blend_mode((CanvasItemMaterial::BlendMode)td->blend_mode);
+        td->draw_node->set_material(td->material);
+    }
 
     td->lasers.resize(n);
     td->wrappers.resize(n);
@@ -438,32 +451,32 @@ static float _trail_alpha(int idx, int trail_count, float opacity) {
 }
 
 // ---------------------------------------------------------------------------
-// Draw — batched via canvas_item_add_triangle_array
+// Draw — per-type batched via canvas_item_add_triangle_array
 //
-// All active lasers that share a texture are accumulated into a single
-// DrawBucket (std::vectors, retained between frames for capacity), then
-// flushed with one canvas_item_add_triangle_array call per texture.
-// This collapses the previous O(lasers × segments) draw_primitive calls
-// down to O(distinct textures) — typically 1.
+// Each TypeData has its own DrawBucket map (keyed by texture RID) and its own
+// Node2D child (draw_node) which carries the CanvasItemMaterial for blend mode.
+// Lasers sharing a texture within a type go into one bucket → one draw call.
 // ---------------------------------------------------------------------------
 
 void TamaServerCurvedLaserPool::_draw() {
-    // Clear bucket contents but retain allocated capacity
-    for (auto &[bkey, bucket] : _draw_buckets) {
-        bucket.points.clear();
-        bucket.colors.clear();
-        bucket.uvs.clear();
-        bucket.indices.clear();
-    }
+    RenderingServer *rs = RenderingServer::get_singleton();
 
     for (auto &[key, td_iter] : _types) {
         TypeData *td = td_iter;
 
+        // Clear this type's bucket contents but retain allocated capacity.
+        for (auto &[bkey, bucket] : td->draw_buckets) {
+            bucket.points.clear();
+            bucket.colors.clear();
+            bucket.uvs.clear();
+            bucket.indices.clear();
+        }
+
+        // Accumulate geometry for every active laser of this type.
         for (int i = 0; i < (int)td->lasers.size(); ++i) {
             CurvedLaserState &l = td->lasers[i];
             if (!l.active || l.trail_count < 2) continue;
 
-            // Resolve texture RID for this laser this frame
             RID tex_rid;
             if (!td->texture_frames.empty()) {
                 Ref<Texture2D> tex = (td->texture_frames.size() > 1)
@@ -472,22 +485,14 @@ void TamaServerCurvedLaserPool::_draw() {
                 if (tex.is_valid()) tex_rid = tex->get_rid();
             }
 
-            // Get or create bucket keyed by texture RID integer
             int64_t tex_key = tex_rid.get_id();
-            DrawBucket &bucket = _draw_buckets[tex_key];
+            DrawBucket &bucket = td->draw_buckets[tex_key];
             bucket.texture_rid = tex_rid;
 
             int count     = l.trail_count;
             int n         = count - 1;
-            int vert_base = (int)bucket.points.size();  // offset for this laser's verts
+            int vert_base = (int)bucket.points.size();
 
-            // ------------------------------------------------------------------
-            // Append 2 vertices per trail node into the bucket.
-            // Edge vertices come from the physics-updated cache (edge_l/edge_r,
-            // indexed by buffer slot) — no per-frame sqrt/normalize here.
-            // Layout: node k → left  = vert_base + k*2
-            //                   right = vert_base + k*2 + 1
-            // ------------------------------------------------------------------
             for (int k = 0; k < count; ++k) {
                 int   slot = (l.trail_head + k) % td->length;
                 float v    = (n > 0) ? ((float)k / (float)n) : 0.0f;
@@ -501,10 +506,6 @@ void TamaServerCurvedLaserPool::_draw() {
                 bucket.uvs.push_back(Vector2(1.0f, v));
             }
 
-            // ------------------------------------------------------------------
-            // Append 6 indices per non-degenerate segment (2 CCW triangles).
-            // Winding matches the previous draw_primitive quad order.
-            // ------------------------------------------------------------------
             for (int s = 0; s < n; ++s) {
                 Vector2 A = l.trail[(l.trail_head + s)     % td->length];
                 Vector2 B = l.trail[(l.trail_head + s + 1) % td->length];
@@ -524,52 +525,51 @@ void TamaServerCurvedLaserPool::_draw() {
                 bucket.indices.push_back(lA);
             }
         }
-    }
 
-    // ------------------------------------------------------------------
-    // Flush: one canvas_item_add_triangle_array call per texture bucket
-    // ------------------------------------------------------------------
-    RID           canvas_rid = get_canvas_item();
-    RenderingServer *rs      = RenderingServer::get_singleton();
+        // Flush: one draw call per texture bucket, onto this type's draw_node
+        // canvas item (which has the CanvasItemMaterial for blend mode).
+        RID canvas_rid = td->draw_node->get_canvas_item();
+        rs->canvas_item_clear(canvas_rid);
 
-    for (auto &[bkey, bucket] : _draw_buckets) {
-        if (bucket.indices.empty()) continue;
+        for (auto &[bkey, bucket] : td->draw_buckets) {
+            if (bucket.indices.empty()) continue;
 
-        int nv = (int)bucket.points.size();
-        int ni = (int)bucket.indices.size();
+            int nv = (int)bucket.points.size();
+            int ni = (int)bucket.indices.size();
 
-        _flush_pts.resize(nv);
-        _flush_col.resize(nv);
-        _flush_uv.resize(nv);
-        _flush_idx.resize(ni);
+            _flush_pts.resize(nv);
+            _flush_col.resize(nv);
+            _flush_uv.resize(nv);
+            _flush_idx.resize(ni);
 
-        {
-            Vector2 *p = _flush_pts.ptrw();
-            for (int j = 0; j < nv; ++j) p[j] = bucket.points[j];
+            {
+                Vector2 *p = _flush_pts.ptrw();
+                for (int j = 0; j < nv; ++j) p[j] = bucket.points[j];
+            }
+            {
+                Color *p = _flush_col.ptrw();
+                for (int j = 0; j < nv; ++j) p[j] = bucket.colors[j];
+            }
+            {
+                Vector2 *p = _flush_uv.ptrw();
+                for (int j = 0; j < nv; ++j) p[j] = bucket.uvs[j];
+            }
+            {
+                int32_t *p = _flush_idx.ptrw();
+                for (int j = 0; j < ni; ++j) p[j] = bucket.indices[j];
+            }
+
+            rs->canvas_item_add_triangle_array(
+                canvas_rid,
+                _flush_idx,
+                _flush_pts,
+                _flush_col,
+                _flush_uv,
+                PackedInt32Array(),    // bones  (unused)
+                PackedFloat32Array(),  // weights (unused)
+                bucket.texture_rid
+            );
         }
-        {
-            Color *p = _flush_col.ptrw();
-            for (int j = 0; j < nv; ++j) p[j] = bucket.colors[j];
-        }
-        {
-            Vector2 *p = _flush_uv.ptrw();
-            for (int j = 0; j < nv; ++j) p[j] = bucket.uvs[j];
-        }
-        {
-            int32_t *p = _flush_idx.ptrw();
-            for (int j = 0; j < ni; ++j) p[j] = bucket.indices[j];
-        }
-
-        rs->canvas_item_add_triangle_array(
-            canvas_rid,
-            _flush_idx,
-            _flush_pts,
-            _flush_col,
-            _flush_uv,
-            PackedInt32Array(),    // bones  (unused)
-            PackedFloat32Array(),  // weights (unused)
-            bucket.texture_rid
-        );
     }
 }
 

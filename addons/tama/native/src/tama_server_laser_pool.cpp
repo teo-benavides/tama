@@ -4,8 +4,10 @@
 #include "tama_server_straight_laser_config.h"
 
 #include <cmath>
+#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
+#include <godot_cpp/variant/transform2d.hpp>
 #include <godot_cpp/classes/world2d.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/color.hpp>
@@ -77,18 +79,28 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     td->fade_frames     = (int)  p_config->get("fade_frames");
     td->pool_size       = (int)  p_config->get("pool_size");
     {
-        auto load_anim = [](Object *cfg, const char *prop) -> std::vector<TamaAnimFrame> {
+        auto load_anim = [&td](Object *cfg, const char *prop, bool read_blend) -> std::vector<TamaAnimFrame> {
             Variant v = cfg->get(prop);
             if (v.get_type() != Variant::OBJECT) return {};
             TamaAnimatedTexture *anim = Object::cast_to<TamaAnimatedTexture>(v.operator Object *());
-            return anim ? anim->build_anim_frames() : std::vector<TamaAnimFrame>{};
+            if (!anim) return {};
+            if (read_blend) td->blend_mode = anim->get_blend_mode();
+            return anim->build_anim_frames();
         };
-        td->texture_frames      = load_anim(p_config, "texture");
-        td->base_texture_frames = load_anim(p_config, "base_texture");
+        td->texture_frames      = load_anim(p_config, "texture",      true);
+        td->base_texture_frames = load_anim(p_config, "base_texture", false);
     }
 
     int n = td->pool_size;
     _types[key] = td;
+
+    td->draw_node = memnew(Node2D);
+    add_child(td->draw_node);
+    if (td->blend_mode != 0) {
+        td->material.instantiate();
+        td->material->set_blend_mode((CanvasItemMaterial::BlendMode)td->blend_mode);
+        td->draw_node->set_material(td->material);
+    }
 
     // Pre-allocate laser states and wrapper objects
     td->lasers.resize(n);
@@ -367,8 +379,13 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
 // ---------------------------------------------------------------------------
 
 void TamaServerLaserPool::_draw() {
+    RenderingServer *rs = RenderingServer::get_singleton();
+
     for (auto &[key, td_iter] : _types) {
         TypeData *td = td_iter;
+        RID ci = td->draw_node->get_canvas_item();
+        rs->canvas_item_clear(ci);
+
         for (int i = 0; i < (int)td->lasers.size(); ++i) {
             LaserState &l = td->lasers[i];
             if (!l.active) continue;
@@ -376,64 +393,71 @@ void TamaServerLaserPool::_draw() {
             Color modulate(1.0f, 1.0f, 1.0f, l.current_opacity);
             float half_w = l.current_width * 0.5f;
 
-            Ref<Texture2D> tex = td->texture_frames.empty()
-                ? Ref<Texture2D>()
-                : td->texture_frames[l.tex_anim_frame].texture;
-            Ref<Texture2D> base_tex = td->base_texture_frames.empty()
-                ? Ref<Texture2D>()
-                : td->base_texture_frames[l.base_anim_frame].texture;
+            RID tex_rid;
+            if (!td->texture_frames.empty()) {
+                Ref<Texture2D> t = td->texture_frames[l.tex_anim_frame].texture;
+                if (t.is_valid()) tex_rid = t->get_rid();
+            }
+            RID base_tex_rid;
+            if (!td->base_texture_frames.empty()) {
+                Ref<Texture2D> t = td->base_texture_frames[l.base_anim_frame].texture;
+                if (t.is_valid()) base_tex_rid = t->get_rid();
+            }
 
-            // All drawing in the laser's local frame: origin at base, +X along the beam
-            draw_set_transform(l.position, l.angle, Vector2(1.0f, 1.0f));
+            // All drawing in the laser's local frame: origin at base, +X along the beam.
+            rs->canvas_item_add_set_transform(ci,
+                Transform2D(l.angle, Vector2(1.0f, 1.0f), 0.0f, l.position));
 
             // Laser body — 4 tiling modes
             const Rect2 body_rect(0.0f, -half_w, td->length, l.current_width);
-            if (tex.is_valid()) {
+            if (tex_rid.is_valid()) {
                 if (!td->tile_x && !td->tile_y) {
-                    draw_texture_rect(tex, body_rect, false, modulate);
+                    rs->canvas_item_add_texture_rect(ci, body_rect, tex_rid, false, modulate);
                 } else if (td->tile_x && td->tile_y) {
-                    draw_texture_rect(tex, body_rect, true, modulate);
+                    rs->canvas_item_add_texture_rect(ci, body_rect, tex_rid, true, modulate);
                 } else if (td->tile_x) {
                     // Tile along length, stretch across width
+                    Ref<Texture2D> tex = td->texture_frames[l.tex_anim_frame].texture;
                     Vector2i tsz = tex->get_size();
                     if (tsz.x > 0) {
                         float x = 0.0f, rem = td->length;
                         while (rem > 0.0f) {
                             float w = std::min((float)tsz.x, rem);
-                            draw_texture_rect_region(tex,
+                            rs->canvas_item_add_texture_rect_region(ci,
                                 Rect2(x, -half_w, w, l.current_width),
-                                Rect2(0, 0, w, (float)tsz.y), modulate);
+                                tex_rid, Rect2(0, 0, w, (float)tsz.y), modulate);
                             x   += (float)tsz.x;
                             rem -= (float)tsz.x;
                         }
                     }
                 } else {
                     // Stretch along length, tile across width
+                    Ref<Texture2D> tex = td->texture_frames[l.tex_anim_frame].texture;
                     Vector2i tsz = tex->get_size();
                     if (tsz.y > 0) {
                         float y = -half_w, rem = l.current_width;
                         while (rem > 0.0f) {
                             float h = std::min((float)tsz.y, rem);
-                            draw_texture_rect_region(tex,
+                            rs->canvas_item_add_texture_rect_region(ci,
                                 Rect2(0.0f, y, td->length, h),
-                                Rect2(0, 0, (float)tsz.x, h), modulate);
+                                tex_rid, Rect2(0, 0, (float)tsz.x, h), modulate);
                             y   += (float)tsz.y;
                             rem -= (float)tsz.y;
                         }
                     }
                 }
             } else {
-                draw_rect(body_rect, modulate);
+                rs->canvas_item_add_rect(ci, body_rect, modulate);
             }
 
             // Base texture centered at origin
-            if (base_tex.is_valid()) {
+            if (base_tex_rid.is_valid()) {
+                Ref<Texture2D> base_tex = td->base_texture_frames[l.base_anim_frame].texture;
                 Vector2i bsz = base_tex->get_size();
-                draw_texture_rect(base_tex,
+                rs->canvas_item_add_texture_rect(ci,
                     Rect2(-bsz.x * 0.5f, -bsz.y * 0.5f, (float)bsz.x, (float)bsz.y),
-                    false, modulate);
+                    base_tex_rid, false, modulate);
             }
         }
     }
-    draw_set_transform(Vector2(), 0.0f, Vector2(1.0f, 1.0f));
 }

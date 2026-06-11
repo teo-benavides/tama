@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/multi_mesh.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/quad_mesh.hpp>
@@ -30,10 +31,13 @@ class TamaServerBulletPool : public godot::Node2D {
         int used         = 0;   // packed: slots [0, used) are all live (== active_count)
         int active_count = 0;
         int birth_frame  = -1;
-        // Per-batch animation state (independent from other batches of same type)
+        // Per-batch main animation state (independent from other batches of same type)
         float anim_time  = 0.0f;
         int   anim_frame = 0;
         godot::Ref<godot::Texture2D> current_texture;
+        // Per-batch spawn animation state
+        float spawn_anim_time  = 0.0f;
+        int   spawn_anim_frame = 0;
         // local_slot -> BulletState*, so recycle can pull the last live slot into a
         // freed hole and keep the batch compact (used == active_count).
         std::vector<BulletState *> slot_bullets;
@@ -68,6 +72,21 @@ class TamaServerBulletPool : public godot::Node2D {
         godot::Ref<godot::Texture2D> spawn_texture;
         // QuadMesh sized to spawn_texture dimensions (created when spawn_delay > 0)
         godot::Ref<godot::QuadMesh> spawn_quad;
+
+        // Blend mode (from animation / spawn_texture TamaAnimatedTexture)
+        int blend_mode       = 0;
+        int spawn_blend_mode = 0;
+
+        // Per-type Node2D children for blend mode isolation.
+        // type_node is added first (renders below), spawn_node second (renders on top).
+        // Materials are set via set_material() — the standard Godot API — which guarantees blend mode works.
+        godot::Node2D *type_node  = nullptr;
+        godot::Node2D *spawn_node = nullptr;
+        godot::Ref<godot::CanvasItemMaterial> type_material;
+        godot::Ref<godot::CanvasItemMaterial> spawn_material;
+
+        // Spawn animation frames (from spawn_texture TamaAnimatedTexture)
+        std::vector<TamaAnimFrame> spawn_anim_frames;
 
         // GPU resources
         godot::Ref<godot::QuadMesh> quad;

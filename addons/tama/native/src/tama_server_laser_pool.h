@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
@@ -28,6 +29,11 @@ class TamaServerLaserPool : public godot::Node2D {
         bool   tile_x           = false;
         bool   tile_y           = false;
         std::vector<TamaAnimFrame> base_texture_frames; // empty = no base texture; size>1 = animated
+
+        // Blend mode from the texture TamaAnimatedTexture; draw_node carries the material.
+        int blend_mode = 0;
+        godot::Node2D *draw_node = nullptr;
+        godot::Ref<godot::CanvasItemMaterial> material;
         int    delay_frames     = 120;
         int    expand_frames    = 10;
         int    duration_frames  = 120;

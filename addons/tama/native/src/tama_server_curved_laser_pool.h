@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/variant/rect2.hpp>
@@ -25,6 +26,15 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
     // Internal structures
     // ------------------------------------------------------------------
 
+    // Per-texture geometry accumulation bucket for batched triangle array draws.
+    struct DrawBucket {
+        godot::RID               texture_rid;
+        std::vector<godot::Vector2> points;
+        std::vector<godot::Color>   colors;
+        std::vector<godot::Vector2> uvs;
+        std::vector<int32_t>        indices;
+    };
+
     struct TypeData {
         godot::Object *config_obj = nullptr;
 
@@ -33,6 +43,15 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
         std::vector<TamaAnimFrame> texture_frames;
         int    pool_size            = 100;
         float  out_of_bounds_margin = 50.0f;
+
+        // Blend mode (from texture TamaAnimatedTexture).
+        // draw_node is a Node2D child of the pool; its material applies the blend mode.
+        int blend_mode = 0;
+        godot::Node2D *draw_node = nullptr;
+        godot::Ref<godot::CanvasItemMaterial> material;
+
+        // Per-type geometry accumulation buckets (keyed by texture RID int).
+        std::unordered_map<int64_t, DrawBucket> draw_buckets;
 
         std::vector<CurvedLaserState>        lasers;
         std::vector<TamaServerCurvedLaser *> wrappers;
@@ -53,16 +72,6 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
 
     struct PendingReg { godot::String key; godot::Object *config; };
     std::vector<PendingReg> _pending_regs;
-
-    // Per-texture accumulation buckets — cleared each frame, capacity retained
-    struct DrawBucket {
-        godot::RID               texture_rid;
-        std::vector<godot::Vector2> points;
-        std::vector<godot::Color>   colors;
-        std::vector<godot::Vector2> uvs;
-        std::vector<int32_t>        indices;
-    };
-    std::unordered_map<int64_t, DrawBucket> _draw_buckets;
 
     // Persistent Packed* buffers for the flush — sized up as needed, never shrunk
     godot::PackedInt32Array    _flush_idx;

@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://65p6f1ql1q4y" path="res://addons/tama/example/bullets/small_bullet_orange.png" id="5_d4i3m"]
 [ext_resource type="Texture2D" uid="uid://lfdjv0lmxssm" path="res://addons/tama/example/bullets/example_bullet.png" id="6_gulsf"]
 [ext_resource type="Texture2D" uid="uid://cabx0lo7p5g18" path="res://addons/tama/example/bullets/spawn_green.png" id="7_bui8c"]
+[ext_resource type="Texture2D" uid="uid://d27oxekhjfn0p" path="res://addons/tama/example/bullets/curvy_yellow.png" id="7_tkymk"]
 [ext_resource type="Texture2D" uid="uid://cfl60futti5a3" path="res://addons/tama/example/bullets/spawn_orange.png" id="9_qvs4j"]
 [ext_resource type="Texture2D" uid="uid://cutiv2a1n4bv2" path="res://addons/tama/example/bullets/fat_bullet_pink.png" id="11_qvs4j"]
 [ext_resource type="Texture2D" uid="uid://ktj7fu54a52q" path="res://addons/tama/example/bullets/laser_pink_base2.png" id="12_j5dk6"]
@@ -23,20 +24,28 @@ frame_count = 1
 frame_0/texture = ExtResource("3_gulsf")
 frame_0/duration = 1
 
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_tkymk"]
+frame_count = 1
+frame_0/texture = ExtResource("4_6fimo")
+frame_0/duration = 1
+
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_qlh80"]
 animation = SubResource("TamaAnimatedTexture_blue")
 shape_radius = 1.0
 spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
-spawn_texture = ExtResource("4_6fimo")
+spawn_texture = SubResource("TamaAnimatedTexture_tkymk")
 starting_spawn_scale = 3.0
 pool_size = 10000
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_circle"]
 frame_count = 1
 frame_0/texture = ExtResource("6_gulsf")
+frame_0/duration = 1
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_qgind"]
+frame_count = 1
+frame_0/texture = ExtResource("12_rspsb")
 frame_0/duration = 1
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_n53vu"]
@@ -45,54 +54,63 @@ texture_scale = Vector2(0.2, 0.2)
 shape_radius = 1.0
 rotates = false
 rect = Rect2(-64, -64, 128, 128)
+spawn_texture = SubResource("TamaAnimatedTexture_qgind")
 pool_size = 10000
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_okdsw"]
+blend_mode = 1
 frame_count = 1
-frame_0/texture = ExtResource("12_rspsb")
+frame_0/texture = ExtResource("7_tkymk")
 frame_0/duration = 1
 
 [sub_resource type="TamaServerCurvedLaserConfig" id="TamaServerCurvedLaserConfig_tkymk"]
 width = 10.0
 texture = SubResource("TamaAnimatedTexture_okdsw")
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_fatblue"]
 frame_count = 1
 frame_0/texture = ExtResource("13_1tfb7")
 frame_0/duration = 1
 
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_unn6j"]
+frame_count = 1
+frame_0/texture = ExtResource("4_6fimo")
+frame_0/duration = 1
+
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_okdsw"]
 animation = SubResource("TamaAnimatedTexture_fatblue")
 shape_radius = 1.0
 rect = Rect2(-14, -8, 28, 16)
-spawn_texture = ExtResource("4_6fimo")
+spawn_texture = SubResource("TamaAnimatedTexture_unn6j")
 starting_spawn_scale = 3.0
 pool_size = 10000
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_fatpink"]
 frame_count = 1
 frame_0/texture = ExtResource("11_qvs4j")
 frame_0/duration = 1
 
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_6tn2w"]
+frame_count = 1
+frame_0/texture = ExtResource("12_rspsb")
+frame_0/duration = 1
+
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_j5dk6"]
 animation = SubResource("TamaAnimatedTexture_fatpink")
 shape_radius = 1.0
 rect = Rect2(-14, -8, 28, 16)
-spawn_texture = ExtResource("12_rspsb")
+spawn_texture = SubResource("TamaAnimatedTexture_6tn2w")
 starting_spawn_scale = 3.0
 pool_size = 10000
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_green"]
 frame_count = 1
 frame_0/texture = ExtResource("4_n53vu")
+frame_0/duration = 1
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_v5vnt"]
+frame_count = 1
+frame_0/texture = ExtResource("7_bui8c")
 frame_0/duration = 1
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_3xnr6"]
@@ -100,11 +118,9 @@ animation = SubResource("TamaAnimatedTexture_green")
 shape_radius = 1.0
 spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
-spawn_texture = ExtResource("7_bui8c")
+spawn_texture = SubResource("TamaAnimatedTexture_v5vnt")
 starting_spawn_scale = 3.0
 pool_size = 10000
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_laser_base"]
 fps = 30.0
@@ -115,6 +131,7 @@ frame_1/texture = ExtResource("12_j5dk6")
 frame_1/duration = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_laser_tex"]
+blend_mode = 1
 fps = 30.0
 frame_count = 2
 frame_0/texture = ExtResource("15_j5dk6")
@@ -128,12 +145,16 @@ texture = SubResource("TamaAnimatedTexture_laser_tex")
 base_texture = SubResource("TamaAnimatedTexture_laser_base")
 expand_frames = 30
 pool_size = 200
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_orange"]
 frame_count = 1
 frame_0/texture = ExtResource("5_d4i3m")
+frame_0/duration = 1
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_j5dk6"]
+fps = 30.0
+frame_count = 1
+frame_0/texture = ExtResource("9_qvs4j")
 frame_0/duration = 1
 
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_d4i3m"]
@@ -141,11 +162,9 @@ animation = SubResource("TamaAnimatedTexture_orange")
 shape_radius = 1.0
 spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
-spawn_texture = ExtResource("9_qvs4j")
+spawn_texture = SubResource("TamaAnimatedTexture_j5dk6")
 starting_spawn_scale = 3.0
 pool_size = 10000
-collision_layer = 2
-collision_mask = 1
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_rainbow"]
 fps = 30.0
@@ -159,16 +178,19 @@ frame_2/duration = 1
 frame_3/texture = ExtResource("5_d4i3m")
 frame_3/duration = 1
 
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_sotnr"]
+frame_count = 1
+frame_0/texture = ExtResource("9_qvs4j")
+frame_0/duration = 1
+
 [sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_i2sv8"]
 animation = SubResource("TamaAnimatedTexture_rainbow")
 shape_radius = 1.0
 spawn_delay = 13
 rect = Rect2(-7, -4, 14, 8)
-spawn_texture = ExtResource("9_qvs4j")
+spawn_texture = SubResource("TamaAnimatedTexture_sotnr")
 starting_spawn_scale = 3.0
 pool_size = 20000
-collision_layer = 2
-collision_mask = 1
 
 [resource]
 default_scene_bullet = ExtResource("1_0v7u8")
