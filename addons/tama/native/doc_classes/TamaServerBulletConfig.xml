@@ -1,53 +1,58 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="TamaServerBulletConfig" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+<class name="TamaServerBulletConfig" inherits="TamaServerObjectConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
 	<brief_description>
 		A Resource that configures the appearance and collision of a server bullet type.
 	</brief_description>
 	<description>
-		[b]TamaServerBulletConfig[/b] defines the visual and physics properties for a server bullet type registered via [method TamaManager.register_server_bullet].
+		[b]TamaServerBulletConfig[/b] defines the visual and physics properties for a server bullet type. Register it in [TamaBulletRegistry] under the [member TamaBulletRegistry.objects] dictionary, or imperatively via [method TamaManager.register_server_bullet].
 
-		Server bullets are rendered as a [MultiMesh] and collide through the physics server directly, making them suitable for large bullet counts (hundreds to thousands on screen simultaneously).
+		Server bullets are rendered as a [MultiMesh] (one draw call per batch), making them suitable for large bullet counts (hundreds to thousands simultaneously). Collision is a per-frame CPU circle test against the tracked player position — no PhysicsServer2D bodies are created.
 
-		Create one [TamaServerBulletConfig] per distinct bullet appearance and register it once at startup.
+		[b]Texture and animation[/b] are defined by a [TamaAnimatedTexture] resource set on [member texture]. For a static bullet use a single-frame [TamaAnimatedTexture]; for an animated sprite use multiple frames with [member TamaAnimatedTexture.fps] > 0. The [member TamaAnimatedTexture.blend_mode] controls how the bullet type is composited (e.g. additive for glows).
+
+		[b]Spawn animation[/b] plays during the optional [member spawn_delay] freeze period. The spawn sprite starts at [member starting_spawn_scale] / [member starting_spawn_opacity] and lerps to scale 1 / opacity 1 by the end of the delay. Set [member spawn_texture] to a [TamaAnimatedTexture] for a custom spawn effect; it renders above the bullet and supports its own blend mode.
 	</description>
 	<tutorials>
 	</tutorials>
 	<members>
-		<member name="frames" type="Texture2D[]" setter="set_frames" getter="get_frames" default="[]">
-			Array of textures used as animation frames. A single-element array produces a static (non-animated) bullet. When more than one texture is provided, the pool cycles through them at [member fps] frames per second. All bullets of this type share the same current frame.
-		</member>
-		<member name="fps" type="float" setter="set_fps" getter="get_fps" default="0.0">
-			Animation playback speed in frames per second. Set to [code]0[/code] to disable animation (the first frame is always shown). Ignored when [member frames] contains only one texture.
+		<member name="texture" type="TamaAnimatedTexture" setter="set_texture" getter="get_texture">
+			Animated texture used to render the bullet. A single-frame [TamaAnimatedTexture] produces a static sprite. All bullets of a type share the same animation phase. The [member TamaAnimatedTexture.blend_mode] is applied to the entire type.
 		</member>
 		<member name="auto_rect" type="bool" setter="set_auto_rect" getter="get_auto_rect" default="true">
-			When [code]true[/code] (default), [member rect] is automatically derived from the size of the first texture in [member frames] whenever [member frames] is assigned. For a 14×8 texture this produces [code]Rect2(-7, -4, 14, 8)[/code]. Set to [code]false[/code] to specify [member rect] manually.
+			When [code]true[/code] (default), [member rect] is automatically derived from the first frame's pixel size whenever [member texture] is assigned. Set to [code]false[/code] to specify [member rect] manually.
 		</member>
 		<member name="rect" type="Rect2" setter="set_rect" getter="get_rect" default="Rect2(-8, -8, 16, 16)">
-			The local-space rectangle that defines the rendered quad size and pivot offset. Only used when [member auto_rect] is [code]false[/code]; when [member auto_rect] is [code]true[/code] this value is overwritten automatically and shown read-only in the inspector.
+			Local-space quad size and pivot offset. When [member auto_rect] is [code]true[/code] this is overwritten automatically and shown read-only in the inspector.
 		</member>
 		<member name="texture_scale" type="Vector2" setter="set_texture_scale" getter="get_texture_scale" default="Vector2(1, 1)">
-			Scales the texture relative to [member rect]. Use this to animate or shrink/grow the sprite without changing the collision shape.
+			Scales the rendered sprite relative to [member rect]. Use this to shrink or grow the visual without changing the collision circle.
 		</member>
 		<member name="shape_radius" type="float" setter="set_shape_radius" getter="get_shape_radius" default="6.0">
-			Radius of the circular collision shape in pixels.
-		</member>
-		<member name="collision_layer" type="int" setter="set_collision_layer" getter="get_collision_layer" default="1">
-			The physics layer this bullet type exists on.
-		</member>
-		<member name="collision_mask" type="int" setter="set_collision_mask" getter="get_collision_mask" default="2">
-			The physics layers this bullet type detects overlaps with.
+			Radius of the circular collision shape in pixels, used for the CPU player-hit test.
 		</member>
 		<member name="rotates" type="bool" setter="set_rotates" getter="get_rotates" default="true">
-			When [code]true[/code], each bullet visually rotates. When [code]false[/code], [member face_velocity] has no effect.
+			When [code]true[/code], each bullet's sprite rotates with its angle. When [code]false[/code], [member face_velocity] has no effect.
 		</member>
 		<member name="face_velocity" type="bool" setter="set_face_velocity" getter="get_face_velocity" default="true">
-			When [code]true[/code] and [member rotates] is [code]true[/code], each bullet rotates to face its actual velocity vector (the combination of [member angle]/[member speed] and [member speed_x]/[member speed_y]). This is useful when [code]accel[/code] adds lateral movement without changing [member angle]. Has no effect when using [code]mvmt[/code] expression directives. Read-only in the inspector when [member rotates] is [code]false[/code].
+			When [code]true[/code] and [member rotates] is [code]true[/code], the sprite faces the actual velocity direction (the combination of [code]angle[/code]/[code]speed[/code] and lateral acceleration). Read-only in the inspector when [member rotates] is [code]false[/code].
+		</member>
+		<member name="spawn_delay" type="int" setter="set_spawn_delay" getter="get_spawn_delay" default="0">
+			Physics frames to freeze the bullet before it starts moving. During this window the spawn animation plays and collision is suppressed. Can be overridden per-fire with the [code]delay[/code] statement in TamaScript.
+		</member>
+		<member name="spawn_texture" type="TamaAnimatedTexture" setter="set_spawn_texture" getter="get_spawn_texture">
+			Animated texture for the spawn effect. Rendered above the bullet during [member spawn_delay]. Supports its own [member TamaAnimatedTexture.blend_mode]. Falls back to the first frame of [member texture] when not set.
+		</member>
+		<member name="starting_spawn_scale" type="float" setter="set_starting_spawn_scale" getter="get_starting_spawn_scale" default="2.0">
+			Scale of the spawn sprite at the first frame of the delay. Lerps to [code]1.0[/code] by the end of the delay.
+		</member>
+		<member name="starting_spawn_opacity" type="float" setter="set_starting_spawn_opacity" getter="get_starting_spawn_opacity" default="0.0">
+			Opacity of the spawn sprite at the first frame of the delay. Lerps to [code]1.0[/code] by the end of the delay.
 		</member>
 		<member name="pool_size" type="int" setter="set_pool_size" getter="get_pool_size" default="1000">
-			Maximum number of bullets of this type that can be alive simultaneously. Bullets fired beyond this limit are silently dropped.
+			Maximum number of simultaneously active bullets of this type. Bullets fired beyond this limit are silently dropped.
 		</member>
 		<member name="out_of_bounds_margin" type="float" setter="set_out_of_bounds_margin" getter="get_out_of_bounds_margin" default="50.0">
-			How far outside the visible viewport (in pixels) a bullet of this type must travel before it is recycled. A value of [code]50[/code] means bullets are despawned once their position is more than 50 pixels beyond any edge of the screen. Overridden by [member TamaManager.global_out_of_bounds_margin] when that value is [code]0[/code] or greater.
+			Distance in pixels past the screen edge before a bullet is recycled. Overridden by [member TamaManager.global_out_of_bounds_margin] when that value is ≥ 0.
 		</member>
 	</members>
 </class>

@@ -10,7 +10,7 @@ class TamaServerBulletConfig : public TamaServerObjectConfig {
 protected:
     static void _bind_methods();
 public:
-    godot::Ref<TamaAnimatedTexture> animation;
+    godot::Ref<TamaAnimatedTexture> texture;
     godot::Rect2   rect           = {-8.0f, -8.0f, 16.0f, 16.0f};
     godot::Vector2 texture_scale  = {1.0f, 1.0f};
     bool           auto_rect      = true;
@@ -29,8 +29,8 @@ public:
     bool _set(const godot::StringName &p_name, const godot::Variant &p_value);
     void _get_property_list(godot::List<godot::PropertyInfo> *p_list) const;
 
-    godot::Ref<TamaAnimatedTexture> get_animation() const { return animation; }
-    void set_animation(godot::Ref<TamaAnimatedTexture> v);
+    godot::Ref<TamaAnimatedTexture> get_texture() const { return texture; }
+    void set_texture(godot::Ref<TamaAnimatedTexture> v);
     godot::Rect2   get_rect()           const { return rect; }
     void set_rect(godot::Rect2 v)             { rect = v; }
     bool get_auto_rect()                const { return auto_rect; }

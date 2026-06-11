@@ -66,6 +66,10 @@ int _TamaSpawnManager::get_scene_bullet_count() const {
 static godot::Vector2 spawner_get_global_position(godot::Object *s) {
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
         return sb->_state ? sb->_state->position : godot::Vector2();
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        return cl->_state ? cl->_state->position : godot::Vector2();
+    if (auto *sl = godot::Object::cast_to<TamaServerLaser>(s))
+        return sl->_state ? sl->_state->position : godot::Vector2();
     if (auto *n = godot::Object::cast_to<godot::Node2D>(s)) return n->get_global_position();
     return godot::Vector2();
 }
@@ -74,44 +78,64 @@ static float spawner_get_last_angle(godot::Object *s) {
     if (auto *b = godot::Object::cast_to<TamaBullet>(s))    return b->_last_angle;
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
         return sb->_state ? sb->_state->last_angle : 0.0f;
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        return cl->_state ? cl->_state->last_angle : 0.0f;
+    if (auto *sl = godot::Object::cast_to<TamaServerLaser>(s))
+        return sl->_state ? sl->_state->last_angle : 0.0f;
     return 0.0f;
 }
 static void spawner_set_last_angle(godot::Object *s, float v) {
     if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   { e->_last_angle = v; return; }
     if (auto *b = godot::Object::cast_to<TamaBullet>(s))    { b->_last_angle = v; return; }
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
-        { if (sb->_state) sb->_state->last_angle = v; }
+        { if (sb->_state) sb->_state->last_angle = v; return; }
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        { if (cl->_state) cl->_state->last_angle = v; return; }
+    if (auto *sl = godot::Object::cast_to<TamaServerLaser>(s))
+        { if (sl->_state) sl->_state->last_angle = v; }
 }
 static float spawner_get_last_speed(godot::Object *s) {
     if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   return e->_last_speed;
     if (auto *b = godot::Object::cast_to<TamaBullet>(s))    return b->_last_speed;
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
         return sb->_state ? sb->_state->last_speed : 0.0f;
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        return cl->_state ? cl->_state->last_speed : 0.0f;
     return 0.0f;
 }
 static void spawner_set_last_speed(godot::Object *s, float v) {
     if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   { e->_last_speed = v; return; }
     if (auto *b = godot::Object::cast_to<TamaBullet>(s))    { b->_last_speed = v; return; }
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
-        { if (sb->_state) sb->_state->last_speed = v; }
+        { if (sb->_state) sb->_state->last_speed = v; return; }
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        { if (cl->_state) cl->_state->last_speed = v; }
 }
 static float spawner_get_last_rot_speed(godot::Object *s) {
     if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   return e->_last_rot_speed;
     if (auto *b = godot::Object::cast_to<TamaBullet>(s))    return b->_last_rot_speed;
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
         return sb->_state ? sb->_state->last_rot_speed : 0.0f;
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        return cl->_state ? cl->_state->last_rot_speed : 0.0f;
     return 0.0f;
 }
 static void spawner_set_last_rot_speed(godot::Object *s, float v) {
     if (auto *e = godot::Object::cast_to<TamaEmitter>(s))   { e->_last_rot_speed = v; return; }
     if (auto *b = godot::Object::cast_to<TamaBullet>(s))    { b->_last_rot_speed = v; return; }
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
-        { if (sb->_state) sb->_state->last_rot_speed = v; }
+        { if (sb->_state) sb->_state->last_rot_speed = v; return; }
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        { if (cl->_state) cl->_state->last_rot_speed = v; }
 }
 static float spawner_get_angle(godot::Object *s) {
     if (auto *b  = godot::Object::cast_to<TamaBullet>(s))       return b->_angle;
     if (auto *sb = godot::Object::cast_to<TamaServerBullet>(s))
         return sb->_state ? sb->_state->angle : 0.0f;
+    if (auto *cl = godot::Object::cast_to<TamaServerCurvedLaser>(s))
+        return cl->_state ? cl->_state->angle : 0.0f;
+    if (auto *sl = godot::Object::cast_to<TamaServerLaser>(s))
+        return sl->_state ? sl->_state->angle : 0.0f;
     if (auto *n  = godot::Object::cast_to<godot::Node2D>(s))    return n->get_rotation();
     return 0.0f;
 }

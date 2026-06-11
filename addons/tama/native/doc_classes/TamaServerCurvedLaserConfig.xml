@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaServerCurvedLaserConfig" inherits="TamaServerObjectConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		A Resource that configures the appearance of a curved (trail-based) laser type.
+	</brief_description>
+	<description>
+		[b]TamaServerCurvedLaserConfig[/b] defines the visual properties for a curved laser type registered in [TamaBulletRegistry] under the [member TamaBulletRegistry.objects] dictionary.
+
+		Curved lasers are rendered as a ribbon trail: the laser's head moves through space each frame and leaves behind a chain of trail segments. The ribbon is drawn as a triangle strip that tapers at tip and tail. Collision is a CPU point-to-segment test against the full trail, with an AABB early-out for performance.
+
+		Curved lasers can run TamaScript [code]act[/code] blocks and respond to [code]chdir[/code], [code]chspd[/code], [code]chrotspd[/code], [code]chpos[/code], and [code]vanish[/code] statements. They can also [code]fire[/code] bullets from their [code]act[/code] block; the spawn position defaults to the laser's current head position.
+
+		[b]Signals:[/b] hits are reported via [signal TamaManager.curved_laser_hit].
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="width" type="float" setter="set_width" getter="get_width" default="20.0">
+			Width of the laser ribbon in pixels.
+		</member>
+		<member name="length" type="int" setter="set_length" getter="get_length" default="30">
+			Number of trail nodes retained in the circular buffer. Higher values produce a longer visible trail at the cost of more geometry per laser. Minimum 2.
+		</member>
+		<member name="texture" type="TamaAnimatedTexture" setter="set_texture" getter="get_texture">
+			Animated texture used to render the laser ribbon. UV coordinates run from 0 (tip) to 1 (tail) along the V axis and 0–1 across the width (U axis). The [member TamaAnimatedTexture.blend_mode] of this texture is applied to all lasers of this type.
+		</member>
+		<member name="pool_size" type="int" setter="set_pool_size" getter="get_pool_size" default="1000">
+			Maximum number of simultaneously active lasers of this type. Spawns beyond this limit are silently dropped.
+		</member>
+		<member name="out_of_bounds_margin" type="float" setter="set_out_of_bounds_margin" getter="get_out_of_bounds_margin" default="50.0">
+			Distance in pixels past the screen edge before the laser's head triggers recycling. Overridden by [member TamaManager.global_out_of_bounds_margin] when that value is ≥ 0.
+		</member>
+	</members>
+</class>

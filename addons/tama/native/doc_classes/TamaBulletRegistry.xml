@@ -1,43 +1,53 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="TamaBulletRegistry" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
 	<brief_description>
-		A Resource that maps bullet type names to scenes and server configs.
+		A Resource that maps bullet and laser type names to their configs and scenes.
 	</brief_description>
 	<description>
-		[b]TamaBulletRegistry[/b] holds the full set of bullet types known to Tama. It can be configured imperatively via [TamaManager] methods, or assembled as a [Resource] asset and assigned to [method TamaManager.set_registry].
+		[b]TamaBulletRegistry[/b] holds the full set of object types known to Tama. It can be configured imperatively via [TamaManager] methods, or assembled as a [Resource] asset and assigned to [method TamaManager.set_registry].
 
-		[b]scene_bullets[/b] maps type name strings to [PackedScene] resources for scene-based bullets.
+		[b]objects[/b] is the primary map. It associates type name strings with [TamaServerObjectConfig] subclass instances:
+		- [TamaServerBulletConfig] — high-performance server bullets rendered with MultiMesh.
+		- [TamaServerStraightLaserConfig] — straight beam lasers with a four-phase lifetime.
+		- [TamaServerCurvedLaserConfig] — ribbon-trail lasers whose head moves each frame.
 
-		[b]server_bullets[/b] maps type name strings to [TamaServerBulletConfig] resources for server (MultiMesh) bullets.
+		[b]scene_bullets[/b] maps type names to [PackedScene] resources for scene-based bullets (full scene graph, one node per bullet).
 
-		When a TamaScript fires a bullet whose type is not found in either dictionary, the fallback used depends on [member default_to_server_bullets]: if [code]false[/code] (default), [member default_scene_bullet] is used; if [code]true[/code], [member default_server_bullet] is used instead.
+		When a TamaScript [code]bul[/code] block references a type name, Tama checks [member objects] first, then [member scene_bullets]. If the type is not found, the fallback depends on [member default_to_server_bullets]: [code]false[/code] uses [member default_scene_bullet]; [code]true[/code] uses [member default_server_bullet].
 	</description>
 	<tutorials>
 	</tutorials>
 	<methods>
+		<method name="get_object_config">
+			<return type="TamaServerObjectConfig" />
+			<param index="0" name="type" type="String" />
+			<description>
+				Returns the [TamaServerObjectConfig] registered under [param type] in [member objects], or [code]null[/code] if none is found. Use this when you don't know the subtype in advance; cast the result to the appropriate config class if needed.
+			</description>
+		</method>
 		<method name="get_server_config">
 			<return type="TamaServerBulletConfig" />
 			<param index="0" name="type" type="String" />
 			<description>
-				Returns the [TamaServerBulletConfig] registered under [param type], or [code]null[/code] if none is found.
+				Returns the [TamaServerBulletConfig] registered under [param type], or [code]null[/code] if none is found or the registered config is not a bullet config.
 			</description>
 		</method>
 	</methods>
 	<members>
-		<member name="default_scene_bullet" type="PackedScene" setter="set_default_scene_bullet" getter="get_default_scene_bullet">
-			Fallback scene used when a bullet type fired by a TamaScript is not found in [member scene_bullets] and [member default_to_server_bullets] is [code]false[/code].
-		</member>
-		<member name="default_server_bullet" type="TamaServerBulletConfig" setter="set_default_server_bullet" getter="get_default_server_bullet">
-			Fallback server bullet config used when a bullet type is not found and [member default_to_server_bullets] is [code]true[/code].
+		<member name="objects" type="Dictionary" setter="set_objects" getter="get_objects" default="{}">
+			Maps type name strings to [TamaServerObjectConfig] resources (bullets, straight lasers, or curved lasers). This is the primary registry for all server-side object types.
 		</member>
 		<member name="scene_bullets" type="Dictionary" setter="set_scene_bullets" getter="get_scene_bullets" default="{}">
-			Maps bullet type names ([String]) to [PackedScene] resources. Used for scene-based bullets.
+			Maps type name strings to [PackedScene] resources for scene-based bullets.
 		</member>
-		<member name="server_bullets" type="Dictionary" setter="set_server_bullets" getter="get_server_bullets" default="{}">
-			Maps bullet type names ([String]) to [TamaServerBulletConfig] resources. Used for server bullets.
+		<member name="default_scene_bullet" type="PackedScene" setter="set_default_scene_bullet" getter="get_default_scene_bullet">
+			Fallback scene used when a bullet type is not found and [member default_to_server_bullets] is [code]false[/code].
+		</member>
+		<member name="default_server_bullet" type="TamaServerBulletConfig" setter="set_default_server_bullet" getter="get_default_server_bullet">
+			Fallback server bullet config used when a type is not found and [member default_to_server_bullets] is [code]true[/code].
 		</member>
 		<member name="default_to_server_bullets" type="bool" setter="set_default_to_server_bullets" getter="get_default_to_server_bullets" default="false">
-			When [code]true[/code], bullets with no type or an unrecognised type fall back to [member default_server_bullet] instead of [member default_scene_bullet]. Has no effect if [member default_server_bullet] is not set.
+			When [code]true[/code], bullets with an unrecognised type fall back to [member default_server_bullet] instead of [member default_scene_bullet].
 		</member>
 	</members>
 </class>

@@ -5,20 +5,60 @@ main
                 dir aim (360/8)*i
                 spd abs 400
                 rotspd 720
-                bul
-                    type curvy
-                    act
-                        wait 0.5
-                        chrotspd
-                            rotspd 0.0
-                        repeat -1 i
-                            var direction 1
-                            if i % 2
-                                direction 1
-                            else
-                                direction -1
-                            chdir
-                                dir rel 90*direction
-                                over 0.2
-                            wait 0.2
-        wait 3.0
+                bul laser
+        wait 10.0
+
+bul laser
+    type curvy
+    act
+        wait 0.5
+        chrotspd
+            rotspd 0.0
+        async act zigzag
+        async act spawn_bullet_trail
+
+act zigzag
+    repeat -1 i
+        var direction 1
+        if i % 2
+            direction 1
+        else
+            direction -1
+        chdir
+            dir rel 90*direction
+            over 0.2
+        wait 0.2
+
+act spawn_bullet_trail
+    var amt 30
+    repeat amt i
+        fire
+            dir abs (360/8)*randi_range(0, 7)
+            spd 0
+            pos
+                x rel randf_range(-5.0, 5.0)
+                y rel randf_range(-5.0, 5.0)
+            bul lightball((amt-1-i)*3+60)
+        fire
+            dir abs (360/8)*randi_range(0, 7)
+            spd 0
+            pos
+                x rel randf_range(-5.0, 5.0)
+                y rel randf_range(-5.0, 5.0)
+            bul lightball((amt-1-i)*3+60)
+        fire
+            dir abs (360/8)*randi_range(0, 7)
+            spd 0
+            pos
+                x rel randf_range(-5.0, 5.0)
+                y rel randf_range(-5.0, 5.0)
+            bul lightball((amt-1-i)*3+60)
+        waitf 3
+
+bul lightball(start_delay)
+    type lightball_blue
+    act
+        waitf start_delay
+        chspd
+            spd abs 100
+            over 2.0

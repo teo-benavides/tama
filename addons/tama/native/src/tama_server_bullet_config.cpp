@@ -5,15 +5,15 @@
 using namespace godot;
 
 static void _auto_compute_rect(TamaServerBulletConfig *cfg) {
-    if (!cfg->animation.is_valid()) return;
-    Ref<Texture2D> first = cfg->animation->get_first_texture();
+    if (!cfg->texture.is_valid()) return;
+    Ref<Texture2D> first = cfg->texture->get_first_texture();
     if (!first.is_valid()) return;
     Vector2i sz = first->get_size();
     cfg->rect = Rect2(-sz.x * 0.5f, -sz.y * 0.5f, (float)sz.x, (float)sz.y);
 }
 
-void TamaServerBulletConfig::set_animation(Ref<TamaAnimatedTexture> v) {
-    animation = v;
+void TamaServerBulletConfig::set_texture(Ref<TamaAnimatedTexture> v) {
+    texture = v;
     if (auto_rect) _auto_compute_rect(this);
 }
 
@@ -61,8 +61,8 @@ void TamaServerBulletConfig::_get_property_list(List<PropertyInfo> *p_list) cons
 }
 
 void TamaServerBulletConfig::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("get_animation"),          &TamaServerBulletConfig::get_animation);
-    ClassDB::bind_method(D_METHOD("set_animation", "v"),     &TamaServerBulletConfig::set_animation);
+    ClassDB::bind_method(D_METHOD("get_texture"),          &TamaServerBulletConfig::get_texture);
+    ClassDB::bind_method(D_METHOD("set_texture", "v"),     &TamaServerBulletConfig::set_texture);
     ClassDB::bind_method(D_METHOD("get_auto_rect"),          &TamaServerBulletConfig::get_auto_rect);
     ClassDB::bind_method(D_METHOD("set_auto_rect", "v"),     &TamaServerBulletConfig::set_auto_rect);
     ClassDB::bind_method(D_METHOD("get_rect"),               &TamaServerBulletConfig::get_rect);
@@ -84,9 +84,9 @@ void TamaServerBulletConfig::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_starting_spawn_opacity"),       &TamaServerBulletConfig::get_starting_spawn_opacity);
     ClassDB::bind_method(D_METHOD("set_starting_spawn_opacity","v"),   &TamaServerBulletConfig::set_starting_spawn_opacity);
 
-    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "animation",
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture",
                  PROPERTY_HINT_RESOURCE_TYPE, "TamaAnimatedTexture"),
-                 "set_animation", "get_animation");
+                 "set_texture", "get_texture");
     ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_rect"), "set_auto_rect", "get_auto_rect");
     // "rect" is dynamic via _get_property_list (read-only when auto_rect is true)
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR2,"texture_scale"), "set_texture_scale", "get_texture_scale");

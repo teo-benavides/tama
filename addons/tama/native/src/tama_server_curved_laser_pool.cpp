@@ -245,6 +245,8 @@ void TamaServerCurvedLaserPool::_recycle_internal(CurvedLaserState *l) {
             break;
         }
     }
+
+    queue_redraw();
 }
 
 // ---------------------------------------------------------------------------
@@ -429,10 +431,11 @@ void TamaServerCurvedLaserPool::_physics_process(double p_delta) {
         }
     }
 
+    bool had_recycles = !_to_recycle.empty();
     for (auto *l : _to_recycle) _recycle_internal(l);
     _to_recycle.clear();
 
-    if (!_active.empty()) queue_redraw();
+    if (!_active.empty() || had_recycles) queue_redraw();
 }
 
 // ---------------------------------------------------------------------------

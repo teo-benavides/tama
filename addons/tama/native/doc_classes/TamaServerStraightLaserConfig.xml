@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaServerStraightLaserConfig" inherits="TamaServerObjectConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		A Resource that configures the appearance and lifetime of a straight (beam) laser type.
+	</brief_description>
+	<description>
+		[b]TamaServerStraightLaserConfig[/b] defines the visual properties and phase timings for a straight laser type registered in [TamaBulletRegistry] under the [member TamaBulletRegistry.objects] dictionary.
+
+		Straight lasers are rendered as an axis-aligned textured rectangle that extends [member length] pixels from the spawn position in the laser's direction. They pass through four phases:
+
+		[b]Phase 0 — delay:[/b] The laser appears as a one-pixel-wide line for [member delay_frames] physics frames. No collision.
+		[b]Phase 1 — expand:[/b] The width grows from 1 pixel to [member width] over [member expand_frames] frames. Collision active.
+		[b]Phase 2 — active:[/b] Full-width beam held for [member duration_frames] frames. Collision active.
+		[b]Phase 3 — fade:[/b] Opacity decreases to zero over [member fade_frames] frames. No collision.
+
+		Straight lasers can run TamaScript [code]act[/code] blocks and respond to [code]chdir[/code], [code]chpos[/code], and [code]vanish[/code]. They can also [code]fire[/code] bullets from their [code]act[/code] block; the spawn position defaults to the laser's base position.
+
+		[b]Signals:[/b] hits are reported via [signal TamaManager.straight_laser_hit].
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="width" type="float" setter="set_width" getter="get_width" default="20.0">
+			Full width of the laser beam in pixels at maximum expansion (phases 2 and 3).
+		</member>
+		<member name="length" type="float" setter="set_length" getter="get_length" default="1000.0">
+			Length of the beam rectangle in pixels, extending from the spawn position along the laser's angle.
+		</member>
+		<member name="texture" type="TamaAnimatedTexture" setter="set_texture" getter="get_texture">
+			Animated texture tiled or stretched across the laser body. Tiling behaviour is controlled by [member tile_x] and [member tile_y]. The [member TamaAnimatedTexture.blend_mode] of this texture is applied to all lasers of this type.
+		</member>
+		<member name="tile_x" type="bool" setter="set_tile_x" getter="get_tile_x" default="false">
+			When [code]true[/code], the texture is tiled along the laser's length axis rather than stretched.
+		</member>
+		<member name="tile_y" type="bool" setter="set_tile_y" getter="get_tile_y" default="false">
+			When [code]true[/code], the texture is tiled across the laser's width axis rather than stretched.
+		</member>
+		<member name="base_texture" type="TamaAnimatedTexture" setter="set_base_texture" getter="get_base_texture">
+			Optional animated texture drawn centred at the laser's spawn position (the base of the beam). Useful for an emitter flash or origin glow effect.
+		</member>
+		<member name="delay_frames" type="int" setter="set_delay_frames" getter="get_delay_frames" default="120">
+			Physics frames to show the one-pixel "warning line" before the beam expands. No collision during this phase.
+		</member>
+		<member name="expand_frames" type="int" setter="set_expand_frames" getter="get_expand_frames" default="10">
+			Physics frames over which the beam expands from 1 pixel to full [member width]. Collision is active during this phase.
+		</member>
+		<member name="duration_frames" type="int" setter="set_duration_frames" getter="get_duration_frames" default="120">
+			Physics frames the beam holds at full width before fading. Collision is active during this phase.
+		</member>
+		<member name="fade_frames" type="int" setter="set_fade_frames" getter="get_fade_frames" default="30">
+			Physics frames over which the beam fades to invisible before being recycled. No collision during this phase.
+		</member>
+		<member name="pool_size" type="int" setter="set_pool_size" getter="get_pool_size" default="1000">
+			Maximum number of simultaneously active lasers of this type. Spawns beyond this limit are silently dropped.
+		</member>
+		<member name="out_of_bounds_margin" type="float" setter="set_out_of_bounds_margin" getter="get_out_of_bounds_margin" default="50.0">
+			Not used for straight lasers (they have a fixed lifetime and do not move outside the screen). Inherited from [TamaServerObjectConfig].
+		</member>
+	</members>
+</class>

@@ -45,47 +45,55 @@ Check out the `example` folder inside the addon to see example TamaScript script
             spd 200
     ```
 
+## TamaAnimatedTexture
+
+`TamaAnimatedTexture` is the texture type used by all server object configs. It stores animation frames, playback speed, and a blend mode that is applied to all objects of that type.
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `frame_count` | `int` | `0` | Number of frames. Set to `1` for a static (non-animated) texture. |
+| `fps` | `float` | `60` | Animation playback speed. `0` or less disables animation. |
+| `blend_mode` | `enum` | `Mix` | How the object type is composited: **Mix**, **Add**, **Subtract**, **Multiply**, **Premultiplied Alpha**. Applied per type. |
+| `frame_N/texture` | `Texture2D` | — | Texture for frame N (shown in the inspector when `frame_count` > 0). |
+| `frame_N/duration` | `int` | `1` | How many animation-frames this frame is shown before advancing. |
+
 ## Server Bullets
 
-Server bullets are a high-performance bullet type that uses `RenderingServer` (MultiMesh) and `PhysicsServer2D` directly — no scene nodes are created per bullet. This makes them suitable for dense patterns with thousands of simultaneous bullets.
+Server bullets use `RenderingServer` (MultiMesh) for rendering — no scene nodes are created per bullet. Collision is a CPU circle test against the player position each frame. This makes them suitable for dense patterns with hundreds to thousands of simultaneous bullets.
 
 ### Setup
 
-1. In your `TamaBulletRegistry`, click on `Default Server Bullet` and create a new `TamaServerBulletConfig`.
-2. Click the newly created `TamaServerBulletConfig` and modify its settings (see properties below).
-3. Check "Default to Server Bullets".
+1. In your `TamaBulletRegistry`, open the `objects` dictionary and add an entry whose key is the type name and whose value is a new `TamaServerBulletConfig`.
+2. Configure the `TamaServerBulletConfig` (see properties below).
+3. Optionally check "Default to Server Bullets" to use this type when no `bul` block is specified.
 
 ### TamaServerBulletConfig Properties
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `frames` | `Array[Texture2D]` | `[]` | Animation frames. Single texture = static sprite. |
-| `fps` | `float` | `0` | Animation playback speed. `0` = no animation. |
-| `auto_rect` | `bool` | `true` | Auto-compute sprite rect from the first frame's size. Disable to set `rect` manually. |
+| `texture` | `TamaAnimatedTexture` | — | Animated texture for the bullet. Single-frame = static sprite. Blend mode set here. |
+| `auto_rect` | `bool` | `true` | Auto-compute sprite rect from the first frame's pixel size. |
 | `rect` | `Rect2` | `(-8,-8,16,16)` | Sprite draw rect (used when `auto_rect` is off). |
-| `texture_scale` | `Vector2` | `(1,1)` | Scale applied to the sprite. |
+| `texture_scale` | `Vector2` | `(1,1)` | Scale applied to the sprite visual only. |
 | `shape_radius` | `float` | `6` | Collision circle radius in pixels. |
-| `collision_layer` | `int` | `1` | Physics collision layer. |
-| `collision_mask` | `int` | `2` | Physics collision mask. |
 | `rotates` | `bool` | `true` | Whether the sprite rotates with the bullet's angle. |
 | `face_velocity` | `bool` | `true` | Sprite faces the direction of movement (requires `rotates`). |
-| `pool_size` | `int` | `1000` | Maximum simultaneous bullets of this type. When the pool is full, new spawns are silently dropped. |
+| `pool_size` | `int` | `1000` | Maximum simultaneous bullets of this type. Excess spawns are silently dropped. |
 | `out_of_bounds_margin` | `float` | `50` | Extra pixels past the screen edge before a bullet is recycled. |
-| `spawn_delay` | `int` | `0` | Physics frames to freeze the bullet before it starts moving. A spawn animation plays during this period. `0` = no delay (can still be overridden per-fire with `delay` in TamaScript). |
-| `spawn_texture` | `Texture2D` | `null` | Texture used for the spawn animation. Falls back to the first frame in `frames` if not set. |
-| `starting_spawn_scale` | `float` | `2.0` | Scale of the spawn animation sprite at t=0 (start). Lerps to 1.0 by the end of the delay. |
-| `starting_spawn_opacity` | `float` | `0.0` | Opacity of the spawn animation sprite at t=0. Lerps to 1.0 by the end of the delay. |
+| `spawn_delay` | `int` | `0` | Physics frames to freeze the bullet before it starts moving. Spawn animation plays during this period. Can be overridden per-fire with `delay` in TamaScript. |
+| `spawn_texture` | `TamaAnimatedTexture` | — | Animated texture for the spawn effect (rendered above the bullet). Falls back to the first frame of `texture` when not set. |
+| `starting_spawn_scale` | `float` | `2.0` | Scale of the spawn sprite at the first delay frame. Lerps to `1.0` by the end. |
+| `starting_spawn_opacity` | `float` | `0.0` | Opacity of the spawn sprite at the first delay frame. Lerps to `1.0` by the end. |
 
 ### Collision Detection
 
-Connect to the `bullet_hit` signal on `TamaManager`:
+Connect to `TamaManager.bullet_hit`. Collision fires when the bullet's `shape_radius` + `TamaManager.player_hitbox_radius` overlaps `TamaManager.player_position`:
 
 ```gdscript
-TamaManager.bullet_hit.connect(_on_bullet_hit)
+func _ready():
+    TamaManager.bullet_hit.connect(_on_bullet_hit)
 
-func _on_bullet_hit(bullet: TamaServerBullet, body_instance_id: int):
-    if body_instance_id == get_instance_id():
-        # handle hit...
+func _on_bullet_hit(bullet: TamaServerBullet) -> void:
     TamaManager.destroy_server_bullet(bullet)
 ```
 
@@ -95,7 +103,69 @@ func _on_bullet_hit(bullet: TamaServerBullet, body_instance_id: int):
 
 The following TamaScript features are **not supported** for server bullets:
 
-- **`emt`** — attaching a firing emitter to a bullet requires a scene node and does not work with server bullets.
+- **`emt`** — attaching a firing emitter requires a scene node and does not work with server bullets.
+
+## Straight Lasers
+
+Straight lasers are beam-shaped objects anchored at a fixed position and angle, passing through four phases: **delay** (warning line, no collision) → **expand** (beam grows to full width) → **active** (full width) → **fade** (beam disappears).
+
+### Setup
+
+Add a `TamaServerStraightLaserConfig` entry to the `objects` dictionary in your `TamaBulletRegistry`.
+
+### TamaServerStraightLaserConfig Properties
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `width` | `float` | `20` | Full beam width in pixels at maximum expansion. |
+| `length` | `float` | `1000` | Beam length in pixels from the spawn position. |
+| `texture` | `TamaAnimatedTexture` | — | Animated texture stretched/tiled across the beam. Blend mode set here. |
+| `tile_x` | `bool` | `false` | Tile the texture along the beam's length instead of stretching. |
+| `tile_y` | `bool` | `false` | Tile the texture across the beam's width instead of stretching. |
+| `base_texture` | `TamaAnimatedTexture` | — | Optional texture drawn centred at the spawn point (e.g. an emitter flash). |
+| `delay_frames` | `int` | `120` | Frames of the 1-pixel warning line. No collision. |
+| `expand_frames` | `int` | `10` | Frames to expand from 1px to full width. Collision active. |
+| `duration_frames` | `int` | `120` | Frames at full width. Collision active. |
+| `fade_frames` | `int` | `30` | Frames to fade out. No collision. |
+| `pool_size` | `int` | `1000` | Maximum simultaneous lasers of this type. |
+
+### Collision Detection
+
+```gdscript
+func _ready():
+    TamaManager.straight_laser_hit.connect(_on_laser_hit)
+
+func _on_laser_hit(laser: TamaServerLaser) -> void:
+    pass  # handle player hit
+```
+
+## Curved Lasers
+
+Curved lasers move through space each frame and render as a ribbon trail. The trail is a triangle strip that tapers at tip and tail; collision is tested against all trail segments.
+
+### Setup
+
+Add a `TamaServerCurvedLaserConfig` entry to the `objects` dictionary in your `TamaBulletRegistry`.
+
+### TamaServerCurvedLaserConfig Properties
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `width` | `float` | `20` | Ribbon width in pixels. |
+| `length` | `int` | `30` | Number of trail nodes retained. Higher = longer visible trail. |
+| `texture` | `TamaAnimatedTexture` | — | Animated texture applied to the ribbon (UV 0→1 along trail length). Blend mode set here. |
+| `pool_size` | `int` | `1000` | Maximum simultaneous lasers of this type. |
+| `out_of_bounds_margin` | `float` | `50` | Pixels past the screen edge before the laser head triggers recycling. |
+
+### Collision Detection
+
+```gdscript
+func _ready():
+    TamaManager.curved_laser_hit.connect(_on_curved_laser_hit)
+
+func _on_curved_laser_hit(laser: TamaServerCurvedLaser) -> void:
+    pass  # handle player hit
+```
 
 ## TamaManager Reference
 
@@ -103,22 +173,29 @@ The following TamaScript features are **not supported** for server bullets:
 
 | Property / Signal | Type | Description |
 |---|---|---|
-| `registry` | `TamaBulletRegistry` | The active bullet registry. Set before `start()` is called on any emitter. |
-| `player_position` | `Vector2` | Player world position used for `dir aim` calculations. Update every frame. |
-| `spawn_parent` | `NodePath` | Where scene bullets are parented. Defaults to the current scene root. |
+| `registry` | `TamaBulletRegistry` | The active object registry. Set before `start()` is called on any emitter. |
+| `player_position` | `Vector2` | Player world position. Update every frame for `dir aim` and collision. |
+| `player_hitbox_radius` | `float` | Radius of the player hitbox in pixels used by CPU collision tests. Default `3`. |
+| `spawn_parent` | `NodePath` | Where scene bullets are parented. Defaults to the scene root. |
 | `context` | `TamaContext` | Custom context that exposes GDScript functions to TamaScript. |
-| `global_out_of_bounds_margin` | `float` | When ≥ 0, overrides the per-config `out_of_bounds_margin` for all server bullets. Default `-1` (disabled). |
-| `bullet_count` | `int` *(read-only)* | Total active bullets across all types. |
-| `bullet_hit(bullet, body_id)` | Signal | Emitted when a server bullet's collision area overlaps a physics body. |
+| `global_out_of_bounds_margin` | `float` | When ≥ 0, overrides the per-config `out_of_bounds_margin` for all types. Default `-1` (disabled). |
+| `bullet_count` | `int` *(read-only)* | Total active server objects across all types. |
+| `bullet_hit(bullet)` | Signal | Emitted when a server bullet overlaps the player hitbox. |
+| `straight_laser_hit(laser)` | Signal | Emitted when a straight laser beam overlaps the player hitbox (expand/active phases only). |
+| `curved_laser_hit(laser)` | Signal | Emitted when any segment of a curved laser trail overlaps the player hitbox. |
 
 Key methods:
 
 | Method | Description |
 |---|---|
-| `get_server_bullet_pool()` | Returns the `TamaServerBulletPool` node (for manual `recycle()` calls). |
+| `get_server_bullet_pool()` | Returns the `TamaServerBulletPool` node. |
+| `get_laser_pool()` | Returns the `TamaServerLaserPool` node for straight lasers. |
+| `get_curved_laser_pool()` | Returns the `TamaServerCurvedLaserPool` node for curved lasers. |
 | `register_bullet(type, scene)` | Imperative alternative to setting `scene_bullets` in the registry. |
-| `register_server_bullet(type, config)` | Imperative alternative to setting `server_bullets` in the registry. |
-| `load_scripts(path)` | Reload all TamaScript files from the given path (or from project settings if omitted). |
+| `register_server_bullet(type, config)` | Imperative alternative to adding to `objects` in the registry. |
+| `destroy_server_bullet(bullet)` | Recycles a server bullet. Call from `bullet_hit`. |
+| `recycle_all()` | Immediately recycles all active bullets and lasers. |
+| `load_scripts(path)` | Load all TamaScript files from the given path (or project settings if omitted). |
 
 ## TamaScript Syntax
 

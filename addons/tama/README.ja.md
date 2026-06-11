@@ -44,47 +44,55 @@ Tamaは、独自の弾幕定義言語「TamaScript」を搭載した、弾幕STG
             spd 200
     ```
 
+## TamaAnimatedTexture
+
+`TamaAnimatedTexture` は、すべてのサーバーオブジェクトコンフィグで使用されるテクスチャ型です。アニメーションフレーム・再生速度・ブレンドモードを保持し、そのタイプの全オブジェクトに適用されます。
+
+| プロパティ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `frame_count` | `int` | `0` | フレーム数。`1` にすると静止テクスチャになる。 |
+| `fps` | `float` | `60` | アニメーション再生速度。`0` 以下でアニメーション無効。 |
+| `blend_mode` | `enum` | `Mix` | オブジェクトタイプの合成方法：**Mix**・**Add**・**Subtract**・**Multiply**・**Premultiplied Alpha**。タイプ単位で適用される。 |
+| `frame_N/texture` | `Texture2D` | — | フレームNのテクスチャ（`frame_count` > 0のときインスペクターに表示）。 |
+| `frame_N/duration` | `int` | `1` | 次のフレームに進む前にこのフレームを表示するアニメーションフレーム数。 |
+
 ## サーバー弾
 
-サーバー弾は、`RenderingServer`（MultiMesh）と`PhysicsServer2D`を直接使用する高パフォーマンスな弾タイプです。弾ごとにシーンノードを作成しないため、数千発の弾を同時に扱う高密度な弾幕パターンに適しています。
+サーバー弾は `RenderingServer`（MultiMesh）を使ってレンダリングします。弾ごとにシーンノードを作成せず、コリジョンは毎物理フレームにプレイヤー位置に対してCPUで円形判定を行います。数百〜数千発の弾を同時に扱う高密度な弾幕パターンに適しています。
 
 ### セットアップ
 
-1. `TamaBulletRegistry` の「Default Server Bullet」をクリックし、新しい `TamaServerBulletConfig` を作成します。
-2. 作成した `TamaServerBulletConfig` をクリックして設定を変更します（下記プロパティ参照）。
-3. 「Default to Server Bullets」にチェックを入れます。
+1. `TamaBulletRegistry` の `objects` ディクショナリを開き、キーをタイプ名、値を新しい `TamaServerBulletConfig` としてエントリを追加します。
+2. `TamaServerBulletConfig` の設定を変更します（下記プロパティ参照）。
+3. （任意）「Default to Server Bullets」にチェックを入れると、`bul` ブロックが指定されていないときにこのタイプがデフォルトになります。
 
 ### TamaServerBulletConfig のプロパティ
 
 | プロパティ | 型 | デフォルト | 説明 |
 |---|---|---|---|
-| `frames` | `Array[Texture2D]` | `[]` | アニメーションフレーム。1枚 = 静止スプライト。 |
-| `fps` | `float` | `0` | アニメーション再生速度。`0` = アニメーションなし。 |
-| `auto_rect` | `bool` | `true` | 最初のフレームのサイズからスプライトの矩形を自動計算する。オフにすると `rect` を手動設定できる。 |
+| `texture` | `TamaAnimatedTexture` | — | 弾のアニメーションテクスチャ。1フレーム = 静止スプライト。ブレンドモードもここで設定。 |
+| `auto_rect` | `bool` | `true` | 最初のフレームのピクセルサイズからスプライトの矩形を自動計算する。 |
 | `rect` | `Rect2` | `(-8,-8,16,16)` | スプライトの描画矩形（`auto_rect` がオフのときに使用）。 |
-| `texture_scale` | `Vector2` | `(1,1)` | スプライトに適用するスケール。 |
-| `shape_radius` | `float` | `6` | コリジョン円の半径（ピクセル）。 |
-| `collision_layer` | `int` | `1` | 物理コリジョンレイヤー。 |
-| `collision_mask` | `int` | `2` | 物理コリジョンマスク。 |
+| `texture_scale` | `Vector2` | `(1,1)` | スプライトの見た目にのみ適用するスケール。 |
+| `shape_radius` | `float` | `6` | CPUプレイヤー判定に使うコリジョン円の半径（ピクセル）。 |
 | `rotates` | `bool` | `true` | スプライトが弾の角度に合わせて回転するかどうか。 |
 | `face_velocity` | `bool` | `true` | スプライトが移動方向を向くかどうか（`rotates` が必要）。 |
-| `pool_size` | `int` | `1000` | このタイプの最大同時弾数。プールが満杯のときは新規スポーンを無視する。 |
+| `pool_size` | `int` | `1000` | このタイプの最大同時弾数。超過したスポーンは無視される。 |
 | `out_of_bounds_margin` | `float` | `50` | 弾がリサイクルされるまでの画面外余白（ピクセル）。 |
-| `spawn_delay` | `int` | `0` | 弾が動き始める前に停止するフレーム数（物理フレーム）。この間スポーンアニメーションが再生される。`0` = ディレイなし（TamaScript の `delay` で上書き可能）。 |
-| `spawn_texture` | `Texture2D` | `null` | スポーンアニメーションに使用するテクスチャ。未設定の場合は `frames` の1枚目にフォールバック。 |
-| `starting_spawn_scale` | `float` | `2.0` | スポーンアニメーション開始時（t=0）のスケール。ディレイ終了時に 1.0 へ補間される。 |
-| `starting_spawn_opacity` | `float` | `0.0` | スポーンアニメーション開始時（t=0）の不透明度。ディレイ終了時に 1.0 へ補間される。 |
+| `spawn_delay` | `int` | `0` | 弾が動き始める前に停止するフレーム数（物理フレーム）。この間スポーンアニメーションが再生され、コリジョンも無効になる。TamaScript の `delay` で上書き可能。 |
+| `spawn_texture` | `TamaAnimatedTexture` | — | スポーンエフェクト用のアニメーションテクスチャ（弾の上に描画）。独自のブレンドモードをサポート。未設定の場合は `texture` の1枚目にフォールバック。 |
+| `starting_spawn_scale` | `float` | `2.0` | ディレイ最初のフレームにおけるスポーンスプライトのスケール。ディレイ終了時に `1.0` へ補間される。 |
+| `starting_spawn_opacity` | `float` | `0.0` | ディレイ最初のフレームにおけるスポーンスプライトの不透明度。ディレイ終了時に `1.0` へ補間される。 |
 
 ### コリジョン検出
 
-`TamaManager` の `bullet_hit` シグナルに接続します:
+`TamaManager.bullet_hit` に接続します。`shape_radius` + `TamaManager.player_hitbox_radius` が `TamaManager.player_position` と重なったときに発火します:
 
 ```gdscript
-TamaManager.bullet_hit.connect(_on_bullet_hit)
+func _ready():
+    TamaManager.bullet_hit.connect(_on_bullet_hit)
 
-func _on_bullet_hit(bullet: TamaServerBullet, body_instance_id: int):
-    if body_instance_id == get_instance_id():
-        # ヒット処理...
+func _on_bullet_hit(bullet: TamaServerBullet) -> void:
     TamaManager.destroy_server_bullet(bullet)
 ```
 
@@ -96,28 +104,97 @@ func _on_bullet_hit(bullet: TamaServerBullet, body_instance_id: int):
 
 - **`emt`** — 弾に発射エミッターをアタッチする機能はシーンノードが必要なため、サーバー弾では動作しません。
 
+## ストレートレーザー
+
+ストレートレーザーは、固定位置・固定角度のビーム型オブジェクトです。**ディレイ**（警告線、コリジョンなし）→ **展開**（幅が広がる）→ **アクティブ**（全幅）→ **フェード**（消滅）の4フェーズを経ます。
+
+### セットアップ
+
+`TamaBulletRegistry` の `objects` ディクショナリに `TamaServerStraightLaserConfig` エントリを追加します。
+
+### TamaServerStraightLaserConfig のプロパティ
+
+| プロパティ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `width` | `float` | `20` | 最大展開時のビーム幅（ピクセル）。 |
+| `length` | `float` | `1000` | スポーン位置からのビーム長（ピクセル）。 |
+| `texture` | `TamaAnimatedTexture` | — | ビームに貼り付けるアニメーションテクスチャ。ブレンドモードもここで設定。 |
+| `tile_x` | `bool` | `false` | ビームの長さ方向にテクスチャをタイリングする（オフの場合は引き伸ばし）。 |
+| `tile_y` | `bool` | `false` | ビームの幅方向にテクスチャをタイリングする（オフの場合は引き伸ばし）。 |
+| `base_texture` | `TamaAnimatedTexture` | — | スポーン位置を中心に描画するオプションテクスチャ（発射フラッシュなど）。 |
+| `delay_frames` | `int` | `120` | 1ピクセルの警告線を表示するフレーム数。コリジョンなし。 |
+| `expand_frames` | `int` | `10` | 1pxから全幅へ展開するフレーム数。コリジョン有効。 |
+| `duration_frames` | `int` | `120` | 全幅を維持するフレーム数。コリジョン有効。 |
+| `fade_frames` | `int` | `30` | フェードアウトするフレーム数。コリジョンなし。 |
+| `pool_size` | `int` | `1000` | このタイプの最大同時レーザー数。 |
+
+### コリジョン検出
+
+```gdscript
+func _ready():
+    TamaManager.straight_laser_hit.connect(_on_laser_hit)
+
+func _on_laser_hit(laser: TamaServerLaser) -> void:
+    pass  # プレイヤーヒット処理
+```
+
+## 曲線レーザー
+
+曲線レーザーは毎フレーム空間を移動し、リボン状のトレイルとして描画されます。トレイルは先端と末端が細くなる三角形ストリップです。コリジョンはトレイル全体のすべてのセグメントに対して判定されます。
+
+### セットアップ
+
+`TamaBulletRegistry` の `objects` ディクショナリに `TamaServerCurvedLaserConfig` エントリを追加します。
+
+### TamaServerCurvedLaserConfig のプロパティ
+
+| プロパティ | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `width` | `float` | `20` | リボン幅（ピクセル）。 |
+| `length` | `int` | `30` | 保持するトレイルノード数。大きいほどトレイルが長くなる。 |
+| `texture` | `TamaAnimatedTexture` | — | リボンに適用するアニメーションテクスチャ（UV: トレイル長方向 0→1）。ブレンドモードもここで設定。 |
+| `pool_size` | `int` | `1000` | このタイプの最大同時レーザー数。 |
+| `out_of_bounds_margin` | `float` | `50` | レーザーの先端がリサイクルされるまでの画面外余白（ピクセル）。 |
+
+### コリジョン検出
+
+```gdscript
+func _ready():
+    TamaManager.curved_laser_hit.connect(_on_curved_laser_hit)
+
+func _on_curved_laser_hit(laser: TamaServerCurvedLaser) -> void:
+    pass  # プレイヤーヒット処理
+```
+
 ## TamaManager リファレンス
 
 `TamaManager` はシングルトンです。主なプロパティ:
 
 | プロパティ / シグナル | 型 | 説明 |
 |---|---|---|
-| `registry` | `TamaBulletRegistry` | 使用する弾レジストリ。エミッターの `start()` より前に設定します。 |
-| `player_position` | `Vector2` | `dir aim` の計算に使うプレイヤーのワールド座標。毎フレーム更新してください。 |
-| `spawn_parent` | `NodePath` | シーン弾の親ノード。デフォルトは現在のシーンのルート。 |
+| `registry` | `TamaBulletRegistry` | 使用するオブジェクトレジストリ。エミッターの `start()` より前に設定します。 |
+| `player_position` | `Vector2` | `dir aim` とコリジョン判定に使うプレイヤーのワールド座標。毎フレーム更新してください。 |
+| `player_hitbox_radius` | `float` | CPUコリジョン判定で使うプレイヤーヒットボックスの半径（ピクセル）。デフォルト `3`。 |
+| `spawn_parent` | `NodePath` | シーン弾の親ノード。デフォルトはシーンのルート。 |
 | `context` | `TamaContext` | GDScript関数をTamaScriptに公開するカスタムコンテキスト。 |
-| `global_out_of_bounds_margin` | `float` | 0以上のとき、すべてのサーバー弾のコンフィグごとの余白を上書きします。デフォルト `-1`（無効）。 |
-| `bullet_count` | `int` *（読み取り専用）* | 全タイプのアクティブな弾の合計数。 |
-| `bullet_hit(bullet, body_id)` | シグナル | サーバー弾のコリジョンエリアが物理ボディと重なったときに発火。 |
+| `global_out_of_bounds_margin` | `float` | 0以上のとき、すべてのタイプのコンフィグごとの余白を上書きします。デフォルト `-1`（無効）。 |
+| `bullet_count` | `int` *（読み取り専用）* | 全タイプのアクティブなサーバーオブジェクトの合計数。 |
+| `bullet_hit(bullet)` | シグナル | サーバー弾がプレイヤーヒットボックスと重なったときに発火。 |
+| `straight_laser_hit(laser)` | シグナル | ストレートレーザーのビームがプレイヤーヒットボックスと重なったときに発火（展開・アクティブフェーズのみ）。 |
+| `curved_laser_hit(laser)` | シグナル | 曲線レーザーのトレイルのいずれかのセグメントがプレイヤーヒットボックスと重なったときに発火。 |
 
 主なメソッド:
 
 | メソッド | 説明 |
 |---|---|
-| `get_server_bullet_pool()` | `TamaServerBulletPool` ノードを返します（手動で `recycle()` を呼ぶ際などに使用）。 |
+| `get_server_bullet_pool()` | `TamaServerBulletPool` ノードを返します。 |
+| `get_laser_pool()` | ストレートレーザー用の `TamaServerLaserPool` ノードを返します。 |
+| `get_curved_laser_pool()` | 曲線レーザー用の `TamaServerCurvedLaserPool` ノードを返します。 |
 | `register_bullet(type, scene)` | レジストリの `scene_bullets` 設定に代わる命令型API。 |
-| `register_server_bullet(type, config)` | レジストリの `server_bullets` 設定に代わる命令型API。 |
-| `load_scripts(path)` | 指定パス（省略時はプロジェクト設定のパス）からTamaScriptファイルをリロードします。 |
+| `register_server_bullet(type, config)` | レジストリの `objects` 設定に代わる命令型API。 |
+| `destroy_server_bullet(bullet)` | サーバー弾をリサイクルします。`bullet_hit` ハンドラ内で呼び出せます。 |
+| `recycle_all()` | アクティブなすべての弾・レーザーを即時リサイクルします。 |
+| `load_scripts(path)` | 指定パス（省略時はプロジェクト設定のパス）からTamaScriptファイルをロードします。 |
 
 ## TamaScript 構文
 

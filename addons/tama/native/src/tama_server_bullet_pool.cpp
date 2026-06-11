@@ -132,7 +132,7 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     td->config_obj     = p_config;
 
     {
-        Variant anim_var = p_config->get("animation");
+        Variant anim_var = p_config->get("texture");
         TamaAnimatedTexture *anim = (anim_var.get_type() == Variant::OBJECT)
             ? Object::cast_to<TamaAnimatedTexture>(anim_var.operator Object *())
             : nullptr;
@@ -804,6 +804,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
       }
     }
 
+    bool had_recycles = !_to_recycle.empty();
     for (BulletState *b : _to_recycle)
         _recycle_internal(b);
 
@@ -871,7 +872,7 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
         }
     }
 
-    if (!_active.empty())
+    if (!_active.empty() || had_recycles)
         queue_redraw();
 }
 

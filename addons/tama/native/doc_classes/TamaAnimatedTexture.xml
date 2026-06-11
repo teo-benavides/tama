@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TamaAnimatedTexture" inherits="Resource" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		A Resource that holds an animation strip of [Texture2D] frames with playback speed and blend mode.
+	</brief_description>
+	<description>
+		[b]TamaAnimatedTexture[/b] is the texture type used by all server object configs ([TamaServerBulletConfig], [TamaServerStraightLaserConfig], [TamaServerCurvedLaserConfig]). It stores a sequence of [Texture2D] frames, a playback speed, and a blend mode that is applied to the canvas item that draws the object type.
+
+		[b]Frames[/b] are indexed 0 to [member frame_count]−1. Each frame has a texture and an integer duration in animation-frames at the configured [member fps]. A [code]TamaAnimatedTexture[/code] with a single frame (or [member fps] ≤ 0) acts as a static texture.
+
+		[b]Blend mode[/b] controls how the rendered pixels are composited. It mirrors [enum CanvasItemMaterial.BlendMode] and is applied per object type, so all active objects of that type share the same blend mode.
+	</description>
+	<tutorials>
+	</tutorials>
+	<members>
+		<member name="fps" type="float" setter="set_fps" getter="get_fps" default="60.0">
+			Animation playback speed in frames per second. Each frame's integer [code]duration[/code] property specifies how many animation frames it is shown before advancing to the next. Set to [code]0[/code] or less to disable animation regardless of frame count.
+		</member>
+		<member name="frame_count" type="int" setter="set_frame_count" getter="get_frame_count" default="0">
+			Total number of frames. Changing this value adds or removes [code]frame_N/texture[/code] and [code]frame_N/duration[/code] properties in the inspector. Set to [code]1[/code] for a static (non-animated) texture.
+		</member>
+		<member name="blend_mode" type="int" setter="set_blend_mode" getter="get_blend_mode" enum="TamaAnimatedTexture.BlendMode" default="0">
+			Blend mode used when rendering objects of this type. Mirrors [enum CanvasItemMaterial.BlendMode]. All active objects that share this texture use the same blend mode.
+		</member>
+	</members>
+	<constants>
+		<constant name="BLEND_MODE_MIX" value="0" enum="BlendMode">
+			Standard alpha blending. Equivalent to [constant CanvasItemMaterial.BLEND_MODE_MIX].
+		</constant>
+		<constant name="BLEND_MODE_ADD" value="1" enum="BlendMode">
+			Additive blending — the texture's colour is added to the background. Good for glows and energy effects. Equivalent to [constant CanvasItemMaterial.BLEND_MODE_ADD].
+		</constant>
+		<constant name="BLEND_MODE_SUB" value="2" enum="BlendMode">
+			Subtractive blending — the texture's colour is subtracted from the background. Equivalent to [constant CanvasItemMaterial.BLEND_MODE_SUB].
+		</constant>
+		<constant name="BLEND_MODE_MUL" value="3" enum="BlendMode">
+			Multiply blending — darkens according to the texture's colour. Equivalent to [constant CanvasItemMaterial.BLEND_MODE_MUL].
+		</constant>
+		<constant name="BLEND_MODE_PREMULT_ALPHA" value="4" enum="BlendMode">
+			Premultiplied-alpha blending. Equivalent to [constant CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA].
+		</constant>
+	</constants>
+</class>
