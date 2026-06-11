@@ -49,6 +49,18 @@ pool_size = 10000
 collision_layer = 2
 collision_mask = 1
 
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_okdsw"]
+frame_count = 1
+frame_0/texture = ExtResource("12_rspsb")
+frame_0/duration = 1
+
+[sub_resource type="TamaServerCurvedLaserConfig" id="TamaServerCurvedLaserConfig_tkymk"]
+width = 10.0
+length = 60
+texture = SubResource("TamaAnimatedTexture_okdsw")
+collision_layer = 2
+collision_mask = 1
+
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_fatblue"]
 frame_count = 1
 frame_0/texture = ExtResource("13_1tfb7")
@@ -168,6 +180,7 @@ scene_bullets = {
 objects = {
 "blue": SubResource("TamaServerBulletConfig_qlh80"),
 "circle": SubResource("TamaServerBulletConfig_n53vu"),
+"curvy": SubResource("TamaServerCurvedLaserConfig_tkymk"),
 "fast": ExtResource("2_uxopc"),
 "fatblue": SubResource("TamaServerBulletConfig_okdsw"),
 "fatpink": SubResource("TamaServerBulletConfig_j5dk6"),

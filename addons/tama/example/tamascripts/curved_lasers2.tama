@@ -1,0 +1,33 @@
+main
+    repeat
+        act laser_circle(1)
+        wait 0.5
+        act laser_circle(-1)
+        wait 3.0
+
+act laser_circle(direction)
+    repeat 16 i
+        fire
+            dir aim (360/16)*i
+            spd abs 200
+            bul curvy(direction)
+
+bul curvy(direction)
+    type curvy
+    act
+        chrotspd
+            rotspd abs -180*direction
+        wait 0.2
+        chrotspd
+            rotspd abs 360*direction
+        wait 0.6
+        chrotspd
+            rotspd abs 0
+        wait 0.2
+        chrotspd
+            rotspd abs -180*direction
+        wait 1.0
+        chrotspd
+            rotspd abs 0
+        chspd
+            spd abs 400

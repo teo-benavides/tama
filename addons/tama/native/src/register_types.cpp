@@ -12,6 +12,9 @@
 #include "tama_server_bullet.h"
 #include "tama_server_bullet_config.h"
 #include "tama_server_bullet_pool.h"
+#include "tama_server_curved_laser.h"
+#include "tama_server_curved_laser_config.h"
+#include "tama_server_curved_laser_pool.h"
 #include "tama_server_laser.h"
 #include "tama_server_laser_pool.h"
 #include "tama_server_object_config.h"
@@ -38,14 +41,17 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     ClassDB::register_internal_class<_TamaExprRuntime>();
     ClassDB::register_internal_class<TamaServerBulletPool>();
     ClassDB::register_internal_class<TamaServerLaserPool>();
+    ClassDB::register_internal_class<TamaServerCurvedLaserPool>();
 
     // User-facing classes — base before derived
     ClassDB::register_class<TamaAnimatedTexture>();
     ClassDB::register_class<TamaServerObjectConfig>();
     ClassDB::register_class<TamaServerBulletConfig>();
     ClassDB::register_class<TamaServerStraightLaserConfig>();
+    ClassDB::register_class<TamaServerCurvedLaserConfig>();
     ClassDB::register_class<TamaServerBullet>();
     ClassDB::register_class<TamaServerLaser>();
+    ClassDB::register_class<TamaServerCurvedLaser>();
     ClassDB::register_class<TamaContext>();
     ClassDB::register_class<TamaBulletRegistry>();
     ClassDB::register_class<TamaBullet>();

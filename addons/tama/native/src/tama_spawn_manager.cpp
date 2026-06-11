@@ -1,6 +1,8 @@
 #include "tama_spawn_manager.h"
 #include "tama_emitter.h"
 #include "tama_manager.h"
+#include "tama_server_curved_laser.h"
+#include "tama_server_curved_laser_config.h"
 #include "tama_server_straight_laser_config.h"
 
 #include <algorithm>
@@ -146,7 +148,7 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
                 default_bullet = registry->default_server_bullet.ptr();
         }
 
-        // Laser path
+        // Straight laser path
         if (_laser_pool) {
             TamaServerStraightLaserConfig *laser_cfg =
                 Object::cast_to<TamaServerStraightLaserConfig>(obj_cfg);
@@ -155,6 +157,27 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
                 Vector2 pos = _resolve_position(data, spawner, angle);
                 spawner_set_last_angle(spawner, angle);
                 _laser_pool->spawn(data, laser_cfg, angle, pos, context.ptr());
+                return;
+            }
+        }
+
+        // Curved laser path
+        if (_curved_laser_pool) {
+            TamaServerCurvedLaserConfig *curved_cfg =
+                Object::cast_to<TamaServerCurvedLaserConfig>(obj_cfg);
+            if (curved_cfg) {
+                float angle = _resolve_angle(data, spawner);
+                float speed = _resolve_speed(data, spawner);
+                Vector2 pos = _resolve_position(data, spawner, angle);
+                spawner_set_last_angle(spawner, angle);
+                spawner_set_last_speed(spawner, speed);
+                auto *wrapper = godot::Object::cast_to<TamaServerCurvedLaser>(
+                    _curved_laser_pool->spawn(data, curved_cfg, angle, speed, pos, context.ptr()));
+                if (wrapper && wrapper->_state && data.has_rot_speed) {
+                    float rot_spd = _resolve_rot_speed(data, spawner);
+                    spawner_set_last_rot_speed(spawner, rot_spd);
+                    wrapper->_state->rot_speed = rot_spd;
+                }
                 return;
             }
         }

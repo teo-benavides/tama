@@ -3,6 +3,7 @@
 #include "tama_context.h"
 #include "tama_script_repository.h"
 #include "tama_server_bullet_pool.h"
+#include "tama_server_curved_laser_pool.h"
 #include "tama_server_laser_pool.h"
 #include "tama_spawn_manager.h"
 
@@ -41,8 +42,9 @@ public:
     void set_context(godot::Ref<TamaContext> v);
     TamaBulletRegistry *get_registry() const;
     void set_registry(TamaBulletRegistry *v);
-    godot::Object *get_server_bullet_pool() const;
-    godot::Object *get_laser_pool()         const;
+    godot::Object *get_server_bullet_pool()    const;
+    godot::Object *get_laser_pool()            const;
+    godot::Object *get_curved_laser_pool()     const;
     void           destroy_server_bullet(godot::Object *bullet);
 
     float get_global_out_of_bounds_margin() const { return _global_out_of_bounds_margin; }
@@ -69,9 +71,10 @@ public:
 private:
     _TamaScriptRepository *_repository    = nullptr;
     _TamaSpawnManager     *_spawn_manager = nullptr;
-    TamaServerBulletPool  *_server_pool   = nullptr;
-    TamaServerLaserPool   *_laser_pool    = nullptr;
-    bool                   _nodes_injected = false;
+    TamaServerBulletPool      *_server_pool       = nullptr;
+    TamaServerLaserPool       *_laser_pool        = nullptr;
+    TamaServerCurvedLaserPool *_curved_laser_pool = nullptr;
+    bool                       _nodes_injected     = false;
     float _global_out_of_bounds_margin    = -1.0f;
 
     void _ensure_scene_nodes();
