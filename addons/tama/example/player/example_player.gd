@@ -15,7 +15,9 @@ func _physics_process(delta):
 	TamaManager.set_player_position(global_position)
 
 func _on_server_bullet_hit(bullet) -> void:
-	print("bullet hit")
+	#print("bullet hit")
+	pass
 
 func _on_server_curved_laser_hit(laser) -> void:
-	print("curved laser hit")
+	#print("curved laser hit")
+	pass

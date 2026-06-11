@@ -63,6 +63,7 @@ wait 1.0  # inline comment
 |---|---|---|
 | `NUMBER` | `\d+(\.\d+)?` | Float literal; floats matched before ints |
 | `WORD` | `[a-zA-Z_][a-zA-Z0-9_]*` | Identifier or keyword |
+| `STRING` | `"[^"]*"` | Quoted string literal (double-quotes); value stored without quotes |
 | `LPAREN` | `(` | |
 | `RPAREN` | `)` | |
 | `OP` | `==`, `!=`, `<=`, `>=`, `&&`, `\|\|`, `*`, `/`, `+`, `-`, `<`, `>`, `!`, `&`, `\|`, `=`, `%` | Two-char operators matched before single-char |
@@ -353,12 +354,12 @@ Evaluates `EXPR` before each iteration. If non-zero (truthy), executes the body 
 `true` and `false` are valid literals (evaluating to `1.0` and `0.0` respectively). Variables declared with `var` inside the body are scoped to each iteration. Reassignments to outer-scope variables propagate back.
 
 ```
-var spd_ 10
+var spd_ = 10
 while spd_ < 500
     fire
         dir aim 0
         spd spd_
-    spd_ spd_ + 10
+    spd_ = spd_ + 10
     wait 0.2
 ```
 
@@ -388,23 +389,23 @@ else
 ### 6.9 `var` / assignment
 
 ```
-var_stmt    = "var" IDENT EXPR
-assign_stmt = IDENT EXPR
+var_stmt    = "var" IDENT "=" EXPR
+assign_stmt = IDENT "=" EXPR
 ```
 
 **`var`** declares a new variable in the current scope. The variable is visible in all nested blocks (repeat, while, if/elif/else, inline acts, fire calls) but is erased when its enclosing block exits.
 
-**Assignment** (`IDENT EXPR` with no keyword) reassigns a variable that is already in scope. The assignment writes to the shared scope dictionary, so it propagates back to parent blocks (see §15.2 for full scoping rules).
+**Assignment** (`IDENT "=" EXPR` with no keyword) reassigns a variable that is already in scope. The assignment writes to the shared scope dictionary, so it propagates back to parent blocks (see §15.2 for full scoping rules).
 
-`IDENT` must not be a keyword. `EXPR` may reference any in-scope variable, loop index, or context function. Bare qualifier keywords (`aim`, `abs`, `rel`, `seq`) and bool literals (`true`, `false`) are valid values.
+`IDENT` must not be a keyword. The `=` is required in both forms — it disambiguates assignments from `context_call` statements, which begin with `IDENT "("`. `EXPR` may reference any in-scope variable, loop index, or context function. Bare qualifier keywords (`aim`, `abs`, `rel`, `seq`) and bool literals (`true`, `false`) are valid values.
 
 ```
-var count 8
-var dir_type aim
-var active true
+var count = 8
+var dir_type = aim
+var active = true
 
-count count + 1          # reassignment
-dir_type abs             # store a qualifier string
+count = count + 1        # reassignment
+dir_type = abs           # store a qualifier string
 ```
 
 ### 6.10 `dir`
@@ -608,6 +609,28 @@ async act
 ```
 
 The interpreter tracks async act count and waits for all async acts to finish before `start()` resolves (so the emitter doesn't stop prematurely).
+
+### 6.23 `context_call`
+
+```
+context_call = IDENT "(" [ call_arg { "," call_arg } ] ")"
+call_arg     = STRING | EXPR
+```
+
+Calls a method on the TamaContext object for side effects. The return value is discarded. `IDENT` must not be a keyword. Arguments may be:
+- **Quoted string literals** (`STRING`): passed as `String` values directly, without scope lookup.
+- **Numeric expressions** (`EXPR`): evaluated the same way as any other expression.
+
+The context object must have been set on the emitter (via `TamaEmitter.context`). If no context is set, or the context has no method matching `IDENT`, a warning is logged and the call is skipped.
+
+This form is distinguished from an assignment by the `(` immediately following the identifier. Unlike `act_call` / `fire_call`, no `act` or `fire` keyword precedes it.
+
+```
+sfx("fire")                    # call context.sfx with string "fire"
+sfx(sfx_name)                  # call context.sfx with the value of variable sfx_name
+spawn_effect(pos_x, pos_y)     # call context.spawn_effect with two numeric args
+play_music("boss_theme")
+```
 
 ---
 
@@ -1230,9 +1253,17 @@ The parser reads them as `WORD` tokens and validates their value explicitly. A t
 
 If `main` is absent (library file), `program.main` is null. The interpreter checks for null and reports an error only if `start()` is called. Library files are safe to parse.
 
-### 16.10 `var` vs assignment disambiguation
+### 16.10 `var` vs assignment vs context_call disambiguation
 
-`var IDENT EXPR` declares a new variable. A bare `IDENT EXPR` (no keyword) reassigns an existing one. Both produce the same AST node (`VarDeclNode`) — the distinction is purely textual. At runtime, `var` and assignment are executed identically: `scope[name] = eval(expr)`. The semantic difference (declaration vs reassignment) is enforced by the pre-keys scoping mechanism, not the interpreter.
+Action statements beginning with a `WORD` token are disambiguated as follows:
+
+1. **`var IDENT "=" EXPR`** — `var` keyword followed by a name, required `=`, then expression. Declares a new variable.
+2. **`IDENT "=" EXPR`** — bare name (no keyword) followed by `=`. Reassigns an existing variable.
+3. **`IDENT "(" ... ")" `** — bare name followed immediately by `(`. Calls a context method (`context_call`).
+
+The `=` is **required** for both `var` and assignment forms (the parser errors on its absence). This ensures `IDENT "="` is always an assignment and `IDENT "("` is always a context call — no lookahead ambiguity.
+
+At runtime, `var` and assignment are executed identically: `scope[name] = eval(expr)`. The semantic difference (declaration vs reassignment) is enforced by the pre-keys scoping mechanism, not the interpreter.
 
 ---
 
@@ -1333,6 +1364,7 @@ action_stmt   = while_stmt
               | if_stmt
               | var_stmt
               | assign_stmt
+              | context_call
               | repeat_stmt
               | repeatf_stmt
               | wait_stmt
@@ -1364,13 +1396,20 @@ if_stmt       = "if" EXPR NEWLINE action_block
                 (* var declarations inside a branch are scoped to that branch;
                    reassignments propagate outward.                           *)
 
-var_stmt      = "var" IDENT EXPR ;
+var_stmt      = "var" IDENT "=" EXPR ;
                 (* declares a new variable; visible in nested blocks but erased
-                   when the enclosing block exits.                            *)
+                   when the enclosing block exits. "=" is required.          *)
 
-assign_stmt   = IDENT EXPR ;
-                (* reassigns a variable already in scope; propagates to parent
-                   blocks. named act calls are excluded (function-call semantics). *)
+assign_stmt   = IDENT "=" EXPR ;
+                (* reassigns a variable already in scope; "=" is required.
+                   disambiguates from context_call (IDENT followed by "(").
+                   propagates to parent blocks; named act calls excluded.    *)
+
+context_call  = IDENT "(" [ call_arg { "," call_arg } ] ")" ;
+call_arg      = STRING | EXPR ;
+                (* calls a method on the TamaContext object; return value discarded.
+                   STRING: quoted string literal passed as-is (no scope lookup).
+                   IDENT must not be a keyword.                               *)
 
 repeat_stmt   = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block ;
                 (* IDENT is the 0-based loop index; omitting EXPR = infinite loop.

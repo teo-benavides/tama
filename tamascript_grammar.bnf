@@ -23,6 +23,11 @@ IDENT   = LETTER { LETTER | DIGIT | "_" } ;
 
 NUMBER  = DIGIT { DIGIT } [ "." { DIGIT } ] ;
 
+STRING  = '"' { any character except '"' } '"' ;
+          (* double-quoted string literal; evaluates to a String value.
+             valid in call argument positions (context_call, act_call arg lists, etc.).
+             not supported inside EXPR — only as a standalone argument.              *)
+
 EXPR    = (* raw token sequence to end-of-line or matching ")"       *)
             (* evaluated at runtime by Godot's Expression class       *)
             (* may reference: IDENT (params, vars, exports), NUMBER,  *)
@@ -165,7 +170,16 @@ action_stmt = while_stmt
              | inline_fire
              | fire_call
              | act_call
-             | async_act ;
+             | async_act
+             | context_call ;
+
+context_call = IDENT "(" [ call_arg { "," call_arg } ] ")" ;
+               (* calls a method on the TamaContext object for side effects.
+                  IDENT must not be a keyword. arguments may be numeric EXPRs
+                  or quoted STRING literals. the return value is discarded.
+                  example:  sfx("fire")
+                            sfx(sfx_name)        (* sfx_name is a str variable *)
+                            spawn_effect(x, y)   *)
 
 while_stmt   = "while" EXPR NEWLINE action_block ;
                (* EXPR is evaluated before each iteration; non-zero is truthy.
@@ -179,7 +193,7 @@ if_stmt      = "if" EXPR NEWLINE action_block
                   variables declared with var inside a branch are scoped to that branch;
                   reassignment of outer-scope variables propagates outward.           *)
 
-var_stmt     = "var" IDENT EXPR ;
+var_stmt     = "var" IDENT "=" EXPR ;
                (* declares a new variable in the current scope.
                   EXPR may reference any in-scope variable, loop index, or context function.
                   EXPR may also be a bare qualifier keyword (aim/abs/rel/seq) to store a
@@ -187,8 +201,9 @@ var_stmt     = "var" IDENT EXPR ;
                   the variable is visible in all nested blocks (repeat, while, inline acts,
                   fire calls) but is erased when its enclosing block exits.           *)
 
-assign_stmt  = IDENT EXPR ;
+assign_stmt  = IDENT "=" EXPR ;
                (* reassigns a variable already in scope; IDENT must not be a keyword.
+                  the "=" disambiguates from context_call (IDENT followed by "(").
                   writes to the shared scope dict, so it propagates back to parent blocks
                   (repeat, while, inline acts).
                   named act calls have their own scope copy (function-call semantics),

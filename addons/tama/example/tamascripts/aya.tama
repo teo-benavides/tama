@@ -1,11 +1,11 @@
 main
-    var amt 12.0
-    var ofs 0.0
+    var amt = 12.0
+    var ofs = 0.0
     repeat
         repeat 5 j
             repeat amt i
                 fire f(20, (2.0 * PI * i / amt), (360.0/5)*j+ofs)
-        ofs ofs + 10
+        ofs = ofs + 10
         wait 0.15
 
 fire f(radius, ofs, direction)

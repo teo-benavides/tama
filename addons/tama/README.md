@@ -262,8 +262,9 @@ fire
 | `repeatf [N] [i]` | Run the block once per physics frame (synchronous). Without `N`: infinite and terminal. With `N`: runs N times then continues; `i` = 0-based index. |
 | `while COND` | Loop while `COND` is non-zero. |
 | `if COND` / `elif COND` / `else` | Conditional branching. |
-| `var NAME EXPR` | Declare a local variable. |
-| `NAME EXPR` | Reassign an existing variable (change propagates to parent scope). |
+| `var NAME = EXPR` | Declare a local variable. |
+| `NAME = EXPR` | Reassign an existing variable (change propagates to parent scope). |
+| `NAME(args...)` | Call a method on the TamaContext object (see Quick Start step 9). Return value is discarded. Arguments can be numeric expressions or quoted strings (e.g. `sfx("fire")`). |
 | `fire NAME` / `fire` *(inline)* | Spawn a bullet. |
 | `act NAME` / `act` *(inline)* | Run an act (blocking). |
 | `async act …` | Run an act without blocking. |
@@ -294,12 +295,12 @@ bullet finite_y
 
 ### Variables and control flow
 
-`var NAME EXPR` declares a variable scoped to the current block. A bare `NAME EXPR` reassigns an existing variable and the change propagates back to parent blocks. `true` and `false` are valid values (equal to `1.0` and `0.0`).
+`var NAME = EXPR` declares a variable scoped to the current block. `NAME = EXPR` (no keyword) reassigns an existing variable and the change propagates back to parent blocks. `true` and `false` are valid values (equal to `1.0` and `0.0`).
 
 ```
 main
-    var count 8
-    var speed 200
+    var count = 8
+    var speed = 200
     while count > 0
         if count > 4
             fire
@@ -309,7 +310,7 @@ main
             fire
                 dir aim 45
                 spd speed * 0.5
-        count count - 1    ← reassign (no var keyword)
+        count = count - 1    ← reassign (no var keyword)
         wait 0.1
 ```
 

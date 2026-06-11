@@ -27,7 +27,7 @@ enum class TamaNodeType : int {
     REPEAT_FRAME = 25, MVMT = 26, OVER = 27,
     INLINE_ACT = 28, INLINE_FIRE = 29, FIRE_CALL = 30,
     WHILE = 31, IF = 32, VAR_DECL = 33, ACT_CALL = 34,
-    CHROTSPD = 35, DELAY = 36,
+    CHROTSPD = 35, DELAY = 36, CONTEXT_CALL = 37,
 };
 
 // ---------------------------------------------------------------------------
@@ -218,6 +218,9 @@ class _TamaInterpreter {
     // Fire node execution (InlineFireNode or FireDefNode)
     void _exec_fire_node(_TamaASTNode *node);
     void _exec_fire_call(_TamaASTNode *n);
+
+    // Context call execution
+    void _exec_context_call(_TamaASTNode *n);
 
     // Signal emission helpers
     void _emit_chdir    (_TamaASTNode *n);

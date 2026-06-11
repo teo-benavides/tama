@@ -27,17 +27,17 @@ main
             x rel 90
             y rel 60
         bullet shooter(90+20, 400)
-    var shots_fired 0
-    var ofs 0
+    var shots_fired = 0
+    var ofs = 0
     repeat
         if shots_fired >= 5 && get_1_in(5)
             if ofs > 0
-                ofs randf_range(-2, -1)
+                ofs = randf_range(-2, -1)
             else
-                ofs randf_range(1, 2)
-            shots_fired 0
+                ofs = randf_range(1, 2)
+            shots_fired = 0
         act spread_shot(15, 80, 90+ofs, 200, fast, abs)
-        shots_fired shots_fired + 1
+        shots_fired = shots_fired + 1
         waitf 10
 
 bullet shooter(wiggle_center, ofs)

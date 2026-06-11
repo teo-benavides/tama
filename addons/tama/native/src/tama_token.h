@@ -4,7 +4,7 @@
 
 // Token type discriminant.
 enum class TT {
-    NUMBER, WORD, LPAREN, RPAREN, OP, COMMA,
+    NUMBER, WORD, STRING, LPAREN, RPAREN, OP, COMMA,
     NEWLINE, INDENT, DEDENT, EOF_, ERROR,
     // Keywords
     KW_MAIN, KW_FIRE, KW_ACT, KW_BULLET, KW_REPEAT, KW_WAIT, KW_WAITF,

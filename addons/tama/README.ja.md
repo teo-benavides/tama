@@ -261,8 +261,9 @@ fire
 | `repeatf [N] [i]` | 毎物理フレーム1回ブロックを実行する（同期処理）。`N` なし：無限ループ（以降の文は実行されない）。`N` あり：N回実行後に継続する。`i` = 0始まりのインデックス。 |
 | `while COND` | `COND` が0以外の間ループする。 |
 | `if COND` / `elif COND` / `else` | 条件分岐。 |
-| `var NAME EXPR` | ローカル変数を宣言する。 |
-| `NAME EXPR` | 既存の変数を再代入する（変更は親スコープに伝播する）。 |
+| `var NAME = EXPR` | ローカル変数を宣言する。 |
+| `NAME = EXPR` | 既存の変数を再代入する（変更は親スコープに伝播する）。 |
+| `NAME(args...)` | TamaContextオブジェクトのメソッドを呼び出す（クイックスタート手順9参照）。戻り値は破棄される。引数には数値式またはクォート文字列（例: `sfx("fire")`）が使える。 |
 | `fire NAME` / `fire` *(インライン)* | 弾をスポーンする。 |
 | `act NAME` / `act` *(インライン)* | アクトを実行する（ブロッキング）。 |
 | `async act …` | アクトをブロッキングなしで実行する。 |
@@ -293,12 +294,12 @@ bullet finite_y
 
 ### 変数と制御フロー
 
-`var NAME EXPR` は現在のブロックにスコープされた変数を宣言します。`var` なしの `NAME EXPR` は既存の変数を再代入し、変更は親スコープに伝播します。`true` と `false` は有効な値です（それぞれ `1.0` と `0.0` に相当）。
+`var NAME = EXPR` は現在のブロックにスコープされた変数を宣言します。`var` なしの `NAME = EXPR` は既存の変数を再代入し、変更は親スコープに伝播します。`true` と `false` は有効な値です（それぞれ `1.0` と `0.0` に相当）。
 
 ```
 main
-    var count 8
-    var speed 200
+    var count = 8
+    var speed = 200
     while count > 0
         if count > 4
             fire
@@ -308,7 +309,7 @@ main
             fire
                 dir aim 45
                 spd speed * 0.5
-        count count - 1    ← 再代入（var キーワード不要）
+        count = count - 1    ← 再代入（var キーワード不要）
         wait 0.1
 ```
 

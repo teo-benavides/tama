@@ -1,6 +1,6 @@
 main
-    var bullets 100
-    var total_over_portion 4.0/3.0
+    var bullets = 100
+    var total_over_portion = 4.0/3.0
     repeat bullets i
         fire f(140, (2.0 * PI * i / (bullets * total_over_portion)))
         waitf 1.0

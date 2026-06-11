@@ -19,18 +19,18 @@ bul laser
 
 act zigzag
     repeat -1 i
-        var direction 1
+        var direction = 1
         if i % 2
-            direction 1
+            direction = 1
         else
-            direction -1
+            direction = -1
         chdir
             dir rel 90*direction
             over 0.2
         wait 0.2
 
 act spawn_bullet_trail
-    var amt 30
+    var amt = 30
     repeat amt i
         fire
             dir abs (360/8)*randi_range(0, 7)

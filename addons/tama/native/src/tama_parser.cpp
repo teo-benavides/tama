@@ -154,6 +154,13 @@ std::vector<TamaArgVal> TamaParserCpp::parse_call_args(const TamaToken &caller_t
 
 TamaArgVal TamaParserCpp::parse_single_arg(const TamaToken &open_tok) {
     TamaToken &tok = peek();
+    // Quoted string literal.
+    if (tok.type == TT::STRING) {
+        TamaToken str_tok = consume(TT::STRING);
+        TamaArgVal av(Variant(String(str_tok.value.c_str())));
+        av.is_literal_string = true;
+        return av;
+    }
     // Inline block as argument (keyword followed by NEWLINE).
     switch (tok.type) {
         case TT::KW_BULLET:
@@ -680,6 +687,11 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_var_decl() {
     TamaToken tok = consume(TT::KW_VAR);
     std::string name = parse_identifier();
     if (name.empty()) { try_consume(TT::NEWLINE); return nullptr; }
+    if (peek_type() == TT::OP && peek().value == "=") {
+        _pos++;
+    } else {
+        error_at(peek(), "Expected '=' after variable name in var declaration");
+    }
     std::string expr = collect_to_eol();
     if (expr.empty()) error_at(peek(), "Expected expression after var name");
     consume(TT::NEWLINE);
@@ -691,6 +703,11 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_var_decl() {
 
 std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_var_assign() {
     TamaToken tok = consume(TT::WORD);
+    if (peek_type() == TT::OP && peek().value == "=") {
+        _pos++;
+    } else {
+        error_at(tok, "Expected '=' after variable name in assignment");
+    }
     std::string expr = collect_to_eol();
     if (expr.empty()) error_at(peek(), "Expected expression after variable name");
     consume(TT::NEWLINE);
@@ -754,6 +771,16 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_act_call() {
     n->name     = name;
     n->args     = std::move(args);
     n->is_async = false;
+    return n;
+}
+
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_context_call() {
+    TamaToken name_tok = consume(TT::WORD);
+    auto args = parse_call_args(name_tok);
+    consume(TT::NEWLINE);
+    auto n = tama_make_node((int)NT::CONTEXT_CALL);
+    n->name = name_tok.value;
+    n->args = std::move(args);
     return n;
 }
 
@@ -909,7 +936,9 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_action_statement() {
         case TT::KW_WHILE:  return parse_while();
         case TT::KW_IF:     return parse_if();
         case TT::KW_VAR:    return parse_var_decl();
-        case TT::WORD:      return parse_var_assign();
+        case TT::WORD:
+            if (peek_type_at(1) == TT::LPAREN) return parse_context_call();
+            return parse_var_assign();
         default:
             error_at(tok, "Unexpected token in action block: '" + tok_display(tok) + "'");
             _pos++; try_consume(TT::NEWLINE);

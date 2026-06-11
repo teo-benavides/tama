@@ -11,8 +11,8 @@ main
 bul laser(ofs)
     type laser
     act
-        var radius 100.0
-        var speed_mult 0.2
+        var radius = 100.0
+        var speed_mult = 0.2
         repeatf -1 i
             chpos
                 x abs spawn_x - radius * cos(deg_to_rad(ofs+i*speed_mult))

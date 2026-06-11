@@ -1,8 +1,8 @@
 include builtin
 
 main
-    var spd_ 300
-    var intervalf 4
+    var spd_ = 300
+    var intervalf = 4
     repeat
         act burst
         wait 0.3
@@ -26,7 +26,7 @@ main
         wait 0.3
 
 act nitori(amount, spread, intervalf, angle, dirtype, speed_, start_amt)
-    var curr_amt start_amt
+    var curr_amt = start_amt
     repeat amount/2
         repeat curr_amt i
             fire
@@ -34,7 +34,7 @@ act nitori(amount, spread, intervalf, angle, dirtype, speed_, start_amt)
                 spd speed_
                 bul
                     type blue
-        curr_amt curr_amt + 2
+        curr_amt = curr_amt + 2
         waitf intervalf
 
 act burst

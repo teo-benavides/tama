@@ -3,7 +3,7 @@ main
 
 act mess
     repeatf
-        var ofs randf_range(0.0, 360.0)
+        var ofs = randf_range(0.0, 360.0)
         repeat 4 i
             fire
                 dir abs (360.0/4.0) * i + ofs

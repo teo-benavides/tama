@@ -1,7 +1,7 @@
 main
-    var amt 10.0
-    var shift_angle 144
-    var shot_angle 360/10*-3
+    var amt = 10.0
+    var shift_angle = 144
+    var shot_angle = 360/10*-3
     repeat amt i
         if i % 2
             shift_angle 144
@@ -16,12 +16,12 @@ main
 
 bullet star_spawner(move_direction, shift_angle, shot_angle)
     act
-        var base_delay 0
-        var arms 5
-        var b_per_arm 10
-        var shot_intervalf 1
-        var base_angle shot_angle
-        var curr_angle shot_angle
+        var base_delay = 0
+        var arms = 5
+        var b_per_arm = 10
+        var shot_intervalf = 1
+        var base_angle = shot_angle
+        var curr_angle = shot_angle
         repeat arms j
             repeat b_per_arm i
                 fire

@@ -14,6 +14,7 @@ struct _TamaASTNode;
 // ---------------------------------------------------------------------------
 struct TamaArgVal {
     bool is_node = false;
+    bool is_literal_string = false; // quoted string literal — skip expression evaluation
     godot::Variant var;
     _TamaASTNode *node = nullptr;
     std::shared_ptr<_TamaASTNode> _owner; // keeps inline parser-created nodes alive

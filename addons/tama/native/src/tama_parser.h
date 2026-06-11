@@ -112,6 +112,7 @@ private:
     std::shared_ptr<_TamaASTNode> parse_repeat();
     std::shared_ptr<_TamaASTNode> parse_inline_act();
     std::shared_ptr<_TamaASTNode> parse_inline_emitter();
+    std::shared_ptr<_TamaASTNode> parse_context_call();
     std::shared_ptr<_TamaASTNode> parse_inline_fire();
     std::shared_ptr<_TamaASTNode> parse_fire_call();
     std::shared_ptr<_TamaASTNode> parse_act_call();

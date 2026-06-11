@@ -361,6 +361,10 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
         _exec_fire_node(n);
         return;
 
+    case NT::CONTEXT_CALL:
+        _exec_context_call(n);
+        return;
+
     case NT::CHDIR:    _emit_chdir(n);    return;
     case NT::CHSPD:    _emit_chspd(n);    return;
     case NT::CHROTSPD: _emit_chrotspd(n); return;
@@ -876,10 +880,39 @@ void _TamaInterpreter::_emit_accel(_TamaASTNode *n) {
 }
 
 // ---------------------------------------------------------------------------
+// Context call
+// ---------------------------------------------------------------------------
+
+void _TamaInterpreter::_exec_context_call(_TamaASTNode *n) {
+    if (!_context) {
+        UtilityFunctions::push_warning(
+            String("TamaScript: context call '") + String(n->name.c_str()) + "' skipped — no context set");
+        return;
+    }
+    godot::String method_name(n->name.c_str());
+    if (!_context->has_method(method_name)) {
+        UtilityFunctions::push_warning(
+            String("TamaScript: context has no method '") + method_name + "'");
+        return;
+    }
+    godot::Array call_args;
+    for (const TamaArgVal &raw_arg : n->args) {
+        if (raw_arg.is_literal_string) {
+            call_args.push_back(raw_arg.var);
+        } else {
+            TamaArgVal ev = _eval_arg(raw_arg);
+            if (!ev.is_node) call_args.push_back(ev.var);
+        }
+    }
+    _context->callv(method_name, call_args);
+}
+
+// ---------------------------------------------------------------------------
 // Expression evaluation
 // ---------------------------------------------------------------------------
 
 TamaArgVal _TamaInterpreter::_eval_arg(const TamaArgVal &arg) {
+    if (arg.is_literal_string) return arg;
     if (arg.ref) return arg;
 
     if (arg.is_node) {

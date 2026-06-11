@@ -1,5 +1,5 @@
 main
-    var intervalf 20
+    var intervalf = 20
     repeat
         act opposing_circles(intervalf)
         wait 2.0

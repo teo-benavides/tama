@@ -36,6 +36,7 @@ const char *tama_token_name(TT t) {
     switch (t) {
         case TT::NUMBER:  return "NUMBER";
         case TT::WORD:    return "WORD";
+        case TT::STRING:  return "STRING";
         case TT::LPAREN:  return "LPAREN";
         case TT::RPAREN:  return "RPAREN";
         case TT::OP:      return "OP";
@@ -163,6 +164,16 @@ std::vector<TamaToken> TamaLexerCpp::tokenize(const std::string &source) const {
             if (c == '(') { tokens.push_back({TT::LPAREN, "(", line_idx, pos}); ++pos; continue; }
             if (c == ')') { tokens.push_back({TT::RPAREN, ")", line_idx, pos}); ++pos; continue; }
             if (c == ',') { tokens.push_back({TT::COMMA,  ",", line_idx, pos}); ++pos; continue; }
+
+            // String literal.
+            if (c == '"') {
+                int start = ++pos; // skip opening quote
+                while (pos < len && raw[pos] != '"') ++pos;
+                std::string val = raw.substr(start, pos - start);
+                if (pos < len) ++pos; // skip closing quote
+                tokens.push_back({TT::STRING, val, line_idx, start});
+                continue;
+            }
 
             // Unrecognised character.
             tokens.push_back({TT::ERROR, std::string(1, c), line_idx, pos});
