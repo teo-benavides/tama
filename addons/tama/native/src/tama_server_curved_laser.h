@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <godot_cpp/classes/object.hpp>
-#include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
 // ---------------------------------------------------------------------------
@@ -29,14 +28,6 @@ struct CurvedLaserState {
     int32_t active_idx  = -1;
     int32_t global_slot = -1;
 
-    // Collision: one rectangle shape per trail buffer slot, indexed by the slot
-    // of the segment's NEWER node (stable as the trail scrolls). Once a segment's
-    // two endpoints are frozen history points its shape never changes, so each
-    // frame only the new head segment is (re)built and the scrolled-off tail
-    // segment is disabled. collision_built tracks the one-time full rebuild on
-    // first spawn (handles any trail already built before collision is wanted).
-    bool collision_built = false;
-
     TweenState1D angle_tween;
     TweenState1D speed_tween;
     TweenState1D rot_speed_tween;
@@ -55,13 +46,16 @@ struct CurvedLaserState {
     std::vector<godot::Vector2> edge_r;
     bool edge_built = false;
 
+    // AABB of the active trail, maintained incrementally alongside edge_built.
+    // Used for O(1) early-out before the O(trail_count) segment collision test.
+    godot::Vector2 aabb_min;
+    godot::Vector2 aabb_max;
+
     // Texture animation
     int   tex_anim_frame = 0;
     float tex_anim_time  = 0.0f;
 
     float current_width = 1.0f;
-
-    godot::RID area_rid;
 
     _TamaInterpreter *runner  = nullptr;
     godot::Object    *wrapper = nullptr;

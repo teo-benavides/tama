@@ -71,8 +71,7 @@ struct BulletState {
     void   *batch_ptr   = nullptr; // raw BatchData* — void* to avoid circular header dep
     int32_t local_slot  = -1;  // index within batch's multimesh
 
-    // Cached RIDs (set at spawn, not hot to look up)
-    godot::RID area_rid;
+    // Cached RID (set at spawn, not hot to look up)
     godot::RID multimesh_rid;
 
     // Tweens

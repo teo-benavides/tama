@@ -1,0 +1,56 @@
+main
+    repeat
+        repeat 15 i
+            fire
+                dir abs -(360/44)*i
+                spd abs 300
+                bul laser(1)
+        wait 0.5
+        repeat 15 i
+            fire
+                dir abs 180+(360/44)*i
+                spd abs 300
+                bul laser(-1)
+        wait 0.5
+        repeat 9 i
+            fire
+                dir abs (2*i + 1 - 9) * 90.0 / (2 * maxf(9 - 1, 1)) + 70
+                spd abs 300
+                bul laser_down(1)
+        repeat 9 i
+            fire
+                dir abs (2*i + 1 - 9) * 90.0 / (2 * maxf(9 - 1, 1)) + 110
+                spd abs 300
+                bul laser_down(-1)
+        wait 3.0
+
+bul laser(direction)
+    type curvy
+    act
+        repeatf 60
+            chdir
+                dir rel 3*direction
+        chspd
+            spd 20
+            over 0.25
+        wait 0.25
+        chspd
+            spd 300
+            over 0.5
+
+bul laser_down(direction)
+    type curvy
+    act
+        chrotspd
+            rotspd abs 160*direction
+        chspd
+            spd abs 100
+            over 1.0
+        wait 1.0
+        chspd
+            spd abs 300
+            over 0.5
+        wait 0.7
+        chrotspd
+            rotspd abs 0
+        

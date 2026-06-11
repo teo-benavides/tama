@@ -46,14 +46,20 @@ public:
     godot::Object *get_laser_pool()            const;
     godot::Object *get_curved_laser_pool()     const;
     void           destroy_server_bullet(godot::Object *bullet);
+    void           recycle_all();
 
     float get_global_out_of_bounds_margin() const { return _global_out_of_bounds_margin; }
     void  set_global_out_of_bounds_margin(float v) { _global_out_of_bounds_margin = v; }
 
+    float get_player_hitbox_radius() const { return _player_hitbox_radius; }
+    void  set_player_hitbox_radius(float v) { _player_hitbox_radius = v; }
+
     int get_bullet_count() const;
 
     // Forwarded from TamaServerBulletPool — emitted when a server bullet hits a body.
-    void _on_pool_bullet_hit(godot::Object *bullet, int64_t body_instance_id);
+    void _on_pool_bullet_hit(godot::Object *bullet);
+    void _on_curved_laser_hit(godot::Object *laser);
+    void _on_laser_hit(godot::Object *laser);
 
     _TamaASTNode  *_get_tama_script(const godot::String &filename) const;
     bool           _has_tama_script(const godot::String &filename) const;
@@ -75,7 +81,8 @@ private:
     TamaServerLaserPool       *_laser_pool        = nullptr;
     TamaServerCurvedLaserPool *_curved_laser_pool = nullptr;
     bool                       _nodes_injected     = false;
-    float _global_out_of_bounds_margin    = -1.0f;
+    float _global_out_of_bounds_margin = -1.0f;
+    float _player_hitbox_radius        = 3.0f;
 
     void _ensure_scene_nodes();
     void _ensure_registry();

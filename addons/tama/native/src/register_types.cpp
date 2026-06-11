@@ -22,6 +22,7 @@
 #include "tama_spawn_manager.h"
 
 #include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
@@ -65,6 +66,18 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     s_tama_manager->_repository = memnew(_TamaScriptRepository);
     Engine::get_singleton()->register_singleton("TamaManager", s_tama_manager);
     TamaManager::s_instance = s_tama_manager;
+
+    ProjectSettings *ps = ProjectSettings::get_singleton();
+    if (!ps->has_setting("tama/player_hitbox_radius")) {
+        ps->set_setting("tama/player_hitbox_radius", 3.0f);
+    }
+    ps->set_initial_value("tama/player_hitbox_radius", 3.0f);
+    Dictionary hint;
+    hint["name"]        = "tama/player_hitbox_radius";
+    hint["type"]        = Variant::FLOAT;
+    hint["hint"]        = PROPERTY_HINT_RANGE;
+    hint["hint_string"] = "0,100,0.5,or_greater";
+    ps->add_property_info(hint);
 }
 
 void uninitialize_tama_module(ModuleInitializationLevel p_level) {

@@ -43,7 +43,7 @@ func _on_option_button_item_selected(index: int) -> void:
 func _restart_emitter(script_name: String) -> void:
 	get_tree().call_group(&"tama_emitters", &"queue_free")
 	get_tree().call_group(&"tama_bullets", &"destroy")
-	TamaManager.get_server_bullet_pool().recycle_all()
+	TamaManager.recycle_all()
 	if emitter:
 		emitter.queue_free()
 	emitter = TamaEmitter.new()

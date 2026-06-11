@@ -5,13 +5,11 @@
 
 #include <cmath>
 #include <godot_cpp/classes/engine.hpp>
-#include <godot_cpp/classes/physics_server2d.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/world2d.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/color.hpp>
 #include <godot_cpp/variant/rect2.hpp>
-#include <godot_cpp/variant/transform2d.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/variant/vector2i.hpp>
 
@@ -27,8 +25,7 @@ void TamaServerLaserPool::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_active_count"),         &TamaServerLaserPool::get_active_count);
 
     ADD_SIGNAL(MethodInfo("laser_hit",
-        PropertyInfo(Variant::OBJECT, "laser", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerLaser"),
-        PropertyInfo(Variant::INT, "body_instance_id")));
+        PropertyInfo(Variant::OBJECT, "laser", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerLaser")));
 }
 
 // ---------------------------------------------------------------------------
@@ -37,9 +34,6 @@ void TamaServerLaserPool::_bind_methods() {
 
 TamaServerLaserPool::~TamaServerLaserPool() {
     for (auto &[key, td] : _types) {
-        PhysicsServer2D *ps = PhysicsServer2D::get_singleton();
-        for (auto &shape : td->shapes) ps->free_rid(shape);
-        if (td->area != RID()) ps->free_rid(td->area);
         for (auto *w : td->wrappers) memdelete(w);
         delete td;
     }
@@ -82,8 +76,6 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     td->duration_frames = (int)  p_config->get("duration_frames");
     td->fade_frames     = (int)  p_config->get("fade_frames");
     td->pool_size       = (int)  p_config->get("pool_size");
-    td->collision_layer = (int)  p_config->get("collision_layer");
-    td->collision_mask  = (int)  p_config->get("collision_mask");
     {
         auto load_anim = [](Object *cfg, const char *prop) -> std::vector<TamaAnimFrame> {
             Variant v = cfg->get(prop);
@@ -98,36 +90,11 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     int n = td->pool_size;
     _types[key] = td;
 
-    // Physics area with N pre-allocated rectangle shapes (all disabled initially)
-    RID space = get_world_2d()->get_space();
-    td->area = PhysicsServer2D::get_singleton()->area_create();
-    PhysicsServer2D::get_singleton()->area_set_space(td->area, space);
-    PhysicsServer2D::get_singleton()->area_set_collision_layer(td->area, td->collision_layer);
-    PhysicsServer2D::get_singleton()->area_set_collision_mask(td->area, td->collision_mask);
-    PhysicsServer2D::get_singleton()->area_set_monitorable(td->area, false);
-
-    // Rectangle shape half-extents: width × length
-    Vector2 half_extents(td->length / 2.0f, td->width / 2.0f);
-
-    td->shapes.reserve(n);
-    for (int i = 0; i < n; ++i) {
-        RID shape = PhysicsServer2D::get_singleton()->rectangle_shape_create();
-        PhysicsServer2D::get_singleton()->shape_set_data(shape, half_extents);
-        PhysicsServer2D::get_singleton()->area_add_shape(td->area, shape);
-        PhysicsServer2D::get_singleton()->area_set_shape_disabled(td->area, i, true);
-        td->shapes.push_back(shape);
-    }
-
-    Callable cb = callable_mp_static(TamaServerLaserPool::_area_monitor_callback)
-                      .bind(this, p_key);
-    PhysicsServer2D::get_singleton()->area_set_monitor_callback(td->area, cb);
-
     // Pre-allocate laser states and wrapper objects
     td->lasers.resize(n);
     td->wrappers.resize(n);
     for (int i = 0; i < n; ++i) {
         td->lasers[i].global_slot = i;
-        td->lasers[i].area_rid    = td->area;
         TamaServerLaser *w = memnew(TamaServerLaser);
         w->_init_slot(this, &td->lasers[i], key);
         td->wrappers[i] = w;
@@ -139,26 +106,6 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     td->ring_r     = 0;
     td->ring_w     = 0;
     td->ring_count = n;
-}
-
-// ---------------------------------------------------------------------------
-// Collision callback
-// ---------------------------------------------------------------------------
-
-void TamaServerLaserPool::_area_monitor_callback(
-        int status, RID /*body_rid*/, int64_t body_iid,
-        int /*body_shape*/, int local_shape,
-        TamaServerLaserPool *self, String type_key)
-{
-    if (status != PhysicsServer2D::AREA_BODY_ADDED) return;
-    std::string key = type_key.utf8().get_data();
-    auto it = self->_types.find(key);
-    if (it == self->_types.end()) return;
-    TypeData *td = it->second;
-    if (local_shape < 0 || local_shape >= (int)td->lasers.size()) return;
-    LaserState &l = td->lasers[local_shape];
-    if (!l.active) return;
-    self->emit_signal("laser_hit", l.wrapper, body_iid);
 }
 
 // ---------------------------------------------------------------------------
@@ -209,11 +156,9 @@ Object *TamaServerLaserPool::spawn(
     l.base_anim_frame = 0;
     l.base_anim_time  = 0.0f;
 
-    // If delay is zero, jump straight to expand and activate hitbox immediately
+    // If delay is zero, jump straight to expand phase immediately
     if (td.delay_frames == 0) {
         l.phase = 1;
-        PhysicsServer2D::get_singleton()->area_set_shape_disabled(td.area, global_slot, false);
-        _update_shape_transform(td, l);
     }
 
     // bullet_act runner
@@ -244,14 +189,6 @@ Object *TamaServerLaserPool::spawn(
     return l.wrapper;
 }
 
-// Helper — computes and applies the rectangle shape transform for expand/active phases
-void TamaServerLaserPool::_update_shape_transform(TypeData &td, LaserState &l) {
-    float hlen = td.length / 2.0f;
-    Vector2 center = l.position + Vector2(std::cos(l.angle), std::sin(l.angle)) * hlen;
-    PhysicsServer2D::get_singleton()->area_set_shape_transform(
-        td.area, l.global_slot, Transform2D(l.angle, center));
-}
-
 // ---------------------------------------------------------------------------
 // Recycle
 // ---------------------------------------------------------------------------
@@ -273,9 +210,6 @@ void TamaServerLaserPool::_recycle_internal(LaserState *l) {
     if (!l || !l->active) return;
     l->active = false;
 
-    // Disable physics shape
-    PhysicsServer2D::get_singleton()->area_set_shape_disabled(l->area_rid, l->global_slot, true);
-
     // Remove from _active via swap-erase
     int idx = l->active_idx;
     int last = (int)_active.size() - 1;
@@ -292,9 +226,11 @@ void TamaServerLaserPool::_recycle_internal(LaserState *l) {
         l->runner = nullptr;
     }
 
-    // Return slot to FIFO ring — find TypeData by area_rid
+    // Return slot to FIFO ring — find TypeData by pointer match
     for (auto &[key, td] : _types) {
-        if (td->area == l->area_rid) {
+        if (l->global_slot >= 0 && l->global_slot < (int)td->lasers.size() &&
+            &td->lasers[l->global_slot] == l)
+        {
             int n = (int)td->lasers.size();
             td->ring[td->ring_w] = l->global_slot;
             td->ring_w = (td->ring_w + 1) % n;
@@ -311,6 +247,9 @@ void TamaServerLaserPool::_recycle_internal(LaserState *l) {
 void TamaServerLaserPool::_physics_process(double p_delta) {
     float delta = (float)p_delta;
     int64_t cur_frame = Engine::get_singleton()->get_physics_frames();
+    TamaManager *mgr = TamaManager::get_instance();
+    Vector2 player   = mgr ? mgr->get_player_position()      : Vector2();
+    float   hitbox_r = mgr ? mgr->get_player_hitbox_radius()  : 3.0f;
 
     _to_recycle.clear();
 
@@ -329,25 +268,22 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
             if (l.angle_tween.active) l.angle = l.angle_tween.step(delta);
 
             switch (l.phase) {
-                case 0: { // delay — thin line, no hitbox
+                case 0: { // delay — thin line, no collision
                     l.current_width   = 1.0f;
                     l.current_opacity = 1.0f;
                     ++l.frame_counter;
                     if (l.frame_counter >= td->delay_frames) {
                         l.phase = 1;
                         l.frame_counter = 0;
-                        PhysicsServer2D::get_singleton()->area_set_shape_disabled(td->area, l.global_slot, false);
-                        _update_shape_transform(*td, l);
                     }
                     break;
                 }
-                case 1: { // expand — width grows, hitbox active
+                case 1: { // expand — width grows, collision active
                     float t = (td->expand_frames > 0)
                         ? std::min((float)l.frame_counter / (float)td->expand_frames, 1.0f)
                         : 1.0f;
                     l.current_width   = 1.0f + (td->width - 1.0f) * t;
                     l.current_opacity = 1.0f;
-                    _update_shape_transform(*td, l);
                     ++l.frame_counter;
                     if (l.frame_counter >= td->expand_frames) {
                         l.phase = 2;
@@ -356,19 +292,17 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
                     }
                     break;
                 }
-                case 2: { // active — full width, hitbox active
+                case 2: { // active — full width, collision active
                     l.current_width   = td->width;
                     l.current_opacity = 1.0f;
-                    _update_shape_transform(*td, l);
                     ++l.frame_counter;
                     if (l.frame_counter >= td->duration_frames) {
                         l.phase = 3;
                         l.frame_counter = 0;
-                        PhysicsServer2D::get_singleton()->area_set_shape_disabled(td->area, l.global_slot, true);
                     }
                     break;
                 }
-                case 3: { // fade — opacity decreases, no hitbox
+                case 3: { // fade — opacity decreases, no collision
                     float t = (td->fade_frames > 0)
                         ? std::min((float)l.frame_counter / (float)td->fade_frames, 1.0f)
                         : 1.0f;
@@ -378,6 +312,29 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
                         _to_recycle.push_back(&l);
                     }
                     break;
+                }
+            }
+
+            // CPU collision — point-to-segment test with AABB early-out
+            if (l.phase == 1 || l.phase == 2) {
+                float threshold = l.current_width * 0.5f + hitbox_r;
+                Vector2 dir(std::cos(l.angle), std::sin(l.angle));
+                Vector2 end = l.position + dir * td->length;
+                float ax = l.position.x < end.x ? l.position.x : end.x;
+                float bx = l.position.x < end.x ? end.x : l.position.x;
+                float ay = l.position.y < end.y ? l.position.y : end.y;
+                float by = l.position.y < end.y ? end.y : l.position.y;
+                if (player.x >= ax - threshold && player.x <= bx + threshold &&
+                    player.y >= ay - threshold && player.y <= by + threshold)
+                {
+                    Vector2 AB = end - l.position;
+                    float ab_sq = AB.length_squared();
+                    if (ab_sq > 0.0001f) {
+                        float t = (player - l.position).dot(AB) / ab_sq;
+                        if (t < 0.0f) t = 0.0f; else if (t > 1.0f) t = 1.0f;
+                        if ((player - (l.position + AB * t)).length_squared() < threshold * threshold)
+                            emit_signal("laser_hit", l.wrapper);
+                    }
                 }
             }
 

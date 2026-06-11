@@ -8,7 +8,6 @@
 #include <cstring>
 
 #include <godot_cpp/classes/engine.hpp>
-#include <godot_cpp/classes/physics_server2d.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
@@ -68,8 +67,7 @@ void TamaServerBulletPool::_bind_methods() {
                          &TamaServerBulletPool::recycle_all);
 
     ADD_SIGNAL(MethodInfo("bullet_hit",
-        PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerBullet"),
-        PropertyInfo(Variant::INT,    "body_instance_id")));
+        PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerBullet")));
 }
 
 // ---------------------------------------------------------------------------
@@ -144,8 +142,6 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     td->rect           = (Rect2)p_config->get("rect");
     td->texture_scale  = (Vector2)p_config->get("texture_scale");
     td->shape_radius   = (float)p_config->get("shape_radius");
-    td->collision_layer = (int)p_config->get("collision_layer");
-    td->collision_mask  = (int)p_config->get("collision_mask");
     td->rotates              = (bool)p_config->get("rotates");
     td->face_velocity        = (bool)p_config->get("face_velocity");
     td->pool_size            = (int)p_config->get("pool_size");
@@ -181,34 +177,11 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     td->composite_res->set_mesh(td->quad);
     td->composite = td->composite_res->get_rid();
 
-    // Physics area with N pre-allocated shapes
-    RID space = get_world_2d()->get_space();
-    td->area = PhysicsServer2D::get_singleton()->area_create();
-    PhysicsServer2D::get_singleton()->area_set_space(td->area, space);
-    PhysicsServer2D::get_singleton()->area_set_collision_layer(td->area, td->collision_layer);
-    PhysicsServer2D::get_singleton()->area_set_collision_mask(td->area, td->collision_mask);
-    PhysicsServer2D::get_singleton()->area_set_monitorable(td->area, false);
-
-    td->shapes.reserve(n);
-    for (int i = 0; i < n; ++i) {
-        RID shape = PhysicsServer2D::get_singleton()->circle_shape_create();
-        PhysicsServer2D::get_singleton()->shape_set_data(shape, td->shape_radius);
-        PhysicsServer2D::get_singleton()->area_add_shape(td->area, shape);
-        PhysicsServer2D::get_singleton()->area_set_shape_disabled(td->area, i, true);
-        td->shapes.push_back(shape);
-    }
-
-    // Monitor callback — local_shape is the global slot index
-    Callable cb = callable_mp_static(TamaServerBulletPool::_area_monitor_callback)
-                      .bind(this, p_key);
-    PhysicsServer2D::get_singleton()->area_set_monitor_callback(td->area, cb);
-
     // Pre-allocate bullet states and wrapper objects
     td->bullets.resize(n);
     td->wrappers.resize(n);
     for (int i = 0; i < n; ++i) {
         td->bullets[i].global_slot = i;
-        td->bullets[i].area_rid    = td->area;
         TamaServerBullet *w = memnew(TamaServerBullet);
         w->_init_slot(this, &td->bullets[i]);
         td->wrappers[i] = w;
@@ -220,26 +193,6 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     td->ring_r     = 0;
     td->ring_w     = 0;
     td->ring_count = n;
-}
-
-// ---------------------------------------------------------------------------
-// Area collision callback (static)
-// ---------------------------------------------------------------------------
-
-void TamaServerBulletPool::_area_monitor_callback(
-        int status, RID /*body_rid*/, int64_t body_iid,
-        int /*body_shape*/, int local_shape,
-        TamaServerBulletPool *self, String type_key)
-{
-    if (status != PhysicsServer2D::AREA_BODY_ADDED) return;
-    std::string key = type_key.utf8().get_data();
-    auto it = self->_types.find(key);
-    if (it == self->_types.end()) return;
-    TypeData *td = it->second;
-    if (local_shape < 0 || local_shape >= (int)td->bullets.size()) return;
-    BulletState &b = td->bullets[local_shape];
-    if (!b.active) return;
-    self->emit_signal("bullet_hit", b.wrapper, body_iid);
 }
 
 // ---------------------------------------------------------------------------
@@ -492,18 +445,11 @@ Object *TamaServerBulletPool::spawn(
                 Color(1.0f, 1.0f, 1.0f, td.starting_spawn_opacity));
         }
 
-        // Physics shape stays disabled until spawn animation finishes.
-        PhysicsServer2D::get_singleton()->area_set_shape_transform(
-            td.area, global_slot, Transform2D(0.0f, position));
+        // spawn_frames_remaining > 0 — collision suppressed until animation finishes.
     } else {
         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
             batch->multimesh, local_slot,
             Transform2D(rot, b.texture_scale, 0.0f, position));
-
-        // Physics transform
-        PhysicsServer2D::get_singleton()->area_set_shape_transform(
-            td.area, global_slot, Transform2D(0.0f, position));
-        PhysicsServer2D::get_singleton()->area_set_shape_disabled(td.area, global_slot, false);
     }
 
     // bullet_act runner — C++ _TamaInterpreter (stepped in _physics_process)
@@ -564,10 +510,11 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
 
     Transform2D offscreen(0.0f, Vector2(-100000.0f, -100000.0f));
 
-    // Find which TypeData owns this slot (search by area_rid)
+    // Find which TypeData owns this slot (search by global_slot pointer match)
     TypeData *td_owner = nullptr;
     for (auto &[k, td] : _types) {
-        if (td->area == b->area_rid) { td_owner = td; break; }
+        if (b->global_slot >= 0 && b->global_slot < (int)td->bullets.size() &&
+            &td->bullets[b->global_slot] == b) { td_owner = td; break; }
     }
 
     // Compact the batch: move the last live slot into this freed hole so the slots
@@ -654,8 +601,6 @@ void TamaServerBulletPool::_recycle_internal(BulletState *b) {
         ++td_owner->ring_count;
     }
 
-    PhysicsServer2D::get_singleton()->area_set_shape_disabled(b->area_rid, b->global_slot, true);
-
     // Clean up runner
     if (b->runner) {
         b->runner->stop();
@@ -681,6 +626,8 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
     Rect2 world = _world_bounds();
     TamaManager *mgr = TamaManager::get_instance();
     float global_margin = mgr ? mgr->get_global_out_of_bounds_margin() : -1.0f;
+    Vector2 player   = mgr ? mgr->get_player_position()     : Vector2();
+    float   hitbox_r = mgr ? mgr->get_player_hitbox_radius() : 3.0f;
     godot::Object *ctx  = mgr ? mgr->_get_context() : nullptr;
     _TamaExprRuntime *er = _TamaExprRuntime::get_singleton();
 
@@ -805,8 +752,17 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
             b->multimesh_rid, b->local_slot,
             Transform2D(rot, b->texture_scale, 0.0f, b->position));
-        PhysicsServer2D::get_singleton()->area_set_shape_transform(
-            b->area_rid, b->global_slot, Transform2D(0.0f, b->position));
+
+        // CPU collision — axis-first AABB rejection before the circle test
+        {
+            float threshold = td_iter->shape_radius + hitbox_r;
+            if (player.x >= b->position.x - threshold && player.x <= b->position.x + threshold &&
+                player.y >= b->position.y - threshold && player.y <= b->position.y + threshold)
+            {
+                if ((player - b->position).length_squared() < threshold * threshold)
+                    emit_signal("bullet_hit", b->wrapper);
+            }
+        }
 
         float m = (global_margin >= 0.0f) ? global_margin : b->out_of_bounds_margin;
         if (b->position.x < world.position.x - m ||
@@ -850,10 +806,6 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
                     RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                         batch->multimesh, i,
                         Transform2D(rot, b->texture_scale, 0.0f, b->position));
-                    PhysicsServer2D::get_singleton()->area_set_shape_transform(
-                        b->area_rid, b->global_slot, Transform2D(0.0f, b->position));
-                    PhysicsServer2D::get_singleton()->area_set_shape_disabled(
-                        b->area_rid, b->global_slot, false);
                     if (batch->spawn_multimesh != RID())
                         RenderingServer::get_singleton()->multimesh_instance_set_transform_2d(
                             batch->spawn_multimesh, i, offscreen);

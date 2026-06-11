@@ -6,7 +6,6 @@
 #include <string>
 
 #include <godot_cpp/classes/object.hpp>
-#include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
 // ---------------------------------------------------------------------------
@@ -39,8 +38,6 @@ struct LaserState {
     // Per-frame computed render values
     float current_width   = 1.0f;
     float current_opacity = 1.0f;
-
-    godot::RID area_rid;
 
     _TamaInterpreter *runner  = nullptr;
     godot::Object    *wrapper = nullptr;

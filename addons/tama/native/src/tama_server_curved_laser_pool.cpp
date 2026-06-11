@@ -6,13 +6,11 @@
 #include <algorithm>
 #include <cmath>
 #include <godot_cpp/classes/engine.hpp>
-#include <godot_cpp/classes/physics_server2d.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/classes/world2d.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/rect2.hpp>
-#include <godot_cpp/variant/transform2d.hpp>
 #include <godot_cpp/variant/color.hpp>
 #include <godot_cpp/variant/packed_color_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
@@ -34,8 +32,7 @@ void TamaServerCurvedLaserPool::_bind_methods() {
 
     ADD_SIGNAL(MethodInfo("laser_hit",
         PropertyInfo(Variant::OBJECT, "laser",
-                     PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerCurvedLaser"),
-        PropertyInfo(Variant::INT, "body_instance_id")));
+                     PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerCurvedLaser")));
 }
 
 // ---------------------------------------------------------------------------
@@ -44,9 +41,6 @@ void TamaServerCurvedLaserPool::_bind_methods() {
 
 TamaServerCurvedLaserPool::~TamaServerCurvedLaserPool() {
     for (auto &[key, td] : _types) {
-        PhysicsServer2D *ps = PhysicsServer2D::get_singleton();
-        for (auto &shape : td->shapes) ps->free_rid(shape);
-        if (td->area != RID()) ps->free_rid(td->area);
         for (auto *w : td->wrappers) memdelete(w);
         delete td;
     }
@@ -84,8 +78,6 @@ void TamaServerCurvedLaserPool::register_type(const String &p_key, Object *p_con
     td->length               = std::max(2, (int)p_config->get("length"));
     td->pool_size            = (int)  p_config->get("pool_size");
     td->out_of_bounds_margin = (float)p_config->get("out_of_bounds_margin");
-    td->collision_layer = (int)  p_config->get("collision_layer");
-    td->collision_mask  = (int)  p_config->get("collision_mask");
     {
         Variant v = p_config->get("texture");
         if (v.get_type() == Variant::OBJECT) {
@@ -94,42 +86,13 @@ void TamaServerCurvedLaserPool::register_type(const String &p_key, Object *p_con
         }
     }
 
-    int n     = td->pool_size;
-    // One shape per trail buffer slot (indexed by the newer node's slot).
-    // The tail slot's shape is always disabled, so length slots cover up to
-    // length-1 simultaneously-active segments.
-    int slots = td->length;
+    int n = td->pool_size;
     _types[key] = td;
-
-    PhysicsServer2D *ps = PhysicsServer2D::get_singleton();
-    RID space = get_world_2d()->get_space();
-    td->area = ps->area_create();
-    ps->area_set_space(td->area, space);
-    ps->area_set_collision_layer(td->area, td->collision_layer);
-    ps->area_set_collision_mask(td->area, td->collision_mask);
-    ps->area_set_monitorable(td->area, false);
-
-    // Pre-allocate n * slots rectangle shapes: index = global_slot * slots + buffer_slot
-    td->shapes.reserve(n * slots);
-    for (int i = 0; i < n; ++i) {
-        for (int s = 0; s < slots; ++s) {
-            RID shape = ps->rectangle_shape_create();
-            ps->shape_set_data(shape, Vector2(1.0f, 1.0f));
-            ps->area_add_shape(td->area, shape);
-            ps->area_set_shape_disabled(td->area, i * slots + s, true);
-            td->shapes.push_back(shape);
-        }
-    }
-
-    Callable cb = callable_mp_static(TamaServerCurvedLaserPool::_area_monitor_callback)
-                      .bind(this, p_key);
-    ps->area_set_monitor_callback(td->area, cb);
 
     td->lasers.resize(n);
     td->wrappers.resize(n);
     for (int i = 0; i < n; ++i) {
         td->lasers[i].global_slot = i;
-        td->lasers[i].area_rid    = td->area;
         td->lasers[i].trail.resize(td->length);
         td->lasers[i].edge_l.resize(td->length);
         td->lasers[i].edge_r.resize(td->length);
@@ -143,28 +106,6 @@ void TamaServerCurvedLaserPool::register_type(const String &p_key, Object *p_con
     td->ring_r     = 0;
     td->ring_w     = 0;
     td->ring_count = n;
-}
-
-// ---------------------------------------------------------------------------
-// Collision callback
-// ---------------------------------------------------------------------------
-
-void TamaServerCurvedLaserPool::_area_monitor_callback(
-        int status, RID /*body_rid*/, int64_t body_iid,
-        int /*body_shape*/, int local_shape,
-        TamaServerCurvedLaserPool *self, String type_key)
-{
-    if (status != PhysicsServer2D::AREA_BODY_ADDED) return;
-    std::string key = type_key.utf8().get_data();
-    auto it = self->_types.find(key);
-    if (it == self->_types.end()) return;
-    TypeData *td = it->second;
-    if (td->length <= 0) return;
-    int laser_slot = local_shape / td->length;
-    if (laser_slot < 0 || laser_slot >= (int)td->lasers.size()) return;
-    CurvedLaserState &l = td->lasers[laser_slot];
-    if (!l.active) return;
-    self->emit_signal("laser_hit", l.wrapper, body_iid);
 }
 
 // ---------------------------------------------------------------------------
@@ -217,7 +158,6 @@ Object *TamaServerCurvedLaserPool::spawn(
     l.tex_anim_time          = 0.0f;
     l.trail_head             = 0;
     l.trail_count            = 0;
-    l.collision_built        = false;
     l.edge_built             = false;
 
     l.runner = nullptr;
@@ -268,19 +208,6 @@ void TamaServerCurvedLaserPool::_recycle_internal(CurvedLaserState *l) {
     if (!l || !l->active) return;
     l->active = false;
 
-    PhysicsServer2D *ps = PhysicsServer2D::get_singleton();
-
-    // Disable all segment shapes for this laser
-    for (auto &[k, td] : _types) {
-        if (td->area == l->area_rid) {
-            int slots = td->length;
-            int base = l->global_slot * slots;
-            for (int s = 0; s < slots; ++s)
-                ps->area_set_shape_disabled(l->area_rid, base + s, true);
-            break;
-        }
-    }
-
     int idx  = l->active_idx;
     int last = (int)_active.size() - 1;
     if (idx != last) {
@@ -295,9 +222,10 @@ void TamaServerCurvedLaserPool::_recycle_internal(CurvedLaserState *l) {
         l->runner = nullptr;
     }
 
+    // Return slot to the free ring — find the TypeData that owns this laser
     for (auto &[key, td] : _types) {
-        if (td->area == l->area_rid) {
-            int n = (int)td->lasers.size();
+        int n = (int)td->lasers.size();
+        if (l->global_slot >= 0 && l->global_slot < n && &td->lasers[l->global_slot] == l) {
             td->ring[td->ring_w] = l->global_slot;
             td->ring_w = (td->ring_w + 1) % n;
             ++td->ring_count;
@@ -347,16 +275,16 @@ static void _cache_edge_slot(CurvedLaserState &l, int j, int length, float hw) {
 void TamaServerCurvedLaserPool::_physics_process(double p_delta) {
     float delta = (float)p_delta;
     int64_t cur_frame = Engine::get_singleton()->get_physics_frames();
-    PhysicsServer2D *ps = PhysicsServer2D::get_singleton();
     Rect2 world = _world_bounds();
     TamaManager *mgr = TamaManager::get_instance();
     float global_margin = mgr ? mgr->get_global_out_of_bounds_margin() : -1.0f;
+    Vector2 player     = mgr ? mgr->get_player_position() : Vector2();
+    float hitbox_r     = mgr ? mgr->get_player_hitbox_radius() : 3.0f;
 
     _to_recycle.clear();
 
     for (auto &[key, td_iter] : _types) {
         TypeData *td = td_iter;
-        int slots = td->length;
 
         for (int i = 0; i < (int)td->lasers.size(); ++i) {
             CurvedLaserState &l = td->lasers[i];
@@ -376,8 +304,13 @@ void TamaServerCurvedLaserPool::_physics_process(double p_delta) {
             if (l.rot_speed != 0.0f) l.angle += l.rot_speed * DEG2RAD * delta;
             l.position += Vector2(std::cos(l.angle), std::sin(l.angle)) * l.speed * delta;
 
+            // Capture dropped tail info before overwriting (needed for AABB update below)
+            bool    was_full     = (l.trail_count == td->length);
+            int     new_head_slot = (l.trail_head - 1 + td->length) % td->length;
+            Vector2 dropped_tail = was_full ? l.trail[new_head_slot] : Vector2();
+
             // Push new position to circular trail buffer
-            l.trail_head = (l.trail_head - 1 + td->length) % td->length;
+            l.trail_head = new_head_slot;
             l.trail[l.trail_head] = l.position;
             if (l.trail_count < td->length) ++l.trail_count;
 
@@ -402,8 +335,17 @@ void TamaServerCurvedLaserPool::_physics_process(double p_delta) {
             {
                 float hw = l.current_width * 0.5f;
                 if (!l.edge_built) {
-                    for (int k = 0; k < l.trail_count; ++k)
-                        _cache_edge_slot(l, (l.trail_head + k) % td->length, td->length, hw);
+                    // Full build — compute edge cache and AABB in the same loop.
+                    float min_x = 1e30f, max_x = -1e30f, min_y = 1e30f, max_y = -1e30f;
+                    for (int k = 0; k < l.trail_count; ++k) {
+                        int slot = (l.trail_head + k) % td->length;
+                        _cache_edge_slot(l, slot, td->length, hw);
+                        Vector2 p = l.trail[slot];
+                        if (p.x < min_x) min_x = p.x; if (p.x > max_x) max_x = p.x;
+                        if (p.y < min_y) min_y = p.y; if (p.y > max_y) max_y = p.y;
+                    }
+                    l.aabb_min = Vector2(min_x, min_y);
+                    l.aabb_max = Vector2(max_x, max_y);
                     l.edge_built = true;
                 } else {
                     // New head: only has an older neighbour (no newer one yet).
@@ -411,50 +353,56 @@ void TamaServerCurvedLaserPool::_physics_process(double p_delta) {
                     // Previous head: now has the new head as its newer neighbour.
                     if (l.trail_count >= 2)
                         _cache_edge_slot(l, (l.trail_head + 1) % td->length, td->length, hw);
+                    // Expand AABB for the new head position.
+                    if (l.position.x < l.aabb_min.x) l.aabb_min.x = l.position.x;
+                    else if (l.position.x > l.aabb_max.x) l.aabb_max.x = l.position.x;
+                    if (l.position.y < l.aabb_min.y) l.aabb_min.y = l.position.y;
+                    else if (l.position.y > l.aabb_max.y) l.aabb_max.y = l.position.y;
+                    // If the dropped tail was a boundary point the AABB may have shrunk;
+                    // recompute fully in that case.
+                    if (was_full && (
+                        dropped_tail.x == l.aabb_min.x || dropped_tail.x == l.aabb_max.x ||
+                        dropped_tail.y == l.aabb_min.y || dropped_tail.y == l.aabb_max.y))
+                    {
+                        float min_x = 1e30f, max_x = -1e30f, min_y = 1e30f, max_y = -1e30f;
+                        for (int k = 0; k < l.trail_count; ++k) {
+                            Vector2 p = l.trail[(l.trail_head + k) % td->length];
+                            if (p.x < min_x) min_x = p.x; if (p.x > max_x) max_x = p.x;
+                            if (p.y < min_y) min_y = p.y; if (p.y > max_y) max_y = p.y;
+                        }
+                        l.aabb_min = Vector2(min_x, min_y);
+                        l.aabb_max = Vector2(max_x, max_y);
+                    }
                 }
             }
 
             // ----------------------------------------------------------------
-            // Collision — incremental update.
-            //
-            // Shapes are indexed by the buffer slot of the newer node of each
-            // segment (stable as the trail scrolls). History nodes never move,
-            // so each frame only the new head segment is (re)built and the
-            // just-scrolled-off tail slot is disabled (~4 calls/laser vs N).
+            // Collision — CPU player-point test (danmakufu style).
+            // Test the tracked player position against each live trail segment
+            // using point-to-segment distance. No PhysicsServer2D involvement.
             // ----------------------------------------------------------------
-            {
-                int base = l.global_slot * slots;
-
-                auto build_segment = [&](int newer_slot, int older_slot) {
-                    Vector2 A = l.trail[newer_slot];
-                    Vector2 B = l.trail[older_slot];
-                    float seg_len   = A.distance_to(B);
-                    float seg_angle = std::atan2(B.y - A.y, B.x - A.x);
-                    Vector2 half_extents(seg_len * 0.5f + td->width * 0.5f, td->width * 0.5f);
-                    int shape_idx = base + newer_slot;
-                    ps->shape_set_data(td->shapes[shape_idx], half_extents);
-                    ps->area_set_shape_transform(l.area_rid, shape_idx,
-                        Transform2D(seg_angle, (A + B) * 0.5f));
-                    ps->area_set_shape_disabled(l.area_rid, shape_idx, false);
-                };
-
-                if (!l.collision_built) {
+            if (l.trail_count >= 2) {
+                float threshold    = td->width * 0.5f + hitbox_r;
+                float threshold_sq = threshold * threshold;
+                // AABB early-out: skip all segment tests when the player is
+                // clearly outside the laser's bounding box.
+                if (player.x >= l.aabb_min.x - threshold && player.x <= l.aabb_max.x + threshold &&
+                    player.y >= l.aabb_min.y - threshold && player.y <= l.aabb_max.y + threshold)
+                {
                     for (int k = 0; k < l.trail_count - 1; ++k) {
-                        int ns = (l.trail_head + k)     % td->length;
-                        int os = (l.trail_head + k + 1) % td->length;
-                        build_segment(ns, os);
+                        Vector2 A  = l.trail[(l.trail_head + k)     % td->length];
+                        Vector2 B  = l.trail[(l.trail_head + k + 1) % td->length];
+                        Vector2 AB = B - A;
+                        float ab_sq = AB.length_squared();
+                        if (ab_sq < 0.0001f) continue;
+                        float t = (player - A).dot(AB) / ab_sq;
+                        if (t < 0.0f) t = 0.0f; else if (t > 1.0f) t = 1.0f;
+                        if ((player - (A + AB * t)).length_squared() < threshold_sq) {
+                            emit_signal("laser_hit", l.wrapper);
+                            break;
+                        }
                     }
-                    l.collision_built = true;
-                } else if (l.trail_count >= 2) {
-                    int ns = l.trail_head;
-                    int os = (l.trail_head + 1) % td->length;
-                    build_segment(ns, os);
                 }
-
-                // The oldest node's slot has no older neighbour — disable it.
-                // When the buffer is full this is the segment that just scrolled off.
-                int tail_slot = (l.trail_head + l.trail_count - 1) % td->length;
-                ps->area_set_shape_disabled(l.area_rid, base + tail_slot, true);
             }
 
             // Advance texture animation

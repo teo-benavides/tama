@@ -9,9 +9,6 @@
 #include <vector>
 
 #include <godot_cpp/classes/node2d.hpp>
-#include <godot_cpp/variant/callable.hpp>
-#include <godot_cpp/variant/rid.hpp>
-#include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
 class TamaServerLaserPool : public godot::Node2D {
@@ -36,12 +33,6 @@ class TamaServerLaserPool : public godot::Node2D {
         int    duration_frames  = 120;
         int    fade_frames      = 30;
         int    pool_size        = 100;
-        int    collision_layer  = 1;
-        int    collision_mask   = 2;
-
-        // Physics area with pool_size pre-allocated rectangle shapes
-        godot::RID area;
-        std::vector<godot::RID> shapes;
 
         // Laser state flat array (indexed by global_slot)
         std::vector<LaserState>        lasers;
@@ -70,12 +61,6 @@ class TamaServerLaserPool : public godot::Node2D {
     // ------------------------------------------------------------------
 
     void _recycle_internal(LaserState *l);
-    void _update_shape_transform(TypeData &td, LaserState &l);
-
-    static void _area_monitor_callback(
-            int status, godot::RID body_rid, int64_t body_iid,
-            int body_shape, int local_shape,
-            TamaServerLaserPool *self, godot::String type_key);
 
     friend class TamaServerLaser;
 

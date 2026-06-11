@@ -13,8 +13,9 @@
 
 using namespace godot;
 
-static const char *SETTING_SCRIPTS_PATH = "tama/scripts_path";
-static const char *DEFAULT_SCRIPTS_PATH = "res://tamascripts";
+static const char *SETTING_SCRIPTS_PATH       = "tama/scripts_path";
+static const char *DEFAULT_SCRIPTS_PATH       = "res://tamascripts";
+static const char *SETTING_PLAYER_HITBOX_RADIUS = "tama/player_hitbox_radius";
 
 TamaManager *TamaManager::s_instance = nullptr;
 
@@ -37,19 +38,30 @@ void TamaManager::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_laser_pool"),                         &TamaManager::get_laser_pool);
     ClassDB::bind_method(D_METHOD("get_curved_laser_pool"),                  &TamaManager::get_curved_laser_pool);
     ClassDB::bind_method(D_METHOD("destroy_server_bullet","bullet"),         &TamaManager::destroy_server_bullet);
+    ClassDB::bind_method(D_METHOD("recycle_all"),                            &TamaManager::recycle_all);
     ClassDB::bind_method(D_METHOD("get_global_out_of_bounds_margin"),        &TamaManager::get_global_out_of_bounds_margin);
     ClassDB::bind_method(D_METHOD("set_global_out_of_bounds_margin","v"),    &TamaManager::set_global_out_of_bounds_margin);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "global_out_of_bounds_margin",
                               PROPERTY_HINT_RANGE, "-1,1000,1,or_greater"),
                  "set_global_out_of_bounds_margin", "get_global_out_of_bounds_margin");
+    ClassDB::bind_method(D_METHOD("get_player_hitbox_radius"),               &TamaManager::get_player_hitbox_radius);
+    ClassDB::bind_method(D_METHOD("set_player_hitbox_radius","v"),           &TamaManager::set_player_hitbox_radius);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "player_hitbox_radius",
+                              PROPERTY_HINT_RANGE, "0,100,0.5,or_greater"),
+                 "set_player_hitbox_radius", "get_player_hitbox_radius");
     ClassDB::bind_method(D_METHOD("get_bullet_count"),                       &TamaManager::get_bullet_count);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "bullet_count",
                               PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
                  "", "get_bullet_count");
-    ClassDB::bind_method(D_METHOD("_on_pool_bullet_hit", "bullet", "body_instance_id"), &TamaManager::_on_pool_bullet_hit);
+    ClassDB::bind_method(D_METHOD("_on_pool_bullet_hit", "bullet"),  &TamaManager::_on_pool_bullet_hit);
     ADD_SIGNAL(MethodInfo("bullet_hit",
-        PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerBullet"),
-        PropertyInfo(Variant::INT,    "body_instance_id")));
+        PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerBullet")));
+    ClassDB::bind_method(D_METHOD("_on_laser_hit", "laser"),         &TamaManager::_on_laser_hit);
+    ADD_SIGNAL(MethodInfo("straight_laser_hit",
+        PropertyInfo(Variant::OBJECT, "laser", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerLaser")));
+    ClassDB::bind_method(D_METHOD("_on_curved_laser_hit", "laser"),  &TamaManager::_on_curved_laser_hit);
+    ADD_SIGNAL(MethodInfo("curved_laser_hit",
+        PropertyInfo(Variant::OBJECT, "laser", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerCurvedLaser")));
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +81,11 @@ void TamaManager::_ensure_scene_nodes() {
     _spawn_manager->_laser_pool         = _laser_pool;
     _spawn_manager->_curved_laser_pool  = _curved_laser_pool;
     _spawn_manager->context = Ref<TamaContext>(memnew(TamaContext));
+    _player_hitbox_radius = (float)ProjectSettings::get_singleton()->get_setting(
+        SETTING_PLAYER_HITBOX_RADIUS, 3.0f);
     _server_pool->connect("bullet_hit", callable_mp(this, &TamaManager::_on_pool_bullet_hit));
+    _laser_pool->connect("laser_hit",   callable_mp(this, &TamaManager::_on_laser_hit));
+    _curved_laser_pool->connect("laser_hit", callable_mp(this, &TamaManager::_on_curved_laser_hit));
     tree->get_root()->call_deferred("add_child", _spawn_manager);
     tree->get_root()->call_deferred("add_child", _server_pool);
     tree->get_root()->call_deferred("add_child", _laser_pool);
@@ -202,14 +218,28 @@ Object *TamaManager::get_server_bullet_pool() const { return _server_pool; }
 Object *TamaManager::get_laser_pool()         const { return _laser_pool; }
 Object *TamaManager::get_curved_laser_pool()  const { return _curved_laser_pool; }
 
+void TamaManager::recycle_all() {
+    if (_server_pool)       _server_pool->call("recycle_all");
+    if (_laser_pool)        _laser_pool->call("recycle_all");
+    if (_curved_laser_pool) _curved_laser_pool->call("recycle_all");
+}
+
 void TamaManager::destroy_server_bullet(Object *p_bullet) {
     // call_deferred so this is safe to call from inside the bullet_hit signal handler,
     // which fires during a physics query flush where area_set_shape_disabled is forbidden.
     if (_server_pool) _server_pool->call_deferred("recycle", p_bullet);
 }
 
-void TamaManager::_on_pool_bullet_hit(Object *bullet, int64_t body_instance_id) {
-    emit_signal("bullet_hit", bullet, body_instance_id);
+void TamaManager::_on_pool_bullet_hit(Object *bullet) {
+    emit_signal("bullet_hit", bullet);
+}
+
+void TamaManager::_on_laser_hit(Object *laser) {
+    emit_signal("straight_laser_hit", laser);
+}
+
+void TamaManager::_on_curved_laser_hit(Object *laser) {
+    emit_signal("curved_laser_hit", laser);
 }
 
 int TamaManager::get_bullet_count() const {

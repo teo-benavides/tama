@@ -11,10 +11,8 @@
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/quad_mesh.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
-#include <godot_cpp/variant/callable.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/rid.hpp>
-#include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
 class TamaServerBulletPool : public godot::Node2D {
@@ -58,8 +56,6 @@ class TamaServerBulletPool : public godot::Node2D {
         godot::Rect2    rect         = {-8.0f, -8.0f, 16.0f, 16.0f};
         godot::Vector2  texture_scale = {1.0f, 1.0f};
         float  shape_radius   = 6.0f;
-        int    collision_layer = 1;
-        int    collision_mask  = 2;
         bool   rotates              = true;
         bool   face_velocity        = true;
         int    pool_size            = 1000;
@@ -77,8 +73,6 @@ class TamaServerBulletPool : public godot::Node2D {
         godot::Ref<godot::QuadMesh> quad;
         godot::Ref<godot::MultiMesh> composite_res;
         godot::RID composite;
-        godot::RID area;
-        std::vector<godot::RID> shapes;
 
         // Bullet state flat array (indexed by global slot)
         std::vector<BulletState>        bullets;
@@ -145,11 +139,6 @@ class TamaServerBulletPool : public godot::Node2D {
     float _accel_axis_end(int axis_type, float value, float current, float over) const;
 
     godot::Rect2 _world_bounds() const;
-
-    static void _area_monitor_callback(
-            int status, godot::RID body_rid, int64_t body_iid,
-            int body_shape, int local_shape,
-            TamaServerBulletPool *self, godot::String type_key);
 
 protected:
     static void _bind_methods();

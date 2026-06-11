@@ -11,13 +11,11 @@
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/variant/rect2.hpp>
-#include <godot_cpp/variant/callable.hpp>
 #include <godot_cpp/variant/color.hpp>
 #include <godot_cpp/variant/packed_color_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/rid.hpp>
-#include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
 class TamaServerCurvedLaserPool : public godot::Node2D {
@@ -35,13 +33,6 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
         std::vector<TamaAnimFrame> texture_frames;
         int    pool_size            = 100;
         float  out_of_bounds_margin = 50.0f;
-        int    collision_layer      = 1;
-        int    collision_mask       = 2;
-
-        // One shared area with pool_size*(length-1) pre-allocated rectangle shapes.
-        // Shape index = global_slot*(length-1) + segment_index.
-        godot::RID area;
-        std::vector<godot::RID> shapes;
 
         std::vector<CurvedLaserState>        lasers;
         std::vector<TamaServerCurvedLaser *> wrappers;
@@ -85,11 +76,6 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
 
     void _recycle_internal(CurvedLaserState *l);
     godot::Rect2 _world_bounds() const;
-
-    static void _area_monitor_callback(
-        int status, godot::RID body_rid, int64_t body_iid,
-        int body_shape, int local_shape,
-        TamaServerCurvedLaserPool *self, godot::String type_key);
 
     friend class TamaServerCurvedLaser;
 

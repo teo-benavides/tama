@@ -56,7 +56,6 @@ frame_0/duration = 1
 
 [sub_resource type="TamaServerCurvedLaserConfig" id="TamaServerCurvedLaserConfig_tkymk"]
 width = 10.0
-length = 60
 texture = SubResource("TamaAnimatedTexture_okdsw")
 collision_layer = 2
 collision_mask = 1
