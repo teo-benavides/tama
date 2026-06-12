@@ -164,6 +164,7 @@ void _TamaInterpreter::_build_lookup_tables() {
     _fires_map.clear();
     _acts_map.clear();
     _bullets_map.clear();
+    _forms_map.clear();
     if (!_program) return;
 
     for (const auto &sp : _program->fires)
@@ -172,6 +173,8 @@ void _TamaInterpreter::_build_lookup_tables() {
         if (sp) _acts_map[sp->name] = sp.get();
     for (const auto &sp : _program->bullets)
         if (sp) _bullets_map[sp->name] = sp.get();
+    for (const auto &sp : _program->forms)
+        if (sp) _forms_map[sp->name] = sp.get();
 }
 
 std::vector<std::string> _TamaInterpreter::_snapshot_scope_keys() const {
@@ -359,6 +362,15 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
 
     case NT::INLINE_FIRE:
         _exec_fire_node(n);
+        return;
+
+    case NT::FORM:
+    case NT::FORM_DEF:
+        _exec_form(n);
+        return;
+
+    case NT::FORM_CALL:
+        _exec_form_call(n);
         return;
 
     case NT::CONTEXT_CALL:
@@ -693,88 +705,70 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
         if (py) { data.pos_y_set = true; data.pos_y_type = _get_axis_type(py); data.pos_y = _eval_float(py->expr); }
     }
 
-    _TamaASTNode *bul_node = node->bullet.get();
-    if (bul_node) {
-        if (bul_node->type_id == (int)TamaNodeType::INLINE_BULLET) {
-            const std::string &btype = bul_node->bullet_type;
-            auto bsit = _scope.find(btype);
-            if (bsit != _scope.end() && bsit->second.kind == TamaScopeVal::STRING)
-                data.bullet_type = bsit->second.str;
-            else
-                data.bullet_type = btype;
-            data.bullet_emitter_act = bul_node->emitter_act.get();
-            data.bullet_act         = bul_node->act.get();
-            _TamaASTNode *mvmt = bul_node->mvmt.get();
-            if (mvmt) _populate_mvmt(&data, mvmt);
-            if (!bul_node->count.empty()) {
-                data.bounces_max  = (int)_eval_float(bul_node->count);
-                data.bounces_axis = bul_node->axis == "x" ? 1
-                                  : bul_node->axis == "y" ? 2 : 0;
-            }
-        } else if (bul_node->type_id == (int)TamaNodeType::BULLET_CALL) {
-            std::string bul_name = bul_node->name;
+    _populate_bullet_data(data, node->bullet.get());
 
-            auto bsit = _scope.find(bul_name);
-            if (bsit != _scope.end()) {
-                if (bsit->second.kind == TamaScopeVal::NODE) {
-                    _TamaASTNode *svo = bsit->second.node;
-                    if (svo && svo->type_id == (int)TamaNodeType::INLINE_BULLET) {
-                        const std::string &btype = svo->bullet_type;
-                        auto btsit = _scope.find(btype);
-                        if (btsit != _scope.end() && btsit->second.kind == TamaScopeVal::STRING)
-                            data.bullet_type = btsit->second.str;
-                        else
-                            data.bullet_type = btype;
-                        data.bullet_emitter_act = svo->emitter_act.get();
-                        data.bullet_act         = svo->act.get();
-                        _TamaASTNode *mvmt = svo->mvmt.get();
-                        if (mvmt) _populate_mvmt(&data, mvmt);
-                        if (!svo->count.empty()) {
-                            data.bounces_max  = (int)_eval_float(svo->count);
-                            data.bounces_axis = svo->axis == "x" ? 1
-                                              : svo->axis == "y" ? 2 : 0;
-                        }
-                        goto bullet_done;
-                    }
-                } else if (bsit->second.kind == TamaScopeVal::REF) {
-                    const auto &tref = bsit->second.ref;
-                    bul_name = tref->name;
-                    _TamaASTNode *bullet_def = _find_bullet(bul_name);
-                    if (!bullet_def) {
-                        UtilityFunctions::push_warning(String("_TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
-                        goto bullet_done;
-                    }
-                    std::vector<TamaArgVal> eval_args;
-                    for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
-                    for (const TamaArgVal &a : bul_node->args)    eval_args.push_back(_eval_arg(a));
-                    const std::string &btype = bullet_def->bullet_type;
+    data.source_program = _program;
+    if (_fire_cb) _fire_cb(data);
+}
+
+void _TamaInterpreter::_populate_bullet_data(TamaBulletFireData &data, _TamaASTNode *bul_node) {
+    if (!bul_node) return;
+
+    if (bul_node->type_id == (int)TamaNodeType::INLINE_BULLET) {
+        const std::string &btype = bul_node->bullet_type;
+        auto bsit = _scope.find(btype);
+        if (bsit != _scope.end() && bsit->second.kind == TamaScopeVal::STRING)
+            data.bullet_type = bsit->second.str;
+        else
+            data.bullet_type = btype;
+        data.bullet_emitter_act = bul_node->emitter_act.get();
+        data.bullet_act         = bul_node->act.get();
+        _TamaASTNode *mvmt = bul_node->mvmt.get();
+        if (mvmt) _populate_mvmt(&data, mvmt);
+        if (!bul_node->count.empty()) {
+            data.bounces_max  = (int)_eval_float(bul_node->count);
+            data.bounces_axis = bul_node->axis == "x" ? 1
+                              : bul_node->axis == "y" ? 2 : 0;
+        }
+        return;
+    }
+
+    if (bul_node->type_id == (int)TamaNodeType::BULLET_CALL) {
+        std::string bul_name = bul_node->name;
+
+        auto bsit = _scope.find(bul_name);
+        if (bsit != _scope.end()) {
+            if (bsit->second.kind == TamaScopeVal::NODE) {
+                _TamaASTNode *svo = bsit->second.node;
+                if (svo && svo->type_id == (int)TamaNodeType::INLINE_BULLET) {
+                    const std::string &btype = svo->bullet_type;
                     auto btsit = _scope.find(btype);
                     if (btsit != _scope.end() && btsit->second.kind == TamaScopeVal::STRING)
                         data.bullet_type = btsit->second.str;
                     else
                         data.bullet_type = btype;
-                    data.bullet_emitter_act = bullet_def->emitter_act.get();
-                    data.bullet_act         = bullet_def->act.get();
-                    data.bullet_params      = bullet_def->params;
-                    data.bullet_args        = eval_args;
-                    _TamaASTNode *mvmt = bullet_def->mvmt.get();
+                    data.bullet_emitter_act = svo->emitter_act.get();
+                    data.bullet_act         = svo->act.get();
+                    _TamaASTNode *mvmt = svo->mvmt.get();
                     if (mvmt) _populate_mvmt(&data, mvmt);
-                    if (!bullet_def->count.empty()) {
-                        data.bounces_max  = (int)_eval_float(bullet_def->count);
-                        data.bounces_axis = bullet_def->axis == "x" ? 1
-                                          : bullet_def->axis == "y" ? 2 : 0;
+                    if (!svo->count.empty()) {
+                        data.bounces_max  = (int)_eval_float(svo->count);
+                        data.bounces_axis = svo->axis == "x" ? 1
+                                          : svo->axis == "y" ? 2 : 0;
                     }
-                    goto bullet_done;
+                    return;
                 }
-            }
-            {
+            } else if (bsit->second.kind == TamaScopeVal::REF) {
+                const auto &tref = bsit->second.ref;
+                bul_name = tref->name;
                 _TamaASTNode *bullet_def = _find_bullet(bul_name);
                 if (!bullet_def) {
                     UtilityFunctions::push_warning(String("_TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
-                    goto bullet_done;
+                    return;
                 }
                 std::vector<TamaArgVal> eval_args;
-                for (const TamaArgVal &a : bul_node->args) eval_args.push_back(_eval_arg(a));
+                for (const TamaArgVal &ba : tref->bound_args) eval_args.push_back(ba);
+                for (const TamaArgVal &a : bul_node->args)    eval_args.push_back(_eval_arg(a));
                 const std::string &btype = bullet_def->bullet_type;
                 auto btsit = _scope.find(btype);
                 if (btsit != _scope.end() && btsit->second.kind == TamaScopeVal::STRING)
@@ -792,13 +786,157 @@ void _TamaInterpreter::_exec_fire_node(_TamaASTNode *node) {
                     data.bounces_axis = bullet_def->axis == "x" ? 1
                                       : bullet_def->axis == "y" ? 2 : 0;
                 }
+                return;
             }
         }
-    }
-    bullet_done:
 
-    data.source_program = _program;
-    if (_fire_cb) _fire_cb(data);
+        _TamaASTNode *bullet_def = _find_bullet(bul_name);
+        if (!bullet_def) {
+            UtilityFunctions::push_warning(String("_TamaInterpreter: unknown bullet '") + String(bul_name.c_str()) + "'");
+            return;
+        }
+        std::vector<TamaArgVal> eval_args;
+        for (const TamaArgVal &a : bul_node->args) eval_args.push_back(_eval_arg(a));
+        const std::string &btype = bullet_def->bullet_type;
+        auto btsit = _scope.find(btype);
+        if (btsit != _scope.end() && btsit->second.kind == TamaScopeVal::STRING)
+            data.bullet_type = btsit->second.str;
+        else
+            data.bullet_type = btype;
+        data.bullet_emitter_act = bullet_def->emitter_act.get();
+        data.bullet_act         = bullet_def->act.get();
+        data.bullet_params      = bullet_def->params;
+        data.bullet_args        = eval_args;
+        _TamaASTNode *mvmt = bullet_def->mvmt.get();
+        if (mvmt) _populate_mvmt(&data, mvmt);
+        if (!bullet_def->count.empty()) {
+            data.bounces_max  = (int)_eval_float(bullet_def->count);
+            data.bounces_axis = bullet_def->axis == "x" ? 1
+                              : bullet_def->axis == "y" ? 2 : 0;
+        }
+    }
+}
+
+void _TamaInterpreter::_exec_form(_TamaASTNode *node) {
+    int amt = (int)_eval_float(node->count);
+    if (amt <= 0) return;
+
+    // Form type: stored in index_var ("ring"/"fan", or a param name resolved from scope).
+    std::string form_type = node->index_var;
+    {
+        auto sit = _scope.find(form_type);
+        if (sit != _scope.end() && sit->second.kind == TamaScopeVal::STRING)
+            form_type = sit->second.str;
+    }
+
+    float spd = 0.0f;
+    _TamaASTNode *spd_node = node->speed.get();
+    if (spd_node) spd = _eval_float(spd_node->expr);
+
+    _TamaASTNode *dir_node = node->dir.get();
+    int   base_dir_type  = dir_node ? _get_dir_type(dir_node) : 0;
+    float base_dir_value = (dir_node && base_dir_type != 4) ? _eval_float(dir_node->expr) : 0.0f;
+
+    bool  has_rad = !node->var_name.empty();
+    float rad_val = has_rad ? _eval_float(node->var_name) : 0.0f;
+
+    // Evaluate spread once (fan only); avoid divide-by-zero for amt==1
+    float fan_step = 0.0f;
+    if (form_type == "fan" && amt > 1 && !node->expr.empty())
+        fan_step = _eval_float(node->expr) / (float)(amt - 1);
+
+    // Evaluate pass-through fields once
+    _TamaASTNode *rotspd_node = node->rotspd.get();
+    _TamaASTNode *off_node    = node->offset.get();
+    _TamaASTNode *pos_node    = node->pos.get();
+    _TamaASTNode *delay_node  = node->delay.get();
+
+    for (int i = 0; i < amt; ++i) {
+        TamaBulletFireData data;
+
+        // Speed
+        data.speed_type  = spd_node ? _get_speed_type(spd_node) : 0;
+        data.speed_value = spd;
+
+        // Direction per bullet
+        if (form_type == "ring") {
+            float step = 360.0f / (float)amt;
+            if (base_dir_type == 4) { // AWAY: rotate ring so player lands in gap
+                data.dir_type  = 0; // AIM
+                data.dir_value = step * 0.5f + (float)i * step;
+            } else {
+                data.dir_type  = base_dir_type;
+                data.dir_value = base_dir_value + (float)i * step;
+            }
+        } else { // fan
+            float offset = ((float)i - (float)(amt - 1) * 0.5f) * fan_step;
+            data.dir_type  = base_dir_type;
+            data.dir_value = base_dir_value + offset;
+        }
+
+        // rad → per-bullet inline offset (ring only, applied before explicit offset)
+        if (form_type == "ring" && has_rad) {
+            data.offset_mode  = 1;
+            data.offset_value = rad_val;
+        }
+
+        // Rotation speed
+        if (rotspd_node) {
+            data.has_rot_speed   = true;
+            data.rot_speed_type  = _get_speed_type(rotspd_node);
+            data.rot_speed_value = _eval_float(rotspd_node->expr);
+        }
+
+        // Offset (overrides rad if both present)
+        if (off_node) {
+            if (off_node->type_id == (int)TamaNodeType::OFFSET_INLINE) {
+                data.offset_mode  = 1;
+                data.offset_value = _eval_float(off_node->expr);
+            } else if (off_node->type_id == (int)TamaNodeType::OFFSET) {
+                data.offset_mode = 2;
+                _TamaASTNode *ox = off_node->x.get();
+                _TamaASTNode *oy = off_node->y.get();
+                if (ox) { data.offset_x_type = _get_axis_type(ox); data.offset_x = _eval_float(ox->expr); }
+                if (oy) { data.offset_y_type = _get_axis_type(oy); data.offset_y = _eval_float(oy->expr); }
+            }
+        }
+
+        // Position
+        if (pos_node && pos_node->type_id == (int)TamaNodeType::POS) {
+            data.has_pos = true;
+            _TamaASTNode *px = pos_node->x.get();
+            _TamaASTNode *py = pos_node->y.get();
+            if (px) { data.pos_x_set = true; data.pos_x_type = _get_axis_type(px); data.pos_x = _eval_float(px->expr); }
+            if (py) { data.pos_y_set = true; data.pos_y_type = _get_axis_type(py); data.pos_y = _eval_float(py->expr); }
+        }
+
+        // Delay
+        if (delay_node) {
+            int d = (int)_eval_float(delay_node->expr);
+            data.spawn_delay_override = d < 0 ? 0 : d;
+        }
+
+        // Bullet
+        _populate_bullet_data(data, node->bullet.get());
+
+        data.source_program = _program;
+        if (_fire_cb) _fire_cb(data);
+    }
+}
+
+void _TamaInterpreter::_exec_form_call(_TamaASTNode *n) {
+    const std::string &name = n->name;
+    _TamaASTNode *form_def = _find_form(name);
+    if (!form_def) {
+        UtilityFunctions::push_warning(String("_TamaInterpreter: unknown form '") + String(name.c_str()) + "'");
+        return;
+    }
+    std::vector<TamaArgVal> eval_args;
+    for (const TamaArgVal &a : n->args) eval_args.push_back(_eval_arg(a));
+    TamaScope saved = _scope;
+    _scope = _scope_snapshot_plus_params(form_def->params, eval_args);
+    _exec_form(form_def);
+    _scope = std::move(saved);
 }
 
 void _TamaInterpreter::_populate_mvmt(TamaBulletFireData *data, _TamaASTNode *mvmt_node) {
@@ -1073,8 +1211,9 @@ int _TamaInterpreter::_get_dir_type(_TamaASTNode *dir_node) const {
     auto sit = _scope.find(dir_node->dir_type_var);
     if (sit != _scope.end() && sit->second.kind == TamaScopeVal::STRING) {
         const std::string &s = sit->second.str;
-        if (s == "aim") return 0; if (s == "abs") return 1;
-        if (s == "rel") return 2; if (s == "seq") return 3;
+        if (s == "aim")  return 0; if (s == "abs") return 1;
+        if (s == "rel")  return 2; if (s == "seq") return 3;
+        if (s == "away") return 4;
     }
     return 0;
 }
@@ -1116,6 +1255,11 @@ _TamaASTNode *_TamaInterpreter::_find_act(const std::string &name) const {
 _TamaASTNode *_TamaInterpreter::_find_bullet(const std::string &name) const {
     auto it = _bullets_map.find(name);
     return it != _bullets_map.end() ? it->second : nullptr;
+}
+
+_TamaASTNode *_TamaInterpreter::_find_form(const std::string &name) const {
+    auto it = _forms_map.find(name);
+    return it != _forms_map.end() ? it->second : nullptr;
 }
 
 // ---------------------------------------------------------------------------

@@ -12,16 +12,8 @@ main
                 spd abs 300
                 bul laser(-1)
         wait 0.5
-        repeat 9 i
-            fire
-                dir abs (2*i + 1 - 9) * 90.0 / (2 * maxf(9 - 1, 1)) + 70
-                spd abs 300
-                bul laser_down(1)
-        repeat 9 i
-            fire
-                dir abs (2*i + 1 - 9) * 90.0 / (2 * maxf(9 - 1, 1)) + 110
-                spd abs 300
-                bul laser_down(-1)
+        form down_lasers(1, 70)
+        form down_lasers(-1, 110)
         wait 3.0
 
 bul laser(direction)
@@ -54,3 +46,10 @@ bul laser_down(direction)
         chrotspd
             rotspd abs 0
         
+form down_lasers(direction, angle)
+    type fan
+    dir abs angle
+    spd abs 300
+    spr 90
+    amt 9
+    bul laser_down(direction)

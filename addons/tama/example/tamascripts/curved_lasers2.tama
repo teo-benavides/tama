@@ -6,10 +6,10 @@ main
         wait 3.0
 
 act laser_circle(direction)
-    var amt = 16
-    repeat amt i
+    var amt_ = 16
+    repeat amt_ i
         fire
-            dir aim (360/amt)*i
+            dir aim (360/amt_)*i
             spd abs 200
             bul curvy(direction)
 

@@ -1,8 +1,8 @@
 main
-    var amt = 100
+    var amt_ = 100
     repeat
-        repeat amt i
-            var theta = (360.0/amt)*i
+        repeat amt_ i
+            var theta = (360.0/amt_)*i
             fire
                 dir abs rad_to_deg(atan2(pow(sin(theta), 3), pow(cos(theta), 3)))
                 spd abs 200

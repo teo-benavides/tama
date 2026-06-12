@@ -54,8 +54,11 @@ KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "over" | "x" | "y"
    | "include" | "export"
    | "bounces"
+   | "form" | "amt" | "spr" | "rad"
    | "true" | "false" ;
-             (* "delay" is a soft keyword: only meaningful as a fire-block statement.
+             (* "delay" is a soft keyword: only meaningful as a fire/form-block statement.
+                it is NOT reserved and may be used freely as a variable or parameter name.
+                "away" is a soft keyword: only meaningful as a dir qualifier inside a form block.
                 it is NOT reserved and may be used freely as a variable or parameter name. *)
 
 DIR_TYPE   = "aim" | "abs" | "rel" | "seq" ;
@@ -85,7 +88,8 @@ export_decl = "export" ( "num" | "str" | "bool" ) IDENT [ EXPR ] NEWLINE ;
 top_level_def = fire_def
               | act_def
               | bullet_def
-              | emitter_def ;
+              | emitter_def
+              | form_def ;
 
 
 (* ------------------------------------------------------------
@@ -97,6 +101,14 @@ main_def    = "main" NEWLINE action_block ;
 fire_def    = "fire" IDENT [ param_list ] NEWLINE fire_block ;
 
 act_def     = "act"  IDENT [ param_list ] NEWLINE action_block ;
+
+form_def    = "form" IDENT [ param_list ] NEWLINE INDENT { form_sub_stmt NEWLINE } DEDENT ;
+              (* named form definition; see form_stmt for the sub-statement list.
+                 parameters may be passed as numeric EXPRs or quoted STRING literals.
+                 "ring", "fan", "away" and dir qualifiers can all be passed as strings:
+                   form my_ring("ring", 10, 200, "away")
+                 within the body, 'type', 'dir', and 'spr' sub-statements resolve their
+                 keyword-like arguments from scope if the name matches a parameter.     *)
 
 bullet_def  = ( "bullet" | "bul" ) IDENT [ param_list ] NEWLINE bullet_block ;
 
@@ -172,7 +184,9 @@ action_stmt = while_stmt
              | act_call
              | async_act
              | context_call
-             | event_stmt ;
+             | event_stmt
+             | form_stmt
+             | form_call ;
 
 context_call = IDENT "(" [ call_arg { "," call_arg } ] ")" ;
                (* calls a method on the TamaContext object for side effects.
@@ -293,6 +307,46 @@ inline_act  = "act"  NEWLINE action_block ;
 
 inline_fire = "fire" NEWLINE fire_block ;
               (* anonymous fire — only valid inside an action_block            *)
+
+form_call = "form" IDENT [ arg_list ] ;
+            (* calls a named form definition with optional args;
+               string args (for type, dir qualifier) must be quoted: form my_ring("away") *)
+
+form_stmt = "form" NEWLINE INDENT { form_sub_stmt NEWLINE } DEDENT ;
+            (* fires multiple bullets simultaneously according to a spatial pattern.
+               all sub-statements are optional except 'type', which determines the
+               layout algorithm.                                                    *)
+
+form_sub_stmt = "type" ( "ring" | "fan" )
+              | "amt" EXPR
+              | ( "speed" | "spd" ) [ VALUE_TYPE ] EXPR
+              | form_dir_stmt
+              | "spr" EXPR
+              | "rad" EXPR
+              | rotspd_stmt
+              | offset_stmt
+              | pos_stmt
+              | delay_stmt
+              | ( "bullet" | "bul" ) IDENT [ arg_list ]
+              | ( "bullet" | "bul" ) NEWLINE bullet_block ;
+
+form_dir_stmt = "dir" ( "away" | [ DIR_TYPE ] EXPR ) ;
+                (* "away" is valid for ring only; rotates the ring by half a bullet-step
+                   so the player falls exactly in the gap between two bullets.
+                   all other DIR_TYPE qualifiers behave the same as in fire blocks.      *)
+
+(* ring: amt bullets evenly distributed over 360°, step = 360/amt.
+         dir away   → dir_type=aim, per-bullet offset = step/2 + i*step
+         dir abs N  → first bullet at N°, rest at N + i*step
+         dir aim N  → first bullet at aim+N°, rest offset by step
+   fan:  amt bullets spread over spr degrees, centred on the base direction.
+         step = spr / (amt-1)  (0 when amt=1)
+         per-bullet offset = (i - (amt-1)/2) * step
+         odd amt  → centre bullet is exactly on the base direction
+         even amt → base direction falls exactly in the centre gap
+   rad: ring only — each bullet is spawned at radius rad from the emitter,
+        offset along its travel direction (equivalent to inline offset per bullet).
+        ignored for fan; overridden by an explicit offset sub-statement.              *)
 
 
 (* ------------------------------------------------------------

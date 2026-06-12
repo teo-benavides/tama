@@ -41,12 +41,13 @@ private:
     std::unordered_map<std::string, bool> _defined_fires;
     std::unordered_map<std::string, bool> _defined_acts;
     std::unordered_map<std::string, bool> _defined_bullets;
+    std::unordered_map<std::string, bool> _defined_forms;
 
     // Parameters of the definition currently being parsed — excluded from ref validation.
     std::unordered_set<std::string> _current_params;
 
     struct Ref3 { std::string name; int line, col; };
-    std::vector<Ref3> _fire_refs, _act_refs, _bullet_refs;
+    std::vector<Ref3> _fire_refs, _act_refs, _bullet_refs, _form_refs;
 
     TamaResolver _resolver;
     std::unordered_map<std::string, std::shared_ptr<_TamaASTNode>> _resolved_includes;
@@ -127,6 +128,12 @@ private:
     std::shared_ptr<_TamaASTNode> parse_action_statement();
 
     // -----------------------------------------------------------------------
+    // Form-block parser
+    // -----------------------------------------------------------------------
+    std::shared_ptr<_TamaASTNode> parse_form_stmt();
+    void parse_form_block(const std::shared_ptr<_TamaASTNode> &node);
+
+    // -----------------------------------------------------------------------
     // Fire-block parser (fills dir/speed/offset/pos/bullet onto node)
     // -----------------------------------------------------------------------
     void parse_fire_block(const std::shared_ptr<_TamaASTNode> &node, const TamaToken &open_tok);
@@ -151,6 +158,8 @@ private:
     std::shared_ptr<_TamaASTNode> parse_fire_def();
     std::shared_ptr<_TamaASTNode> parse_act_def();
     std::shared_ptr<_TamaASTNode> parse_bullet_def();
+    std::shared_ptr<_TamaASTNode> parse_form_def();
+    std::shared_ptr<_TamaASTNode> parse_form_call();
 
     // -----------------------------------------------------------------------
     // Post-parse reference validation

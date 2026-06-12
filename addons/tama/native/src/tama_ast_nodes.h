@@ -46,7 +46,7 @@ struct _TamaASTNode {
     godot::Variant default_value; // export var defaults — keep as Variant
 
     std::vector<std::shared_ptr<_TamaASTNode>> body, else_body;
-    std::vector<std::shared_ptr<_TamaASTNode>> fires, acts, bullets, exports;
+    std::vector<std::shared_ptr<_TamaASTNode>> fires, acts, bullets, exports, forms;
 
     std::vector<std::string>                               conditions;
     std::vector<std::vector<std::shared_ptr<_TamaASTNode>>> bodies;

@@ -97,6 +97,11 @@ void TamaParserCpp::pre_scan_definitions() {
                     _tokens[i + 1].type == TT::WORD)
                     _defined_bullets[_tokens[i + 1].value] = true;
                 break;
+            case TT::KW_FORM:
+                if (depth == 0 && i + 1 < (int)_tokens.size() &&
+                    _tokens[i + 1].type == TT::WORD)
+                    _defined_forms[_tokens[i + 1].value] = true;
+                break;
             default: break;
         }
     }
@@ -954,6 +959,9 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_action_statement() {
         case TT::KW_WHILE:  return parse_while();
         case TT::KW_IF:     return parse_if();
         case TT::KW_VAR:    return parse_var_decl();
+        case TT::KW_FORM:
+            if (peek_type_at(1) == TT::NEWLINE) return parse_form_stmt();
+            else                                 return parse_form_call();
         case TT::WORD:
             if (peek_type_at(1) == TT::LPAREN) return parse_context_call();
             return parse_var_assign();
@@ -962,6 +970,111 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_action_statement() {
             _pos++; try_consume(TT::NEWLINE);
             return nullptr;
     }
+}
+
+// ===========================================================================
+// Form-block parser
+// ===========================================================================
+
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_form_stmt() {
+    consume(TT::KW_FORM);
+    consume(TT::NEWLINE);
+    auto node = tama_make_node((int)NT::FORM);
+    parse_form_block(node);
+    return node;
+}
+
+void TamaParserCpp::parse_form_block(const std::shared_ptr<_TamaASTNode> &node) {
+    if (peek_type() != TT::INDENT) {
+        error_at(peek(), "Expected indented block after 'form'");
+        return;
+    }
+    consume(TT::INDENT);
+    skip_newlines();
+    while (peek_type() != TT::DEDENT && peek_type() != TT::EOF_) {
+        TamaToken &t = peek();
+        if (t.type == TT::WORD && t.value == "delay") {
+            node->delay = parse_delay();
+        } else switch (t.type) {
+            case TT::KW_TYPE:
+                consume(TT::KW_TYPE);
+                if (peek_type() == TT::WORD) {
+                    node->index_var = _tokens[_pos].value;
+                    _pos++;
+                } else {
+                    error_at(peek(), "Expected form type ('ring' or 'fan') after 'type'");
+                }
+                consume(TT::NEWLINE);
+                break;
+            case TT::KW_AMT:
+                consume(TT::KW_AMT);
+                node->count = collect_to_eol();
+                if (node->count.empty()) error_at(peek(), "Expected expression after 'amt'");
+                consume(TT::NEWLINE);
+                break;
+            case TT::KW_SPEED: // spd and speed both lex to KW_SPEED
+                node->speed = parse_speed();
+                break;
+            case TT::KW_DIR: {
+                // "dir away" — literal soft keyword; no expression follows
+                if (peek_type_at(1) == TT::WORD && _tokens[_pos + 1].value == "away") {
+                    consume(TT::KW_DIR);
+                    _pos++; // consume "away"
+                    consume(TT::NEWLINE);
+                    auto d = tama_make_node((int)NT::DIR);
+                    d->dir_type = 4; // AWAY
+                    node->dir = d;
+                // "dir WORD" where WORD is a variable and the line ends after it —
+                // treat as a variable qualifier with no angle expression (supports
+                // passing "away"/"aim"/etc. as a parameter)
+                } else if (peek_type_at(1) == TT::WORD && peek_type_at(2) == TT::NEWLINE) {
+                    consume(TT::KW_DIR);
+                    auto d = tama_make_node((int)NT::DIR);
+                    d->dir_type_var = _tokens[_pos].value;
+                    _pos++; // consume the WORD
+                    consume(TT::NEWLINE);
+                    // expr stays empty; _exec_form guards on dir_type != 4 before eval
+                    node->dir = d;
+                } else {
+                    node->dir = parse_dir();
+                }
+                break;
+            }
+            case TT::KW_SPR:
+                consume(TT::KW_SPR);
+                node->expr = collect_to_eol();
+                if (node->expr.empty()) error_at(peek(), "Expected expression after 'spr'");
+                consume(TT::NEWLINE);
+                break;
+            case TT::KW_RAD:
+                consume(TT::KW_RAD);
+                node->var_name = collect_to_eol();
+                if (node->var_name.empty()) error_at(peek(), "Expected expression after 'rad'");
+                consume(TT::NEWLINE);
+                break;
+            case TT::KW_ROTSPD:
+                node->rotspd = parse_rotspd();
+                break;
+            case TT::KW_OFFSET:
+                node->offset = parse_offset();
+                break;
+            case TT::KW_POS:
+                node->pos = parse_pos();
+                break;
+            case TT::KW_BULLET: // bul also lexes to KW_BULLET
+                if (peek_type_at(1) == TT::NEWLINE)
+                    node->bullet = parse_inline_bullet();
+                else
+                    node->bullet = parse_bullet_call();
+                break;
+            default:
+                error_at(t, "Unexpected token in form block: '" + tok_display(t) + "'");
+                _pos++; try_consume(TT::NEWLINE);
+        }
+        skip_newlines();
+    }
+    if (peek_type() == TT::DEDENT) consume(TT::DEDENT);
+    else error_at(peek(), "Unclosed form block (missing dedent)");
 }
 
 // ===========================================================================
@@ -1213,6 +1326,40 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_bullet_def() {
     return node;
 }
 
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_form_def() {
+    consume(TT::KW_FORM);
+    TamaToken name_tok = peek();
+    std::string name = parse_identifier();
+    if (name.empty()) return nullptr;
+    _defined_forms[name] = true;
+    auto params = parse_param_list();
+    _current_params.clear();
+    for (const auto &p : params)
+        _current_params.insert(p);
+    consume(TT::NEWLINE);
+    auto node = tama_make_node((int)NT::FORM_DEF);
+    node->name   = name;
+    node->params = params;
+    parse_form_block(node);
+    _current_params.clear();
+    return node;
+}
+
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_form_call() {
+    consume(TT::KW_FORM);
+    TamaToken name_tok = peek();
+    std::string name = parse_identifier();
+    if (name.empty()) return nullptr;
+    auto args = parse_call_args(name_tok);
+    if (!_current_params.count(name))
+        _form_refs.push_back({name, name_tok.line, name_tok.col});
+    consume(TT::NEWLINE);
+    auto n = tama_make_node((int)NT::FORM_CALL);
+    n->name = name;
+    n->args = std::move(args);
+    return n;
+}
+
 // ===========================================================================
 // Post-parse reference validation
 // ===========================================================================
@@ -1233,6 +1380,11 @@ void TamaParserCpp::resolve_references() {
             _errors.push_back({ref.line, ref.col, (int)ref.name.size(),
                                "Unknown bullet reference '" + ref.name + "'"});
     }
+    for (auto &ref : _form_refs) {
+        if (!_defined_forms.count(ref.name))
+            _errors.push_back({ref.line, ref.col, (int)ref.name.size(),
+                               "Unknown form reference '" + ref.name + "'"});
+    }
 }
 
 // ===========================================================================
@@ -1247,10 +1399,12 @@ TamaParseResult TamaParserCpp::parse(const std::vector<TamaToken> &tokens,
     _defined_fires.clear();
     _defined_acts.clear();
     _defined_bullets.clear();
+    _defined_forms.clear();
     _current_params.clear();
     _fire_refs.clear();
     _act_refs.clear();
     _bullet_refs.clear();
+    _form_refs.clear();
     _resolver  = resolver;
     _resolved_includes.clear();
 
@@ -1284,6 +1438,11 @@ TamaParseResult TamaParserCpp::parse(const std::vector<TamaToken> &tokens,
             case TT::KW_BULLET: {
                 auto n = parse_bullet_def();
                 if (n) program->bullets.push_back(n);
+                break;
+            }
+            case TT::KW_FORM: {
+                auto n = parse_form_def();
+                if (n) program->forms.push_back(n);
                 break;
             }
             case TT::ERROR:

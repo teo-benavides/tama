@@ -18,10 +18,10 @@ act sun
             waitf 1
         wait 1.0
     
-act circle(amt, spd_, posx, ofs)
-    repeat amt i
+act circle(amt_, spd_, posx, ofs)
+    repeat amt_ i
         fire
-            dir abs (360.0/amt) * i + ofs
+            dir abs (360.0/amt_) * i + ofs
             spd spd_
             pos
                 x rel posx

@@ -12,12 +12,12 @@ main
         waitf 30
         wait 5.0
 
-act a(amt, peaks, start_speed, min_ch_speed, max_ch_speed, stop_time, spin)
-    repeat amt i
+act a(amt_, peaks, start_speed, min_ch_speed, max_ch_speed, stop_time, spin)
+    repeat amt_ i
         fire
-            dir abs (360.0/amt)*i+spin
+            dir abs (360.0/amt_)*i+spin
             spd start_speed
-            bul b((pow(absf(sin(peaks*((360.0/amt)*i) * (PI/360.0))), 2.5)*max_ch_speed)+min_ch_speed, stop_time)
+            bul b((pow(absf(sin(peaks*((360.0/amt_)*i) * (PI/360.0))), 2.5)*max_ch_speed)+min_ch_speed, stop_time)
 
 
 bullet b(spd_change, stop_time)

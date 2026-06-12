@@ -1,0 +1,42 @@
+main
+    repeat
+        # fires a ring of 10 evenly spaced bullets, aiming to the player in such a way that the player ends up exactly in the middle of the gap between 2 bullets
+        form
+            type ring
+            amt 10
+            spd 200
+            dir away # this can only be used in ring type forms. takes no expression
+            bul
+                type fast
+        wait 2.0
+        # fires a ring of 21 evenly spaced bullets, with a bullet aiming directly upwards
+        form
+            type ring
+            amt 21
+            spd 200
+            dir abs -90
+            rad 50
+            delay 30
+            bul
+                type fast
+        wait 2.0
+        # fires 5 bullets at the player with a spread of 90 degrees, the middle bullet will hit the player
+        form
+            type fan
+            amt 5
+            spd 200
+            dir aim 0
+            spr 90
+            bul
+                type fast
+        wait 2.0
+        # fires 6 bullets at the player with a spread of 90 degrees. since its an even number of bullets, the player will end up "surrounded" by the 2 middle bullets, ending up exactly in the middle of the gap between these 2 bullets
+        form
+            type fan
+            amt 6
+            spd 200
+            dir aim 0
+            spr 90
+            bul
+                type fast
+        wait 2.0

@@ -28,6 +28,7 @@ enum class TamaNodeType : int {
     INLINE_ACT = 28, INLINE_FIRE = 29, FIRE_CALL = 30,
     WHILE = 31, IF = 32, VAR_DECL = 33, ACT_CALL = 34,
     CHROTSPD = 35, DELAY = 36, CONTEXT_CALL = 37, EVENT = 38,
+    FORM = 39, FORM_DEF = 40, FORM_CALL = 41,
 };
 
 // ---------------------------------------------------------------------------
@@ -188,6 +189,7 @@ class _TamaInterpreter {
     std::unordered_map<std::string, _TamaASTNode *> _fires_map;
     std::unordered_map<std::string, _TamaASTNode *> _acts_map;
     std::unordered_map<std::string, _TamaASTNode *> _bullets_map;
+    std::unordered_map<std::string, _TamaASTNode *> _forms_map;
 
     // -----------------------------------------------------------------------
     // Internal helpers
@@ -219,6 +221,13 @@ class _TamaInterpreter {
     void _exec_fire_node(_TamaASTNode *node);
     void _exec_fire_call(_TamaASTNode *n);
 
+    // Form execution
+    void _exec_form(_TamaASTNode *node);
+    void _exec_form_call(_TamaASTNode *n);
+
+    // Shared bullet population (used by both _exec_fire_node and _exec_form)
+    void _populate_bullet_data(TamaBulletFireData &data, _TamaASTNode *bul_node);
+
     // Context call execution
     void _exec_context_call(_TamaASTNode *n);
 
@@ -249,6 +258,7 @@ class _TamaInterpreter {
     _TamaASTNode *_find_fire(const std::string &name) const;
     _TamaASTNode *_find_act(const std::string &name) const;
     _TamaASTNode *_find_bullet(const std::string &name) const;
+    _TamaASTNode *_find_form(const std::string &name) const;
 
     // Run an async child act
     void _run_async_act(_TamaASTNode *act_node, TamaScope scope_copy);

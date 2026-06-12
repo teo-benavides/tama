@@ -30,29 +30,29 @@ act zigzag
         wait 0.2
 
 act spawn_bullet_trail
-    var amt = 30
-    repeat amt i
+    var amt_ = 30
+    repeat amt_ i
         fire
             dir abs (360/8)*randi_range(0, 7)
             spd 0
             pos
                 x rel randf_range(-5.0, 5.0)
                 y rel randf_range(-5.0, 5.0)
-            bul lightball((amt-1-i)*3+60)
+            bul lightball((amt_-1-i)*3+60)
         fire
             dir abs (360/8)*randi_range(0, 7)
             spd 0
             pos
                 x rel randf_range(-5.0, 5.0)
                 y rel randf_range(-5.0, 5.0)
-            bul lightball((amt-1-i)*3+60)
+            bul lightball((amt_-1-i)*3+60)
         fire
             dir abs (360/8)*randi_range(0, 7)
             spd 0
             pos
                 x rel randf_range(-5.0, 5.0)
                 y rel randf_range(-5.0, 5.0)
-            bul lightball((amt-1-i)*3+60)
+            bul lightball((amt_-1-i)*3+60)
         waitf 3
 
 bul lightball(start_delay)

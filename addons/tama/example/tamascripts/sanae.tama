@@ -1,8 +1,8 @@
 main
-    var amt = 10.0
+    var amt_ = 10.0
     var shift_angle = 144
     var shot_angle = 360/10*-3
-    repeat amt i
+    repeat amt_ i
         if i % 2
             shift_angle = 144
             shot_angle = 360/10*-3
@@ -12,7 +12,7 @@ main
         fire
             dir abs shot_angle # rotate to make it an inverted star
             spd abs 1000
-            bul star_spawner((360.0/amt)*i, shift_angle, shot_angle)
+            bul star_spawner((360.0/amt_)*i, shift_angle, shot_angle)
 
 bullet star_spawner(move_direction, shift_angle, shot_angle)
     act

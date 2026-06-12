@@ -8,12 +8,12 @@ fire bwp(direction)
     dir rel direction
     speed abs 250
 
-bullet shooter(amt)
+bullet shooter(amt_)
     act
         repeat
             event sfx("shot")
-            repeat amt i
-                fire bwp((360/amt) * i)
+            repeat amt_ i
+                fire bwp((360/amt_) * i)
             chdir
                 dir rel time()*4
             waitf 3
