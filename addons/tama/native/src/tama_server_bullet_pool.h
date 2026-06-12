@@ -86,6 +86,9 @@ class TamaServerBulletPool : public godot::Node2D {
 
         // GPU resources
         godot::Ref<godot::QuadMesh> quad;
+        // Composite multimesh — used in optimized draw mode to merge all batches into one draw call.
+        godot::Ref<godot::MultiMesh> composite_res;
+        godot::RID composite;
 
         // Bullet state flat array (indexed by global slot)
         std::vector<BulletState>        bullets;
@@ -117,6 +120,7 @@ class TamaServerBulletPool : public godot::Node2D {
     std::vector<BulletState *> _to_recycle;
 
     // Pre-allocated buffer for spawn animation draw path (transform + color per instance)
+    bool _optimize_draw_calls = false;
     godot::PackedFloat32Array _spawn_buf;
 
     // Registrations queued before the node enters the scene tree

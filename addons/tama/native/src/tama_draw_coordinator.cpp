@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
+#include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/transform2d.hpp>
@@ -22,6 +24,13 @@ static float _curved_trail_alpha(int idx, int trail_count) {
 }
 
 void _TamaDrawCoordinator::_bind_methods() {}
+
+void _TamaDrawCoordinator::_ready() {
+    set_physics_process(true);
+    ProjectSettings *ps = ProjectSettings::get_singleton();
+    _optimize_draw_calls  = (bool)ps->get_setting("tama/optimize_draw_calls", false);
+    _composite_threshold  = (int)ps->get_setting("tama/server_bullet_composite_threshold", 1000);
+}
 
 // ---------------------------------------------------------------------------
 // Canvas item management
@@ -118,10 +127,12 @@ void _TamaDrawCoordinator::_physics_process(double /*delta*/) {
         }
     }
 
-    std::stable_sort(_jobs.begin(), _jobs.end(),
-        [](const DrawJob &a, const DrawJob &b) {
-            return a.spawn_frame < b.spawn_frame;
-        });
+    if (!_optimize_draw_calls) {
+        std::stable_sort(_jobs.begin(), _jobs.end(),
+            [](const DrawJob &a, const DrawJob &b) {
+                return a.spawn_frame < b.spawn_frame;
+            });
+    }
 
     queue_redraw();
 }
@@ -129,6 +140,39 @@ void _TamaDrawCoordinator::_physics_process(double /*delta*/) {
 // ---------------------------------------------------------------------------
 // _draw — emit sorted draw commands into per-blend-mode canvas items
 // ---------------------------------------------------------------------------
+
+int _TamaDrawCoordinator::_accumulate_curved(
+    CurvedLaserState *l,
+    TamaServerCurvedLaserPool::TypeData *td,
+    int vert_base)
+{
+    int count  = l->trail_count;
+    int length = td->length;
+    int n      = count - 1;
+
+    for (int k = 0; k < count; ++k) {
+        int   slot = (l->trail_head + k) % length;
+        float v    = (n > 0) ? (float(k) / float(n)) : 0.0f;
+        float a    = _curved_trail_alpha(k, count);
+        Color c(1.0f, 1.0f, 1.0f, a);
+        _acc_pts.push_back(l->edge_l[slot]);
+        _acc_pts.push_back(l->edge_r[slot]);
+        _acc_col.push_back(c);
+        _acc_col.push_back(c);
+        _acc_uv.push_back(Vector2(0.0f, v));
+        _acc_uv.push_back(Vector2(1.0f, v));
+    }
+    for (int s = 0; s < n; ++s) {
+        Vector2 A = l->trail[(l->trail_head + s)     % length];
+        Vector2 B = l->trail[(l->trail_head + s + 1) % length];
+        if ((B - A).length_squared() < 0.0001f) continue;
+        int lA = vert_base + s * 2,   rA = vert_base + s * 2 + 1;
+        int lB = vert_base + (s+1)*2, rB = vert_base + (s+1)*2 + 1;
+        _idx_buf.push_back(lA); _idx_buf.push_back(rA); _idx_buf.push_back(rB);
+        _idx_buf.push_back(rB); _idx_buf.push_back(lB); _idx_buf.push_back(lA);
+    }
+    return vert_base + count * 2;
+}
 
 void _TamaDrawCoordinator::_draw() {
     RenderingServer *rs = RenderingServer::get_singleton();
@@ -138,9 +182,10 @@ void _TamaDrawCoordinator::_draw() {
         rs->canvas_item_clear(ci);
 
     // Curved laser batch accumulation state.
-    // Consecutive DRAW_CURVED_LASER jobs with the same (spawn_frame, blend_mode, texture_rid)
-    // are merged into one canvas_item_add_triangle_array call. A new batch starts whenever
-    // any key changes or a non-curved job interrupts the sequence.
+    // Default mode: consecutive DRAW_CURVED_LASER jobs with the same
+    //   (spawn_frame, blend_mode, texture_rid) are merged into one triangle_array call.
+    // Optimized mode: spawn_frame is NOT part of the key, so all lasers sharing
+    //   (blend_mode, texture_rid) merge regardless of when they were fired.
     int64_t curved_frame     = -1;
     int     curved_bm        = -1;
     RID     curved_tex;
@@ -173,12 +218,122 @@ void _TamaDrawCoordinator::_draw() {
         curved_vert_base = 0;
     };
 
-    for (const DrawJob &job : _jobs) {
-        if (job.kind == DRAW_CURVED_LASER) {
+    // Helper: emit a non-curved job immediately.
+    auto emit_non_curved = [&](const DrawJob &job) {
+        RID ci = _get_or_create_blend_ci(job.blend_mode);
+        switch (job.kind) {
+            case DRAW_BULLET_BATCH:
+                _draw_bullet_batch(
+                    static_cast<TamaServerBulletPool::TypeData *>(job.extra),
+                    static_cast<TamaServerBulletPool::BatchData *>(job.data),
+                    ci, rs);
+                break;
+            case DRAW_BULLET_BATCH_SPAWN:
+                _draw_bullet_batch_spawn(
+                    static_cast<TamaServerBulletPool::TypeData *>(job.extra),
+                    static_cast<TamaServerBulletPool::BatchData *>(job.data),
+                    ci, rs);
+                break;
+            case DRAW_STRAIGHT_LASER:
+                _draw_straight_laser(
+                    static_cast<TamaServerLaserPool::TypeData *>(job.extra),
+                    static_cast<LaserState *>(job.data),
+                    ci, rs);
+                break;
+            default: break;
+        }
+    };
+
+    if (_optimize_draw_calls) {
+        // Optimized mode: replicates the old per-pool draw behavior.
+        // Bullets: static types above composite_threshold → one multimesh per type;
+        //          animated types → one multimesh per batch (same as default).
+        // Straight lasers: one draw call per laser (transforms differ, no batching possible).
+        // Curved lasers: batched by (blend_mode, tex_rid) across all spawn frames → max merging.
+
+        if (_bullet_pool) {
+            bool use_composite = (int)_bullet_pool->_active.size() > _composite_threshold;
+            for (auto &[key, td] : _bullet_pool->_types) {
+                if (td->active_batches.empty()) continue;
+                bool animated = td->anim_frames.size() > 1;
+                RID  ci       = _get_or_create_blend_ci(td->blend_mode);
+
+                if (!animated && use_composite && td->composite.is_valid()) {
+                    // Composite: concatenate all batch transforms into one draw call.
+                    int total_floats = 0;
+                    for (TamaServerBulletPool::BatchData *batch : td->active_batches)
+                        total_floats += batch->used * 8;
+                    if (total_floats > 0) {
+                        _composite_buf.resize(total_floats);
+                        float *dst = _composite_buf.ptrw();
+                        int offset = 0;
+                        for (TamaServerBulletPool::BatchData *batch : td->active_batches) {
+                            if (batch->used <= 0) continue;
+                            PackedFloat32Array src = rs->multimesh_get_buffer(batch->multimesh);
+                            int count = batch->used * 8;
+                            if (src.size() >= count) {
+                                std::memcpy(dst + offset, src.ptr(), count * sizeof(float));
+                                offset += count;
+                            }
+                        }
+                        if (offset > 0) {
+                            td->composite_res->set_instance_count(offset / 8);
+                            rs->multimesh_set_buffer(td->composite, _composite_buf);
+                            RID tex = td->first_texture.is_valid() ? td->first_texture->get_rid() : RID();
+                            rs->canvas_item_add_multimesh(ci, td->composite, tex);
+                        }
+                    }
+                } else {
+                    // Animated or below threshold: one draw call per batch.
+                    for (TamaServerBulletPool::BatchData *batch : td->active_batches)
+                        _draw_bullet_batch(td, batch, ci, rs);
+                }
+
+                // Spawn animations: one draw call per batch with live spawn instances.
+                RID spawn_ci = _get_or_create_blend_ci(td->spawn_blend_mode);
+                for (TamaServerBulletPool::BatchData *batch : td->active_batches) {
+                    if (batch->spawn_active_count <= 0) continue;
+                    if (!batch->spawn_multimesh_res.is_valid()) continue;
+                    _draw_bullet_batch_spawn(td, batch, spawn_ci, rs);
+                }
+            }
+        }
+
+        if (_laser_pool) {
+            for (LaserState *l : _laser_pool->_active) {
+                if (!l->active) continue;
+                auto *td = static_cast<TamaServerLaserPool::TypeData *>(l->type_data_ptr);
+                RID ci   = _get_or_create_blend_ci(td->blend_mode);
+                _draw_straight_laser(td, l, ci, rs);
+            }
+        }
+
+        _curved_deferred.clear();
+        if (_curved_pool) {
+            for (CurvedLaserState *l : _curved_pool->_active) {
+                if (!l->active) continue;
+                auto *td = static_cast<TamaServerCurvedLaserPool::TypeData *>(l->type_data_ptr);
+                DrawJob j;
+                j.spawn_frame = l->spawn_frame;
+                j.blend_mode  = td->blend_mode;
+                j.kind        = DRAW_CURVED_LASER;
+                j.data        = l;
+                j.extra       = td;
+                _curved_deferred.push_back(j);
+            }
+        }
+        std::sort(_curved_deferred.begin(), _curved_deferred.end(),
+            [](const DrawJob &a, const DrawJob &b) {
+                if (a.blend_mode != b.blend_mode) return a.blend_mode < b.blend_mode;
+                if (a.extra != b.extra)           return a.extra < b.extra;
+                auto *la = static_cast<CurvedLaserState *>(a.data);
+                auto *lb = static_cast<CurvedLaserState *>(b.data);
+                return la->tex_anim_frame < lb->tex_anim_frame;
+            });
+        for (const DrawJob &job : _curved_deferred) {
             auto *td = static_cast<TamaServerCurvedLaserPool::TypeData *>(job.extra);
             auto *l  = static_cast<CurvedLaserState *>(job.data);
             if (l->trail_count < 2) continue;
-
             RID tex_rid;
             if (!td->texture_frames.empty()) {
                 Ref<Texture2D> tex = (td->texture_frames.size() > 1)
@@ -187,77 +342,59 @@ void _TamaDrawCoordinator::_draw() {
                 if (tex.is_valid()) tex_rid = tex->get_rid();
             }
             RID ci = _get_or_create_blend_ci(job.blend_mode);
-
-            // Flush if batch key changed.
             bool same_batch = !_idx_buf.empty()
-                && curved_frame == job.spawn_frame
-                && curved_bm    == job.blend_mode
-                && curved_tex   == tex_rid
-                && curved_ci    == ci;
+                && curved_bm  == job.blend_mode
+                && curved_tex == tex_rid
+                && curved_ci  == ci;
             if (!same_batch) {
                 flush_curved();
-                curved_frame = job.spawn_frame;
-                curved_bm    = job.blend_mode;
-                curved_tex   = tex_rid;
-                curved_ci    = ci;
+                curved_bm  = job.blend_mode;
+                curved_tex = tex_rid;
+                curved_ci  = ci;
             }
+            curved_vert_base = _accumulate_curved(l, td, curved_vert_base);
+        }
+        flush_curved();
 
-            // Accumulate this laser's ribbon geometry.
-            int count  = l->trail_count;
-            int length = td->length;
-            int n      = count - 1;
-            int vbase  = curved_vert_base;
+    } else {
+        // Default mode: jobs are sorted by spawn_frame; curved lasers batch only when
+        // consecutive with the same (spawn_frame, blend_mode, tex_rid).
+        for (const DrawJob &job : _jobs) {
+            if (job.kind == DRAW_CURVED_LASER) {
+                auto *td = static_cast<TamaServerCurvedLaserPool::TypeData *>(job.extra);
+                auto *l  = static_cast<CurvedLaserState *>(job.data);
+                if (l->trail_count < 2) continue;
 
-            for (int k = 0; k < count; ++k) {
-                int   slot = (l->trail_head + k) % length;
-                float v    = (n > 0) ? (float(k) / float(n)) : 0.0f;
-                float a    = _curved_trail_alpha(k, count);
-                Color c(1.0f, 1.0f, 1.0f, a);
-                _acc_pts.push_back(l->edge_l[slot]);
-                _acc_pts.push_back(l->edge_r[slot]);
-                _acc_col.push_back(c);
-                _acc_col.push_back(c);
-                _acc_uv.push_back(Vector2(0.0f, v));
-                _acc_uv.push_back(Vector2(1.0f, v));
-            }
-            for (int s = 0; s < n; ++s) {
-                Vector2 A = l->trail[(l->trail_head + s)     % length];
-                Vector2 B = l->trail[(l->trail_head + s + 1) % length];
-                if ((B - A).length_squared() < 0.0001f) continue;
-                int lA = vbase + s * 2,   rA = vbase + s * 2 + 1;
-                int lB = vbase + (s+1)*2, rB = vbase + (s+1)*2 + 1;
-                _idx_buf.push_back(lA); _idx_buf.push_back(rA); _idx_buf.push_back(rB);
-                _idx_buf.push_back(rB); _idx_buf.push_back(lB); _idx_buf.push_back(lA);
-            }
-            curved_vert_base += count * 2;
+                RID tex_rid;
+                if (!td->texture_frames.empty()) {
+                    Ref<Texture2D> tex = (td->texture_frames.size() > 1)
+                        ? td->texture_frames[l->tex_anim_frame].texture
+                        : td->texture_frames[0].texture;
+                    if (tex.is_valid()) tex_rid = tex->get_rid();
+                }
+                RID ci = _get_or_create_blend_ci(job.blend_mode);
 
-        } else {
-            flush_curved(); // commit any pending curved batch before drawing the next non-curved item
-            RID ci = _get_or_create_blend_ci(job.blend_mode);
-            switch (job.kind) {
-                case DRAW_BULLET_BATCH:
-                    _draw_bullet_batch(
-                        static_cast<TamaServerBulletPool::TypeData *>(job.extra),
-                        static_cast<TamaServerBulletPool::BatchData *>(job.data),
-                        ci, rs);
-                    break;
-                case DRAW_BULLET_BATCH_SPAWN:
-                    _draw_bullet_batch_spawn(
-                        static_cast<TamaServerBulletPool::TypeData *>(job.extra),
-                        static_cast<TamaServerBulletPool::BatchData *>(job.data),
-                        ci, rs);
-                    break;
-                case DRAW_STRAIGHT_LASER:
-                    _draw_straight_laser(
-                        static_cast<TamaServerLaserPool::TypeData *>(job.extra),
-                        static_cast<LaserState *>(job.data),
-                        ci, rs);
-                    break;
-                default: break;
+                bool same_batch = !_idx_buf.empty()
+                    && curved_frame == job.spawn_frame
+                    && curved_bm    == job.blend_mode
+                    && curved_tex   == tex_rid
+                    && curved_ci    == ci;
+                if (!same_batch) {
+                    flush_curved();
+                    curved_frame = job.spawn_frame;
+                    curved_bm    = job.blend_mode;
+                    curved_tex   = tex_rid;
+                    curved_ci    = ci;
+                }
+                curved_vert_base = _accumulate_curved(l, td, curved_vert_base);
+
+            } else {
+                flush_curved();
+                emit_non_curved(job);
             }
         }
+        flush_curved();
     }
-    flush_curved(); // commit any trailing curved batch
 }
 
 // ---------------------------------------------------------------------------

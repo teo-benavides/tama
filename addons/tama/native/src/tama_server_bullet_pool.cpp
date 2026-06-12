@@ -8,6 +8,7 @@
 #include <cstring>
 
 #include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
@@ -94,6 +95,8 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 
 void TamaServerBulletPool::_ready() {
     set_physics_process(true);
+    _optimize_draw_calls = (bool)ProjectSettings::get_singleton()->get_setting(
+        "tama/optimize_draw_calls", false);
     for (auto &pr : _pending_regs)
         register_type(pr.key, pr.config);
     _pending_regs.clear();
@@ -174,6 +177,12 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     // QuadMesh shared by all batches for this type.
     td->quad.instantiate();
     td->quad->set_size(td->rect.size);
+
+    // Composite multimesh — pre-allocated, resized at draw time in optimized mode.
+    td->composite_res.instantiate();
+    td->composite_res->set_transform_format(MultiMesh::TRANSFORM_2D);
+    td->composite_res->set_mesh(td->quad);
+    td->composite = td->composite_res->get_rid();
 
     // Pre-allocate bullet states and wrapper objects
     td->bullets.resize(n);
@@ -290,10 +299,11 @@ Object *TamaServerBulletPool::spawn(
     bool    animated = td.anim_frames.size() > 1;
     // Resolve effective spawn delay: fire-block override takes priority.
     int eff_delay = (p_data.spawn_delay_override >= 0) ? p_data.spawn_delay_override : td.spawn_delay;
-    // Spawn animation state is per-bullet, so spawn-delay types no longer need per-frame batches.
-    // Only animated types (multi-frame sprites) need a fresh batch each frame to keep
-    // each spawn-frame cohort on its own independent animation phase.
-    bool needs_per_frame_batch = true;
+    // In default mode, every type opens a fresh batch each physics frame so the coordinator
+    // can sort by spawn_frame for correct temporal draw order. In optimized mode, only
+    // animated types need per-frame batches (to keep each cohort on its own animation phase);
+    // static types fill across frames for dense batches and composite merging.
+    bool needs_per_frame_batch = animated || !_optimize_draw_calls;
     bool need_new_batch = !td.cur_batch
         || td.cur_batch->used >= BATCH_CHUNK
         || (needs_per_frame_batch && td.cur_frame != frame);

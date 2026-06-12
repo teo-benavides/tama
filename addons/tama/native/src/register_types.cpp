@@ -74,12 +74,39 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
         ps->set_setting("tama/player_hitbox_radius", 3.0f);
     }
     ps->set_initial_value("tama/player_hitbox_radius", 3.0f);
-    Dictionary hint;
-    hint["name"]        = "tama/player_hitbox_radius";
-    hint["type"]        = Variant::FLOAT;
-    hint["hint"]        = PROPERTY_HINT_RANGE;
-    hint["hint_string"] = "0,100,0.5,or_greater";
-    ps->add_property_info(hint);
+    {
+        Dictionary hint;
+        hint["name"]        = "tama/player_hitbox_radius";
+        hint["type"]        = Variant::FLOAT;
+        hint["hint"]        = PROPERTY_HINT_RANGE;
+        hint["hint_string"] = "0,100,0.5,or_greater";
+        ps->add_property_info(hint);
+    }
+
+    if (!ps->has_setting("tama/server_bullet_composite_threshold")) {
+        ps->set_setting("tama/server_bullet_composite_threshold", 1000);
+    }
+    ps->set_initial_value("tama/server_bullet_composite_threshold", 1000);
+    {
+        Dictionary hint;
+        hint["name"]        = "tama/server_bullet_composite_threshold";
+        hint["type"]        = Variant::INT;
+        hint["hint"]        = PROPERTY_HINT_RANGE;
+        hint["hint_string"] = "0,10000,1,or_greater";
+        ps->add_property_info(hint);
+    }
+
+    // tama/optimize_draw_calls — disabled by default.
+    if (!ps->has_setting("tama/optimize_draw_calls")) {
+        ps->set_setting("tama/optimize_draw_calls", false);
+    }
+    ps->set_initial_value("tama/optimize_draw_calls", false);
+    {
+        Dictionary hint;
+        hint["name"] = "tama/optimize_draw_calls";
+        hint["type"] = Variant::BOOL;
+        ps->add_property_info(hint);
+    }
 }
 
 void uninitialize_tama_module(ModuleInitializationLevel p_level) {

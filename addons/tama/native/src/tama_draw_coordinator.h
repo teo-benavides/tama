@@ -12,6 +12,7 @@
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/variant/color.hpp>
 #include <godot_cpp/variant/packed_color_array.hpp>
+#include <godot_cpp/variant/packed_float32_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/rid.hpp>
@@ -39,12 +40,23 @@ class _TamaDrawCoordinator : public godot::Node2D {
     godot::PackedColorArray   _flush_col;
     godot::PackedVector2Array _flush_uv;
 
-    // Accumulation buffers for same-frame curved laser batching.
+    // Accumulation buffers for curved laser batching.
     // Grown as needed, never shrunk. Cleared between batches.
     std::vector<int32_t>          _idx_buf;
     std::vector<godot::Vector2>   _acc_pts;
     std::vector<godot::Color>     _acc_col;
     std::vector<godot::Vector2>   _acc_uv;
+
+    // Deferred curved laser job list for optimized draw mode.
+    std::vector<DrawJob> _curved_deferred;
+
+    // Reusable buffer for composite bullet draw (static types, optimized mode).
+    godot::PackedFloat32Array _composite_buf;
+
+    // When true: skip spawn_frame sort; static bullet types use composite multimesh; curved
+    // lasers batch by texture across all spawn frames. Fewer draw calls, order not guaranteed.
+    bool _optimize_draw_calls    = false;
+    int  _composite_threshold    = 1000;
 
     godot::RID _get_or_create_blend_ci(int blend_mode);
 
@@ -66,6 +78,11 @@ class _TamaDrawCoordinator : public godot::Node2D {
         godot::RID ci,
         godot::RenderingServer *rs);
 
+    int _accumulate_curved(
+        CurvedLaserState *l,
+        TamaServerCurvedLaserPool::TypeData *td,
+        int vert_base);
+
 protected:
     static void _bind_methods();
 
@@ -73,9 +90,10 @@ public:
     _TamaDrawCoordinator()           = default;
     ~_TamaDrawCoordinator() override = default;
 
-    void _physics_process(double delta) override;
-    void _draw()                        override;
-    void _exit_tree()                   override;
+    void _ready()                        override;
+    void _physics_process(double delta)  override;
+    void _draw()                         override;
+    void _exit_tree()                    override;
 
     void set_pools(
         TamaServerBulletPool      *bullet,
