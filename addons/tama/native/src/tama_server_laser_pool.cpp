@@ -4,7 +4,6 @@
 #include "tama_server_straight_laser_config.h"
 
 #include <cmath>
-#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/variant/transform2d.hpp>
@@ -94,14 +93,6 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     int n = td->pool_size;
     _types[key] = td;
 
-    td->draw_node = memnew(Node2D);
-    add_child(td->draw_node);
-    if (td->blend_mode != 0) {
-        td->material.instantiate();
-        td->material->set_blend_mode((CanvasItemMaterial::BlendMode)td->blend_mode);
-        td->draw_node->set_material(td->material);
-    }
-
     // Pre-allocate laser states and wrapper objects
     td->lasers.resize(n);
     td->wrappers.resize(n);
@@ -153,6 +144,7 @@ Object *TamaServerLaserPool::spawn(
     l.active         = true;
     l.spawn_frame    = frame;
     l.active_idx     = (int32_t)_active.size();
+    l.type_data_ptr  = (void *)it->second;
     _active.push_back(&l);
 
     l.position     = position;
@@ -381,86 +373,16 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
 // Draw
 // ---------------------------------------------------------------------------
 
-void TamaServerLaserPool::_draw() {
-    RenderingServer *rs = RenderingServer::get_singleton();
-
-    for (auto &[key, td_iter] : _types) {
-        TypeData *td = td_iter;
-        RID ci = td->draw_node->get_canvas_item();
-        rs->canvas_item_clear(ci);
-
-        for (int i = 0; i < (int)td->lasers.size(); ++i) {
-            LaserState &l = td->lasers[i];
-            if (!l.active) continue;
-
-            Color modulate(1.0f, 1.0f, 1.0f, l.current_opacity);
-            float half_w = l.current_width * 0.5f;
-
-            RID tex_rid;
-            if (!td->texture_frames.empty()) {
-                Ref<Texture2D> t = td->texture_frames[l.tex_anim_frame].texture;
-                if (t.is_valid()) tex_rid = t->get_rid();
-            }
-            RID base_tex_rid;
-            if (!td->base_texture_frames.empty()) {
-                Ref<Texture2D> t = td->base_texture_frames[l.base_anim_frame].texture;
-                if (t.is_valid()) base_tex_rid = t->get_rid();
-            }
-
-            // All drawing in the laser's local frame: origin at base, +X along the beam.
-            rs->canvas_item_add_set_transform(ci,
-                Transform2D(l.angle, Vector2(1.0f, 1.0f), 0.0f, l.position));
-
-            // Laser body — 4 tiling modes
-            const Rect2 body_rect(0.0f, -half_w, td->length, l.current_width);
-            if (tex_rid.is_valid()) {
-                if (!td->tile_x && !td->tile_y) {
-                    rs->canvas_item_add_texture_rect(ci, body_rect, tex_rid, false, modulate);
-                } else if (td->tile_x && td->tile_y) {
-                    rs->canvas_item_add_texture_rect(ci, body_rect, tex_rid, true, modulate);
-                } else if (td->tile_x) {
-                    // Tile along length, stretch across width
-                    Ref<Texture2D> tex = td->texture_frames[l.tex_anim_frame].texture;
-                    Vector2i tsz = tex->get_size();
-                    if (tsz.x > 0) {
-                        float x = 0.0f, rem = td->length;
-                        while (rem > 0.0f) {
-                            float w = std::min((float)tsz.x, rem);
-                            rs->canvas_item_add_texture_rect_region(ci,
-                                Rect2(x, -half_w, w, l.current_width),
-                                tex_rid, Rect2(0, 0, w, (float)tsz.y), modulate);
-                            x   += (float)tsz.x;
-                            rem -= (float)tsz.x;
-                        }
-                    }
-                } else {
-                    // Stretch along length, tile across width
-                    Ref<Texture2D> tex = td->texture_frames[l.tex_anim_frame].texture;
-                    Vector2i tsz = tex->get_size();
-                    if (tsz.y > 0) {
-                        float y = -half_w, rem = l.current_width;
-                        while (rem > 0.0f) {
-                            float h = std::min((float)tsz.y, rem);
-                            rs->canvas_item_add_texture_rect_region(ci,
-                                Rect2(0.0f, y, td->length, h),
-                                tex_rid, Rect2(0, 0, (float)tsz.x, h), modulate);
-                            y   += (float)tsz.y;
-                            rem -= (float)tsz.y;
-                        }
-                    }
-                }
-            } else {
-                rs->canvas_item_add_rect(ci, body_rect, modulate);
-            }
-
-            // Base texture centered at origin
-            if (base_tex_rid.is_valid()) {
-                Ref<Texture2D> base_tex = td->base_texture_frames[l.base_anim_frame].texture;
-                Vector2i bsz = base_tex->get_size();
-                rs->canvas_item_add_texture_rect(ci,
-                    Rect2(-bsz.x * 0.5f, -bsz.y * 0.5f, (float)bsz.x, (float)bsz.y),
-                    base_tex_rid, false, modulate);
-            }
-        }
+void TamaServerLaserPool::collect_draw_jobs(std::vector<DrawJob> &out) {
+    for (LaserState *l : _active) {
+        if (!l->active) continue;
+        TypeData *td = static_cast<TypeData *>(l->type_data_ptr);
+        DrawJob j;
+        j.spawn_frame = l->spawn_frame;
+        j.blend_mode  = td->blend_mode;
+        j.kind        = DRAW_STRAIGHT_LASER;
+        j.data        = l;
+        j.extra       = td;
+        out.push_back(j);
     }
 }

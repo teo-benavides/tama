@@ -23,10 +23,11 @@ struct CurvedLaserState {
     float rot_speed       = 0.0f;   // degrees/sec
     float last_rot_speed  = 0.0f;
 
-    bool    active      = false;
-    int64_t spawn_frame = -1;
-    int32_t active_idx  = -1;
-    int32_t global_slot = -1;
+    bool    active         = false;
+    int64_t spawn_frame    = -1;
+    int32_t active_idx     = -1;
+    int32_t global_slot    = -1;
+    void   *type_data_ptr  = nullptr;  // points to owning TypeData; set in spawn()
 
     TweenState1D angle_tween;
     TweenState1D speed_tween;

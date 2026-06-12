@@ -17,10 +17,11 @@ struct LaserState {
     float angle      = 0.0f;
     float last_angle = 0.0f;  // for SEQ direction type support
 
-    bool    active      = false;
-    int64_t spawn_frame = -1;
-    int32_t active_idx  = -1;
-    int32_t global_slot = -1;
+    bool    active         = false;
+    int64_t spawn_frame    = -1;
+    int32_t active_idx     = -1;
+    int32_t global_slot    = -1;
+    void   *type_data_ptr  = nullptr;  // points to owning TypeData; set in spawn()
 
     // Lifecycle phase: 0=delay, 1=expand, 2=active, 3=fade
     int phase         = 0;

@@ -1,5 +1,6 @@
 #pragma once
 #include "tama_animated_texture.h"
+#include "tama_draw_job.h"
 #include "tama_server_bullet.h"
 
 #include <cstdint>
@@ -16,8 +17,11 @@
 #include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
+class _TamaDrawCoordinator;
+
 class TamaServerBulletPool : public godot::Node2D {
     GDCLASS(TamaServerBulletPool, godot::Node2D)
+    friend class _TamaDrawCoordinator;
 
     // ------------------------------------------------------------------
     // Internal structures
@@ -77,21 +81,11 @@ class TamaServerBulletPool : public godot::Node2D {
         int blend_mode       = 0;
         int spawn_blend_mode = 0;
 
-        // Per-type Node2D children for blend mode isolation.
-        // type_node is added first (renders below), spawn_node second (renders on top).
-        // Materials are set via set_material() — the standard Godot API — which guarantees blend mode works.
-        godot::Node2D *type_node  = nullptr;
-        godot::Node2D *spawn_node = nullptr;
-        godot::Ref<godot::CanvasItemMaterial> type_material;
-        godot::Ref<godot::CanvasItemMaterial> spawn_material;
-
         // Spawn animation frames (from spawn_texture TamaAnimatedTexture)
         std::vector<TamaAnimFrame> spawn_anim_frames;
 
         // GPU resources
         godot::Ref<godot::QuadMesh> quad;
-        godot::Ref<godot::MultiMesh> composite_res;
-        godot::RID composite;
 
         // Bullet state flat array (indexed by global slot)
         std::vector<BulletState>        bullets;
@@ -122,17 +116,12 @@ class TamaServerBulletPool : public godot::Node2D {
     // Persistent recycle list — cleared at the top of each _physics_process to avoid per-frame allocation
     std::vector<BulletState *> _to_recycle;
 
-    // Pre-allocated buffer for the composite draw path — reused across frames and types
-    godot::PackedFloat32Array _composite_buf;
     // Pre-allocated buffer for spawn animation draw path (transform + color per instance)
     godot::PackedFloat32Array _spawn_buf;
 
     // Registrations queued before the node enters the scene tree
     struct PendingReg { godot::String key; godot::Object *config; };
     std::vector<PendingReg> _pending_regs;
-
-    // Cached threshold (read from ProjectSettings in _ready)
-    int _composite_threshold = 1000;
 
 
     // ------------------------------------------------------------------
@@ -167,10 +156,9 @@ public:
     ~TamaServerBulletPool() override;
 
     // Godot virtuals
-    void _ready()                   override;
+    void _ready()                       override;
     void _physics_process(double delta) override;
-    void _draw()                    override;
-    void _exit_tree()               override;
+    void _exit_tree()                   override;
 
     // ------------------------------------------------------------------
     // Public API
@@ -179,6 +167,8 @@ public:
     void register_type(const godot::String &key, godot::Object *config);
 
     int get_active_count() const { return (int)_active.size(); }
+
+    void collect_draw_jobs(std::vector<DrawJob> &out);
 
     // Returns the TamaServerBullet wrapper, or null if the pool is full.
     godot::Object *spawn(const TamaBulletFireData &data, godot::Object *config,

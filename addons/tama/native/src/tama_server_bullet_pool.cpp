@@ -8,7 +8,6 @@
 #include <cstring>
 
 #include <godot_cpp/classes/engine.hpp>
-#include <godot_cpp/classes/project_settings.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/scene_tree.hpp>
@@ -95,8 +94,6 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 
 void TamaServerBulletPool::_ready() {
     set_physics_process(true);
-    _composite_threshold = (int)ProjectSettings::get_singleton()
-        ->get_setting("tama/server_bullet_composite_threshold", 1000);
     for (auto &pr : _pending_regs)
         register_type(pr.key, pr.config);
     _pending_regs.clear();
@@ -174,37 +171,9 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     int n = td->pool_size;
     _types[key] = td;
 
-    // Per-type Node2D children for blend mode isolation.
-    // type_node is added first (renders below bullets), spawn_node second (renders on top).
-    // In Godot 4, siblings with equal z_index render in scene-tree order: later child = in front.
-    // set_material() is the standard Node2D API and reliably applies the CanvasItemMaterial.
-    {
-        td->type_node = memnew(Node2D);
-        add_child(td->type_node);
-        if (td->blend_mode != 0) {
-            td->type_material.instantiate();
-            td->type_material->set_blend_mode((CanvasItemMaterial::BlendMode)td->blend_mode);
-            td->type_node->set_material(td->type_material);
-        }
-
-        td->spawn_node = memnew(Node2D);
-        add_child(td->spawn_node);
-        if (td->spawn_blend_mode != 0) {
-            td->spawn_material.instantiate();
-            td->spawn_material->set_blend_mode((CanvasItemMaterial::BlendMode)td->spawn_blend_mode);
-            td->spawn_node->set_material(td->spawn_material);
-        }
-    }
-
     // QuadMesh shared by all batches for this type.
     td->quad.instantiate();
     td->quad->set_size(td->rect.size);
-
-    // Composite multimesh
-    td->composite_res.instantiate();
-    td->composite_res->set_transform_format(MultiMesh::TRANSFORM_2D);
-    td->composite_res->set_mesh(td->quad);
-    td->composite = td->composite_res->get_rid();
 
     // Pre-allocate bullet states and wrapper objects
     td->bullets.resize(n);
@@ -324,7 +293,7 @@ Object *TamaServerBulletPool::spawn(
     // Spawn animation state is per-bullet, so spawn-delay types no longer need per-frame batches.
     // Only animated types (multi-frame sprites) need a fresh batch each frame to keep
     // each spawn-frame cohort on its own independent animation phase.
-    bool needs_per_frame_batch = animated;
+    bool needs_per_frame_batch = true;
     bool need_new_batch = !td.cur_batch
         || td.cur_batch->used >= BATCH_CHUNK
         || (needs_per_frame_batch && td.cur_frame != frame);
@@ -880,72 +849,31 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 // Draw
 // ---------------------------------------------------------------------------
 
-void TamaServerBulletPool::_draw() {
-    // All drawing goes through per-TypeData Node2D children so each type can have its own
-    // CanvasItemMaterial (blend mode). type_node was added first → renders below spawn_node.
-    // This node's own draw list is left empty.
-    RenderingServer *rs = RenderingServer::get_singleton();
-
-    // Pass 1: regular bullets (all types).
+void TamaServerBulletPool::collect_draw_jobs(std::vector<DrawJob> &out) {
+    // Regular batch jobs first so stable_sort keeps spawn animations above their batch's bullets.
     for (auto &[key, td] : _types) {
-        RID type_ci = td->type_node->get_canvas_item();
-        rs->canvas_item_clear(type_ci);
-        if (td->active_batches.empty()) continue;
-
-        bool animated = td->anim_frames.size() > 1;
-        if (animated || (int)_active.size() <= _composite_threshold) {
-            // Animated types always draw per-batch (each batch has a different texture).
-            // Static types use per-batch draws when below the composite threshold.
-            for (BatchData *batch : td->active_batches) {
-                RID tex = batch->current_texture.is_valid() ? batch->current_texture->get_rid() : RID();
-                rs->canvas_item_add_multimesh(type_ci, batch->multimesh, tex);
-            }
-        } else {
-            // Composite: concatenate all batch transforms into one draw call.
-            // Only reached for static (non-animated) types above the threshold.
-            int total_floats = 0;
-            for (BatchData *batch : td->active_batches)
-                total_floats += batch->used * 8;
-            if (total_floats == 0) continue;
-
-            _composite_buf.resize(total_floats);
-            float *dst = _composite_buf.ptrw();
-            int offset = 0;
-            for (BatchData *batch : td->active_batches) {
-                if (batch->used <= 0) continue;
-                PackedFloat32Array src = rs->multimesh_get_buffer(batch->multimesh);
-                int count = batch->used * 8;
-                if (src.size() >= count) {
-                    std::memcpy(dst + offset, src.ptr(), count * sizeof(float));
-                    offset += count;
-                }
-            }
-            if (offset == 0) continue;
-            td->composite_res->set_instance_count(offset / 8);
-            rs->multimesh_set_buffer(td->composite, _composite_buf);
-            RID tex = td->first_texture.is_valid() ? td->first_texture->get_rid() : RID();
-            rs->canvas_item_add_multimesh(type_ci, td->composite, tex);
+        for (BatchData *batch : td->active_batches) {
+            DrawJob j;
+            j.spawn_frame = batch->birth_frame;
+            j.blend_mode  = td->blend_mode;
+            j.kind        = DRAW_BULLET_BATCH;
+            j.data        = batch;
+            j.extra       = td;
+            out.push_back(j);
         }
     }
-
-    // Pass 2: spawn animations (all types).
-    // spawn_node was added after type_node → later sibling → renders on top of bullets.
+    // Second pass: spawn animation jobs (pushed after regular → stable_sort keeps them on top).
     for (auto &[key, td] : _types) {
-        RID spawn_ci = td->spawn_node->get_canvas_item();
-        rs->canvas_item_clear(spawn_ci);
         for (BatchData *batch : td->active_batches) {
             if (batch->spawn_active_count <= 0) continue;
             if (!batch->spawn_multimesh_res.is_valid()) continue;
-            batch->spawn_multimesh_res->set_visible_instance_count(batch->used);
-            // Pick per-batch animated spawn texture, falling back to static spawn_texture / first_texture.
-            Ref<Texture2D> stex;
-            if (!td->spawn_anim_frames.empty()) {
-                stex = td->spawn_anim_frames[batch->spawn_anim_frame].texture;
-            } else {
-                stex = td->spawn_texture.is_valid() ? td->spawn_texture : td->first_texture;
-            }
-            RID stex_rid = stex.is_valid() ? stex->get_rid() : RID();
-            rs->canvas_item_add_multimesh(spawn_ci, batch->spawn_multimesh, stex_rid);
+            DrawJob j;
+            j.spawn_frame = batch->birth_frame;
+            j.blend_mode  = td->spawn_blend_mode;
+            j.kind        = DRAW_BULLET_BATCH_SPAWN;
+            j.data        = batch;
+            j.extra       = td;
+            out.push_back(j);
         }
     }
 }

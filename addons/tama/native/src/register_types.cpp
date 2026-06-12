@@ -7,6 +7,7 @@
 #include "tama_emitter.h"
 #include "tama_expr.h"
 #include "tama_interpreter.h"
+#include "tama_draw_coordinator.h"
 #include "tama_manager.h"
 #include "tama_script_repository.h"
 #include "tama_server_bullet.h"
@@ -43,6 +44,7 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     ClassDB::register_internal_class<TamaServerBulletPool>();
     ClassDB::register_internal_class<TamaServerLaserPool>();
     ClassDB::register_internal_class<TamaServerCurvedLaserPool>();
+    ClassDB::register_internal_class<_TamaDrawCoordinator>();
 
     // User-facing classes — base before derived
     ClassDB::register_class<TamaAnimatedTexture>();

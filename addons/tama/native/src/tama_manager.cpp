@@ -89,10 +89,13 @@ void TamaManager::_ensure_scene_nodes() {
     _server_pool->connect("bullet_hit", callable_mp(this, &TamaManager::_on_pool_bullet_hit));
     _laser_pool->connect("laser_hit",   callable_mp(this, &TamaManager::_on_laser_hit));
     _curved_laser_pool->connect("laser_hit", callable_mp(this, &TamaManager::_on_curved_laser_hit));
+    _draw_coordinator = memnew(_TamaDrawCoordinator);
+    _draw_coordinator->set_pools(_server_pool, _laser_pool, _curved_laser_pool);
     tree->get_root()->call_deferred("add_child", _spawn_manager);
     tree->get_root()->call_deferred("add_child", _server_pool);
     tree->get_root()->call_deferred("add_child", _laser_pool);
     tree->get_root()->call_deferred("add_child", _curved_laser_pool);
+    tree->get_root()->call_deferred("add_child", _draw_coordinator);
     _nodes_injected = true;
 }
 
@@ -101,6 +104,7 @@ void TamaManager::_shutdown() {
     _server_pool        = nullptr;
     _laser_pool         = nullptr;
     _curved_laser_pool  = nullptr;
+    _draw_coordinator   = nullptr;
     _nodes_injected     = false;
     if (_repository) {
         memdelete(_repository);
@@ -114,6 +118,7 @@ void TamaManager::_on_scene_nodes_freed() {
     _server_pool        = nullptr;
     _laser_pool         = nullptr;
     _curved_laser_pool  = nullptr;
+    _draw_coordinator   = nullptr;
     _nodes_injected     = false;
 }
 

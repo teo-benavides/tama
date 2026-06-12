@@ -1,5 +1,6 @@
 #pragma once
 #include "tama_animated_texture.h"
+#include "tama_draw_job.h"
 #include "tama_interpreter.h"
 #include "tama_server_laser.h"
 
@@ -8,12 +9,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
+class _TamaDrawCoordinator;
+
 class TamaServerLaserPool : public godot::Node2D {
     GDCLASS(TamaServerLaserPool, godot::Node2D)
+    friend class _TamaDrawCoordinator;
 
     // ------------------------------------------------------------------
     // Internal structures
@@ -30,10 +33,7 @@ class TamaServerLaserPool : public godot::Node2D {
         bool   tile_y           = false;
         std::vector<TamaAnimFrame> base_texture_frames; // empty = no base texture; size>1 = animated
 
-        // Blend mode from the texture TamaAnimatedTexture; draw_node carries the material.
-        int blend_mode = 0;
-        godot::Node2D *draw_node = nullptr;
-        godot::Ref<godot::CanvasItemMaterial> material;
+        int blend_mode      = 0;
         int    delay_frames     = 120;
         int    expand_frames    = 10;
         int    duration_frames  = 120;
@@ -79,12 +79,13 @@ public:
 
     void _ready()                        override;
     void _physics_process(double delta)  override;
-    void _draw()                         override;
     void _exit_tree()                    override;
 
     void register_type(const godot::String &key, godot::Object *config);
 
     int get_active_count() const { return (int)_active.size(); }
+
+    void collect_draw_jobs(std::vector<DrawJob> &out);
 
     // Returns the TamaServerLaser wrapper, or null if the pool is full.
     godot::Object *spawn(const TamaBulletFireData &data, godot::Object *config,

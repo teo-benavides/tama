@@ -1,5 +1,6 @@
 #pragma once
 #include "tama_animated_texture.h"
+#include "tama_draw_job.h"
 #include "tama_interpreter.h"
 #include "tama_server_curved_laser.h"
 
@@ -8,32 +9,20 @@
 #include <unordered_map>
 #include <vector>
 
-#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/variant/rect2.hpp>
-#include <godot_cpp/variant/color.hpp>
-#include <godot_cpp/variant/packed_color_array.hpp>
-#include <godot_cpp/variant/packed_int32_array.hpp>
-#include <godot_cpp/variant/packed_vector2_array.hpp>
-#include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/vector2.hpp>
+
+class _TamaDrawCoordinator;
 
 class TamaServerCurvedLaserPool : public godot::Node2D {
     GDCLASS(TamaServerCurvedLaserPool, godot::Node2D)
+    friend class _TamaDrawCoordinator;
 
     // ------------------------------------------------------------------
     // Internal structures
     // ------------------------------------------------------------------
-
-    // Per-texture geometry accumulation bucket for batched triangle array draws.
-    struct DrawBucket {
-        godot::RID               texture_rid;
-        std::vector<godot::Vector2> points;
-        std::vector<godot::Color>   colors;
-        std::vector<godot::Vector2> uvs;
-        std::vector<int32_t>        indices;
-    };
 
     struct TypeData {
         godot::Object *config_obj = nullptr;
@@ -44,14 +33,7 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
         int    pool_size            = 100;
         float  out_of_bounds_margin = 50.0f;
 
-        // Blend mode (from texture TamaAnimatedTexture).
-        // draw_node is a Node2D child of the pool; its material applies the blend mode.
         int blend_mode = 0;
-        godot::Node2D *draw_node = nullptr;
-        godot::Ref<godot::CanvasItemMaterial> material;
-
-        // Per-type geometry accumulation buckets (keyed by texture RID int).
-        std::unordered_map<int64_t, DrawBucket> draw_buckets;
 
         std::vector<CurvedLaserState>        lasers;
         std::vector<TamaServerCurvedLaser *> wrappers;
@@ -73,12 +55,6 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
     struct PendingReg { godot::String key; godot::Object *config; };
     std::vector<PendingReg> _pending_regs;
 
-    // Persistent Packed* buffers for the flush — sized up as needed, never shrunk
-    godot::PackedInt32Array    _flush_idx;
-    godot::PackedVector2Array  _flush_pts;
-    godot::PackedColorArray    _flush_col;
-    godot::PackedVector2Array  _flush_uv;
-
     // ------------------------------------------------------------------
     // Internal helpers
     // ------------------------------------------------------------------
@@ -97,12 +73,13 @@ public:
 
     void _ready()                        override;
     void _physics_process(double delta)  override;
-    void _draw()                         override;
     void _exit_tree()                    override;
 
     void register_type(const godot::String &key, godot::Object *config);
 
     int get_active_count() const { return (int)_active.size(); }
+
+    void collect_draw_jobs(std::vector<DrawJob> &out);
 
     godot::Object *spawn(const TamaBulletFireData &data, godot::Object *config,
                          float angle, float speed, godot::Vector2 position,

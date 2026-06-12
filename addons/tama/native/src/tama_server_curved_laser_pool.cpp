@@ -5,17 +5,12 @@
 
 #include <algorithm>
 #include <cmath>
-#include <godot_cpp/classes/canvas_item_material.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/classes/world2d.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/rect2.hpp>
-#include <godot_cpp/variant/color.hpp>
-#include <godot_cpp/variant/packed_color_array.hpp>
-#include <godot_cpp/variant/packed_int32_array.hpp>
-#include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
@@ -93,15 +88,6 @@ void TamaServerCurvedLaserPool::register_type(const String &p_key, Object *p_con
     int n = td->pool_size;
     _types[key] = td;
 
-    // Per-type draw node for blend mode isolation (same pattern as TamaServerBulletPool).
-    td->draw_node = memnew(Node2D);
-    add_child(td->draw_node);
-    if (td->blend_mode != 0) {
-        td->material.instantiate();
-        td->material->set_blend_mode((CanvasItemMaterial::BlendMode)td->blend_mode);
-        td->draw_node->set_material(td->material);
-    }
-
     td->lasers.resize(n);
     td->wrappers.resize(n);
     for (int i = 0; i < n; ++i) {
@@ -154,6 +140,7 @@ Object *TamaServerCurvedLaserPool::spawn(
     l.active         = true;
     l.spawn_frame    = frame;
     l.active_idx     = (int32_t)_active.size();
+    l.type_data_ptr  = (void *)it->second;
     _active.push_back(&l);
 
     l.position         = position;
@@ -439,140 +426,17 @@ void TamaServerCurvedLaserPool::_physics_process(double p_delta) {
 }
 
 // ---------------------------------------------------------------------------
-// Draw helpers
-// ---------------------------------------------------------------------------
-
-// Per-vertex alpha: linear fade-in from tip and fade-out toward tail.
-// idx=0 is the tip, idx=trail_count-1 is the tail.
-static float _trail_alpha(int idx, int trail_count, float opacity) {
-    int taper = (trail_count / 5 < 2) ? 2 : trail_count / 5;
-    float tip_alpha  = (float)(idx + 1)                    / (float)taper;
-    float tail_alpha = (float)(trail_count - 1 - idx + 1)  / (float)taper;
-    if (tip_alpha  > 1.0f) tip_alpha  = 1.0f;
-    if (tail_alpha > 1.0f) tail_alpha = 1.0f;
-    return tip_alpha * tail_alpha * opacity;
-}
-
-// ---------------------------------------------------------------------------
-// Draw — per-type batched via canvas_item_add_triangle_array
-//
-// Each TypeData has its own DrawBucket map (keyed by texture RID) and its own
-// Node2D child (draw_node) which carries the CanvasItemMaterial for blend mode.
-// Lasers sharing a texture within a type go into one bucket → one draw call.
-// ---------------------------------------------------------------------------
-
-void TamaServerCurvedLaserPool::_draw() {
-    RenderingServer *rs = RenderingServer::get_singleton();
-
-    for (auto &[key, td_iter] : _types) {
-        TypeData *td = td_iter;
-
-        // Clear this type's bucket contents but retain allocated capacity.
-        for (auto &[bkey, bucket] : td->draw_buckets) {
-            bucket.points.clear();
-            bucket.colors.clear();
-            bucket.uvs.clear();
-            bucket.indices.clear();
-        }
-
-        // Accumulate geometry for every active laser of this type.
-        for (int i = 0; i < (int)td->lasers.size(); ++i) {
-            CurvedLaserState &l = td->lasers[i];
-            if (!l.active || l.trail_count < 2) continue;
-
-            RID tex_rid;
-            if (!td->texture_frames.empty()) {
-                Ref<Texture2D> tex = (td->texture_frames.size() > 1)
-                    ? td->texture_frames[l.tex_anim_frame].texture
-                    : td->texture_frames[0].texture;
-                if (tex.is_valid()) tex_rid = tex->get_rid();
-            }
-
-            int64_t tex_key = tex_rid.get_id();
-            DrawBucket &bucket = td->draw_buckets[tex_key];
-            bucket.texture_rid = tex_rid;
-
-            int count     = l.trail_count;
-            int n         = count - 1;
-            int vert_base = (int)bucket.points.size();
-
-            for (int k = 0; k < count; ++k) {
-                int   slot = (l.trail_head + k) % td->length;
-                float v    = (n > 0) ? ((float)k / (float)n) : 0.0f;
-                float a    = _trail_alpha(k, count, 1.0f);
-                Color c(1.0f, 1.0f, 1.0f, a);
-                bucket.points.push_back(l.edge_l[slot]);
-                bucket.points.push_back(l.edge_r[slot]);
-                bucket.colors.push_back(c);
-                bucket.colors.push_back(c);
-                bucket.uvs.push_back(Vector2(0.0f, v));
-                bucket.uvs.push_back(Vector2(1.0f, v));
-            }
-
-            for (int s = 0; s < n; ++s) {
-                Vector2 A = l.trail[(l.trail_head + s)     % td->length];
-                Vector2 B = l.trail[(l.trail_head + s + 1) % td->length];
-                if ((B - A).length_squared() < 0.0001f) continue;
-
-                int lA = vert_base + s * 2;
-                int rA = vert_base + s * 2 + 1;
-                int lB = vert_base + (s + 1) * 2;
-                int rB = vert_base + (s + 1) * 2 + 1;
-
-                bucket.indices.push_back(lA);
-                bucket.indices.push_back(rA);
-                bucket.indices.push_back(rB);
-
-                bucket.indices.push_back(rB);
-                bucket.indices.push_back(lB);
-                bucket.indices.push_back(lA);
-            }
-        }
-
-        // Flush: one draw call per texture bucket, onto this type's draw_node
-        // canvas item (which has the CanvasItemMaterial for blend mode).
-        RID canvas_rid = td->draw_node->get_canvas_item();
-        rs->canvas_item_clear(canvas_rid);
-
-        for (auto &[bkey, bucket] : td->draw_buckets) {
-            if (bucket.indices.empty()) continue;
-
-            int nv = (int)bucket.points.size();
-            int ni = (int)bucket.indices.size();
-
-            _flush_pts.resize(nv);
-            _flush_col.resize(nv);
-            _flush_uv.resize(nv);
-            _flush_idx.resize(ni);
-
-            {
-                Vector2 *p = _flush_pts.ptrw();
-                for (int j = 0; j < nv; ++j) p[j] = bucket.points[j];
-            }
-            {
-                Color *p = _flush_col.ptrw();
-                for (int j = 0; j < nv; ++j) p[j] = bucket.colors[j];
-            }
-            {
-                Vector2 *p = _flush_uv.ptrw();
-                for (int j = 0; j < nv; ++j) p[j] = bucket.uvs[j];
-            }
-            {
-                int32_t *p = _flush_idx.ptrw();
-                for (int j = 0; j < ni; ++j) p[j] = bucket.indices[j];
-            }
-
-            rs->canvas_item_add_triangle_array(
-                canvas_rid,
-                _flush_idx,
-                _flush_pts,
-                _flush_col,
-                _flush_uv,
-                PackedInt32Array(),    // bones  (unused)
-                PackedFloat32Array(),  // weights (unused)
-                bucket.texture_rid
-            );
-        }
+void TamaServerCurvedLaserPool::collect_draw_jobs(std::vector<DrawJob> &out) {
+    for (CurvedLaserState *l : _active) {
+        if (!l->active) continue;
+        TypeData *td = static_cast<TypeData *>(l->type_data_ptr);
+        DrawJob j;
+        j.spawn_frame = l->spawn_frame;
+        j.blend_mode  = td->blend_mode;
+        j.kind        = DRAW_CURVED_LASER;
+        j.data        = l;
+        j.extra       = td;
+        out.push_back(j);
     }
 }
 

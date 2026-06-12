@@ -1,6 +1,7 @@
 #pragma once
 #include "tama_bullet_registry.h"
 #include "tama_context.h"
+#include "tama_draw_coordinator.h"
 #include "tama_script_repository.h"
 #include "tama_server_bullet_pool.h"
 #include "tama_server_curved_laser_pool.h"
@@ -80,6 +81,7 @@ private:
     TamaServerBulletPool      *_server_pool       = nullptr;
     TamaServerLaserPool       *_laser_pool        = nullptr;
     TamaServerCurvedLaserPool *_curved_laser_pool = nullptr;
+    _TamaDrawCoordinator      *_draw_coordinator  = nullptr;
     bool                       _nodes_injected     = false;
     float _global_out_of_bounds_margin = -1.0f;
     float _player_hitbox_radius        = 3.0f;
