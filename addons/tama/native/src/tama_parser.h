@@ -93,6 +93,7 @@ private:
     std::shared_ptr<_TamaASTNode> parse_waitf();
     std::shared_ptr<_TamaASTNode> parse_vanish();
     std::shared_ptr<_TamaASTNode> parse_break();
+    std::shared_ptr<_TamaASTNode> parse_event();
     std::shared_ptr<_TamaASTNode> parse_over();
     std::shared_ptr<_TamaASTNode> parse_offset();
     std::shared_ptr<_TamaASTNode> parse_pos();

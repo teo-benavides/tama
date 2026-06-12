@@ -82,7 +82,7 @@ The following identifiers are reserved and cannot be used as variable or definit
 
 ```
 main    fire    act     bullet  bul
-repeat  repeatf wait    waitf   vanish  break
+repeat  repeatf wait    waitf   vanish  break    event
 chdir   chspd   chrotspd  chpos   accel   over
 dir     speed   spd     rotspd  offset  pos     mvmt
 aim     abs     rel     seq
@@ -630,6 +630,47 @@ sfx("fire")                    # call context.sfx with string "fire"
 sfx(sfx_name)                  # call context.sfx with the value of variable sfx_name
 spawn_effect(pos_x, pos_y)     # call context.spawn_effect with two numeric args
 play_music("boss_theme")
+```
+
+### 6.24 `event`
+
+```
+event_stmt = "event" IDENT [ "(" [ event_arg { "," event_arg } ] ")" ]
+event_arg  = STRING | EXPR
+```
+
+Emits a named, fire-and-forget event from the script to game code. At runtime the interpreter emits the Godot signal:
+
+```
+TamaManager.event_fired(name: String, args: Array)
+```
+
+`IDENT` is the event name. Arguments are optional and may be:
+- **Quoted string literals** (`STRING`): passed into the `args` array as `String` values, without scope lookup.
+- **Numeric expressions** (`EXPR`): evaluated and passed as floats.
+
+The interpreter does not block — it emits the signal and continues immediately. The signal is emitted on the `TamaManager` singleton, so a single central handler can react to events from every running emitter and bullet. Connect to it in GDScript and dispatch on `name`:
+
+```gdscript
+TamaManager.event_fired.connect(func(name: String, args: Array):
+    if name == "sfx":
+        $AudioStreamPlayer.stream = load("res://sfx/" + args[0])
+        $AudioStreamPlayer.play())
+```
+
+**`event` vs. `context_call`:** both run side effects, but they differ in how they dispatch:
+
+| | `event foo(...)` | `foo(...)` (context_call) |
+|---|---|---|
+| Mechanism | Emits `TamaManager.event_fired` signal | Calls method `foo` on the `TamaContext` |
+| Requires a `TamaContext` | No | Yes (warns and skips if unset/missing) |
+| Coupling | Decoupled — one handler, dispatch by name | Direct — one method per call |
+| Best for | Game-side reactions (SFX, score, shake) | Context-defined helpers/behaviour |
+
+```
+event sfx("shot.wav")          # emit event_fired("sfx", ["shot.wav"])
+event screen_shake(amount)     # numeric arg evaluated from scope
+event boss_phase_started       # no args → event_fired("boss_phase_started", [])
 ```
 
 ---
@@ -1282,6 +1323,7 @@ At runtime, `var` and assignment are executed identically: `scope[name] = eval(e
 | `waitf` | — | Action stmt |
 | `vanish` | — | Action stmt |
 | `break` | — | Action stmt |
+| `event` | — | Action stmt — emits `TamaManager.event_fired(name, args)` |
 | `while` | — | Action stmt |
 | `if` | — | Action stmt |
 | `elif` | — | Action stmt (if branch) |
@@ -1365,6 +1407,7 @@ action_stmt   = while_stmt
               | var_stmt
               | assign_stmt
               | context_call
+              | event_stmt
               | repeat_stmt
               | repeatf_stmt
               | wait_stmt
@@ -1410,6 +1453,12 @@ call_arg      = STRING | EXPR ;
                 (* calls a method on the TamaContext object; return value discarded.
                    STRING: quoted string literal passed as-is (no scope lookup).
                    IDENT must not be a keyword.                               *)
+
+event_stmt    = "event" IDENT [ "(" [ event_arg { "," event_arg } ] ")" ] ;
+event_arg     = STRING | EXPR ;
+                (* emits TamaManager.event_fired(name: String, args: Array).
+                   fire-and-forget; does not block. args may be string literals
+                   or numeric EXPRs. parentheses/args optional.                *)
 
 repeat_stmt   = "repeat" [ EXPR [ IDENT ] ] NEWLINE action_block ;
                 (* IDENT is the 0-based loop index; omitting EXPR = infinite loop.

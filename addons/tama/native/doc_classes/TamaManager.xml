@@ -247,5 +247,20 @@
 				[/codeblock]
 			</description>
 		</signal>
+		<signal name="event_fired">
+			<param index="0" name="name" type="String" />
+			<param index="1" name="args" type="Array" />
+			<description>
+				Emitted by the [code]event[/code] statement in TamaScript. [param name] is the event name; [param args] holds the evaluated arguments (quoted strings pass through as [String], numeric expressions as [float]). Fire-and-forget: the script does not block. Connect a single handler and dispatch on [param name] to react to script-driven events such as sound effects or score changes.
+				[codeblock]
+				func _ready():
+				    TamaManager.event_fired.connect(_on_event_fired)
+
+				func _on_event_fired(name: String, args: Array) -> void:
+				    if name == "sfx":
+				        play_sfx(args[0])
+				[/codeblock]
+			</description>
+		</signal>
 	</signals>
 </class>

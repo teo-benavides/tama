@@ -379,6 +379,23 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_break() {
     return tama_make_node((int)NT::BREAK);
 }
 
+std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_event() {
+    consume(TT::KW_EVENT);
+    TamaToken name_tok = peek();
+    if (name_tok.type != TT::WORD) {
+        error_at(name_tok, "Expected event name after 'event'");
+        try_consume(TT::NEWLINE);
+        return nullptr;
+    }
+    name_tok = consume(TT::WORD);
+    auto args = parse_call_args(name_tok);
+    consume(TT::NEWLINE);
+    auto n = tama_make_node((int)NT::EVENT);
+    n->name = name_tok.value;
+    n->args = std::move(args);
+    return n;
+}
+
 std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_over() {
     consume(TT::KW_OVER);
     std::string expr = collect_to_eol();
@@ -918,6 +935,7 @@ std::shared_ptr<_TamaASTNode> TamaParserCpp::parse_action_statement() {
         case TT::KW_WAITF:  return parse_waitf();
         case TT::KW_VANISH: return parse_vanish();
         case TT::KW_BREAK:  return parse_break();
+        case TT::KW_EVENT:  return parse_event();
         case TT::KW_OFFSET: return parse_offset();
         case TT::KW_CHDIR:  return parse_chdir();
         case TT::KW_CHSPD:    return parse_chspd();

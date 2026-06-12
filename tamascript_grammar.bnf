@@ -46,7 +46,7 @@ COMMENT = "#" { any character except newline } ;
 KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "repeat" | "repeatf" | "wait" | "waitf"
    | "chdir" | "chspd" | "chrotspd" | "chpos" | "accel"
-   | "vanish" | "var" | "break"
+   | "vanish" | "var" | "break" | "event"
    | "if" | "elif" | "else" | "while"
    | "dir" | "speed" | "spd" | "rotspd" | "offset" | "pos" | "mvmt"
    | "emitter" | "emt" | "type" | "async"
@@ -171,7 +171,8 @@ action_stmt = while_stmt
              | fire_call
              | act_call
              | async_act
-             | context_call ;
+             | context_call
+             | event_stmt ;
 
 context_call = IDENT "(" [ call_arg { "," call_arg } ] ")" ;
                (* calls a method on the TamaContext object for side effects.
@@ -234,6 +235,12 @@ vanish_stmt  = "vanish" ;
 break_stmt   = "break" ;
                (* exits the innermost enclosing repeat, repeatf, or while.
                   only exits one level — nested break only exits the nearest loop.    *)
+
+event_stmt   = "event" IDENT [ "(" [ event_arg { "," event_arg } ] ")" ] ;
+event_arg    = STRING | EXPR ;
+               (* fires TamaManager.event_fired(name: String, args: Array).
+                  IDENT is the event name; optional args may be string literals or
+                  numeric EXPRs. connect to TamaManager.event_fired in GDScript.     *)
 
 fire_call    = "fire" IDENT [ arg_list ] ;
 act_call     = "act"  IDENT [ arg_list ] ;

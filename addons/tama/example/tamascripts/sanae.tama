@@ -4,11 +4,11 @@ main
     var shot_angle = 360/10*-3
     repeat amt i
         if i % 2
-            shift_angle 144
-            shot_angle 360/10*-3
+            shift_angle = 144
+            shot_angle = 360/10*-3
         else
-            shift_angle -144
-            shot_angle (360/10*-3)+36 # 180 - 144 = 36
+            shift_angle = -144
+            shot_angle = (360/10*-3)+36 # 180 - 144 = 36
         fire
             dir abs shot_angle # rotate to make it an inverted star
             spd abs 1000
@@ -31,7 +31,7 @@ bullet star_spawner(move_direction, shift_angle, shot_angle)
                 waitf shot_intervalf
             chdir
                 dir rel shift_angle
-            curr_angle curr_angle + shift_angle
+            curr_angle = curr_angle + shift_angle
         vanish
 
 bullet star_bullet(delay, move_direction, unfold_direction)

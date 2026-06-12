@@ -60,5 +60,7 @@ layout_mode = 2
 label_settings = SubResource("LabelSettings_pq7m2")
 script = ExtResource("4_bjbng")
 
+[node name="SFXPlayer" type="AudioStreamPlayer" parent="." unique_id=1859151334]
+
 [connection signal="item_selected" from="CanvasLayer/Container/OptionButton" to="." method="_on_option_button_item_selected"]
 [connection signal="text_changed" from="CanvasLayer/Container/TextEdit" to="." method="_on_text_edit_text_changed"]

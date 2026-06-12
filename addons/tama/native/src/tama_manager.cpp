@@ -62,6 +62,9 @@ void TamaManager::_bind_methods() {
     ClassDB::bind_method(D_METHOD("_on_curved_laser_hit", "laser"),  &TamaManager::_on_curved_laser_hit);
     ADD_SIGNAL(MethodInfo("curved_laser_hit",
         PropertyInfo(Variant::OBJECT, "laser", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerCurvedLaser")));
+    ADD_SIGNAL(MethodInfo("event_fired",
+        PropertyInfo(Variant::STRING, "name"),
+        PropertyInfo(Variant::ARRAY,  "args")));
 }
 
 // ---------------------------------------------------------------------------

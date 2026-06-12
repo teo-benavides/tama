@@ -25,6 +25,7 @@ static const std::unordered_map<std::string, TT> KEYWORDS = {
     {"false",   TT::KW_FALSE},   {"while",   TT::KW_WHILE},
     {"break",   TT::KW_BREAK},   {"bounces", TT::KW_BOUNCES},
     {"chrotspd", TT::KW_CHROTSPD}, {"rotspd",   TT::KW_ROTSPD},
+    {"event",    TT::KW_EVENT},
 };
 
 TT tama_keyword_type(const std::string &word) {

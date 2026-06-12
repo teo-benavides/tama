@@ -6,4 +6,4 @@ main
             spd 200
         if count > 180
             break
-        count count + 1
+        count = count + 1

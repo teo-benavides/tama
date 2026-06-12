@@ -11,6 +11,7 @@ fire bwp(direction)
 bullet shooter(amt)
     act
         repeat
+            event sfx("shot")
             repeat amt i
                 fire bwp((360/amt) * i)
             chdir

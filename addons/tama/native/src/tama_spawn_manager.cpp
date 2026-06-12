@@ -45,6 +45,10 @@ void _TamaSpawnManager::connect_interpreter(_TamaInterpreter *interp, Object *sp
     interp->_fire_cb = [this, spawner](const TamaBulletFireData &data) {
         _on_bullet_fired(data, spawner);
     };
+    interp->_event_cb = [](const std::string &name, const godot::Array &args) {
+        if (TamaManager *mgr = TamaManager::get_instance())
+            mgr->emit_signal("event_fired", godot::String(name.c_str()), args);
+    };
 }
 
 _TamaASTNode *_TamaSpawnManager::get_tama_script(const String &filename) const {

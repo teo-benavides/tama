@@ -182,6 +182,7 @@ func _on_curved_laser_hit(laser: TamaServerCurvedLaser) -> void:
 | `bullet_hit(bullet)` | シグナル | サーバー弾がプレイヤーヒットボックスと重なったときに発火。 |
 | `straight_laser_hit(laser)` | シグナル | ストレートレーザーのビームがプレイヤーヒットボックスと重なったときに発火（展開・アクティブフェーズのみ）。 |
 | `curved_laser_hit(laser)` | シグナル | 曲線レーザーのトレイルのいずれかのセグメントがプレイヤーヒットボックスと重なったときに発火。 |
+| `event_fired(name, args)` | シグナル | TamaScriptの `event` 文によって発火される。`name` は `String`、`args` は評価済み引数の `Array`。スクリプト駆動のイベント（SFX、スコアなど）に反応するために接続する。 |
 
 主なメソッド:
 
@@ -264,6 +265,7 @@ fire
 | `var NAME = EXPR` | ローカル変数を宣言する。 |
 | `NAME = EXPR` | 既存の変数を再代入する（変更は親スコープに伝播する）。 |
 | `NAME(args...)` | TamaContextオブジェクトのメソッドを呼び出す（クイックスタート手順9参照）。戻り値は破棄される。引数には数値式またはクォート文字列（例: `sfx("fire")`）が使える。 |
+| `event NAME(args...)` | `TamaManager.event_fired(name, args)` を発火する。ゲーム側コードへの撃ちっぱなし（fire-and-forget）シグナル。引数には数値式またはクォート文字列が使える（例: `event sfx("shot.wav")`）。引数がない場合は括弧を省略できる。SFX・スコア・画面シェイクなどに使う。コンテキスト呼び出しと違い `TamaContext` は不要。 |
 | `fire NAME` / `fire` *(インライン)* | 弾をスポーンする。 |
 | `act NAME` / `act` *(インライン)* | アクトを実行する（ブロッキング）。 |
 | `async act …` | アクトをブロッキングなしで実行する。 |

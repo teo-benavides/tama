@@ -370,6 +370,7 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
     case NT::CHROTSPD: _emit_chrotspd(n); return;
     case NT::CHPOS:    _emit_chpos(n);    return;
     case NT::ACCEL:    _emit_accel(n);    return;
+    case NT::EVENT:    _emit_event(n);    return;
 
     case NT::IF: {
         bool taken = false;
@@ -583,6 +584,7 @@ void _TamaInterpreter::_run_async_act(_TamaASTNode *act_n, TamaScope scope_copy)
     child->_acts_map    = _acts_map;
     child->_bullets_map = _bullets_map;
     child->_fire_cb       = _fire_cb;
+    child->_event_cb      = _event_cb;
     child->_event_handler = _event_handler;
     child->_scope   = std::move(scope_copy);
     child->_running = true;
@@ -877,6 +879,20 @@ void _TamaInterpreter::_emit_accel(_TamaASTNode *n) {
     if (yn) { e.has_y = true; e.y_type = _get_axis_type(yn); e.y = _eval_float(yn->expr); }
     e.over = ov ? _eval_float(ov->expr) : 0.0f;
     _event_handler->on_accel(e);
+}
+
+void _TamaInterpreter::_emit_event(_TamaASTNode *n) {
+    if (!_event_cb) return;
+    godot::Array args;
+    for (const TamaArgVal &raw_arg : n->args) {
+        if (raw_arg.is_literal_string) {
+            args.push_back(raw_arg.var);
+        } else {
+            TamaArgVal ev = _eval_arg(raw_arg);
+            if (!ev.is_node) args.push_back(ev.var);
+        }
+    }
+    _event_cb(n->name, args);
 }
 
 // ---------------------------------------------------------------------------

@@ -27,7 +27,7 @@ enum class TamaNodeType : int {
     REPEAT_FRAME = 25, MVMT = 26, OVER = 27,
     INLINE_ACT = 28, INLINE_FIRE = 29, FIRE_CALL = 30,
     WHILE = 31, IF = 32, VAR_DECL = 33, ACT_CALL = 34,
-    CHROTSPD = 35, DELAY = 36, CONTEXT_CALL = 37,
+    CHROTSPD = 35, DELAY = 36, CONTEXT_CALL = 37, EVENT = 38,
 };
 
 // ---------------------------------------------------------------------------
@@ -228,6 +228,7 @@ class _TamaInterpreter {
     void _emit_chrotspd (_TamaASTNode *n);
     void _emit_chpos    (_TamaASTNode *n);
     void _emit_accel    (_TamaASTNode *n);
+    void _emit_event    (_TamaASTNode *n);
 
     // Scope helpers
     TamaScope _scope_snapshot_plus_params(
@@ -278,8 +279,9 @@ public:
                            const std::vector<double> &var_values);
 
     // C++ callbacks — set by spawn manager / emitter, no Godot signal overhead
-    std::function<void(const TamaBulletFireData &)> _fire_cb;
-    std::function<void()>                           _finished_cb;
+    std::function<void(const TamaBulletFireData &)>               _fire_cb;
+    std::function<void()>                                         _finished_cb;
+    std::function<void(const std::string &, const godot::Array &)> _event_cb;
 
     // Event handler (C++ only — no Godot signal overhead)
     void set_event_handler(TamaBulletEventHandler *h) { _event_handler = h; }

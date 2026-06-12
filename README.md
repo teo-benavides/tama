@@ -183,6 +183,7 @@ func _on_curved_laser_hit(laser: TamaServerCurvedLaser) -> void:
 | `bullet_hit(bullet)` | Signal | Emitted when a server bullet overlaps the player hitbox. |
 | `straight_laser_hit(laser)` | Signal | Emitted when a straight laser beam overlaps the player hitbox (expand/active phases only). |
 | `curved_laser_hit(laser)` | Signal | Emitted when any segment of a curved laser trail overlaps the player hitbox. |
+| `event_fired(name, args)` | Signal | Emitted by the `event` statement in TamaScript. `name` is a `String`; `args` is an `Array` of the evaluated arguments. Connect to react to script-driven events (SFX, score, etc.). |
 
 Key methods:
 
@@ -265,6 +266,7 @@ fire
 | `var NAME = EXPR` | Declare a local variable. |
 | `NAME = EXPR` | Reassign an existing variable (change propagates to parent scope). |
 | `NAME(args...)` | Call a method on the TamaContext object (see Quick Start step 9). Return value is discarded. Arguments can be numeric expressions or quoted strings (e.g. `sfx("fire")`). |
+| `event NAME(args...)` | Emit `TamaManager.event_fired(name, args)` — a fire-and-forget signal to game code. Args can be numeric expressions or quoted strings (e.g. `event sfx("shot.wav")`). Parentheses are optional when there are no args. Use this for SFX/score/screen-shake; unlike a context call it needs no `TamaContext`. |
 | `fire NAME` / `fire` *(inline)* | Spawn a bullet. |
 | `act NAME` / `act` *(inline)* | Run an act (blocking). |
 | `async act …` | Run an act without blocking. |

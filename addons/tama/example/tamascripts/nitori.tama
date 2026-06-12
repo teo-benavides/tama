@@ -4,30 +4,34 @@ main
     var spd_ = 300
     var intervalf = 4
     repeat
+        event sfx("shot")
         act burst
         wait 0.3
+        event sfx("shot")
         act burst
         wait 0.3
         # the next three have a bullet in the middle
         # right petal
-        async act nitori(30, 180, intervalf, 270+35, abs, spd_, 1)
+        async act nitori(30, 180, intervalf, 270+35, abs, spd_, 1, false)
         # middle petal
-        async act nitori(30, 180, intervalf, 90, abs, spd_, 1)
+        async act nitori(30, 180, intervalf, 90, abs, spd_, 1, false)
         # left petal
-        async act nitori(30, 180, intervalf, 270-35, abs, spd_, 1)
+        async act nitori(30, 180, intervalf, 270-35, abs, spd_, 1, false)
         waitf 2
         # the next three have a space in the middle
         # right petal
-        async act nitori(30, 180, intervalf, 270+35, abs, spd_, 2)
+        async act nitori(30, 180, intervalf, 270+35, abs, spd_, 2, false)
         # middle petal
-        async act nitori(30, 180, intervalf, 90, abs, spd_, 2)
+        async act nitori(30, 180, intervalf, 90, abs, spd_, 2, false)
         # left petal. make this synchronous so we shoot bursts only after it's finished
-        act nitori(30, 180, intervalf, 270-35, abs, spd_, 2)
+        act nitori(30, 180, intervalf, 270-35, abs, spd_, 2, true)
         wait 0.3
 
-act nitori(amount, spread, intervalf, angle, dirtype, speed_, start_amt)
+act nitori(amount, spread, intervalf, angle, dirtype, speed_, start_amt, play_sfx)
     var curr_amt = start_amt
     repeat amount/2
+        if play_sfx
+            event sfx("shot")
         repeat curr_amt i
             fire
                 dir dirtype (2*i + 1 - curr_amt) * spread / (2 * maxi(amount - 2, 1)) + angle
