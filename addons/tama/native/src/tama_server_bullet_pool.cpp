@@ -95,8 +95,6 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 
 void TamaServerBulletPool::_ready() {
     set_physics_process(true);
-    _z_order_by_type = (bool)ProjectSettings::get_singleton()->get_setting(
-        "tama/z_order_by_type", true);
     for (auto &pr : _pending_regs)
         register_type(pr.key, pr.config);
     _pending_regs.clear();
@@ -279,35 +277,14 @@ Object *TamaServerBulletPool::spawn(
 
     // Get or start the current fill batch.
     //
-    // Animation phase is per-batch: every instance in a batch is drawn with one
-    // shared texture (the batch's current animation frame). So for ANIMATED types we
-    // open a fresh batch each physics frame — that keeps each spawn-frame cohort on
-    // its own animation phase (older batches are further along the animation), which
-    // is the intended look.
-    //
-    // For STATIC types (single frame / fps <= 0) there is no phase to preserve, so we
-    // instead keep filling the current batch across frames until it reaches
-    // BATCH_CHUNK. A per-frame batch would otherwise be a problem at the pool limit:
-    // only a few spawns succeed per frame, so each batch would hold a handful of
-    // bullets yet still reserve a full BATCH_CHUNK of multimesh slots and linger until
-    // its longest-lived bullet exits. That fragments active_batches into hundreds of
-    // sparse batches, and every frame the _draw and animation passes iterate every
-    // active batch (with a per-batch multimesh_get_buffer readback in the composite
-    // path), so the cost climbs as the fragmentation builds — the gradual FPS decay
-    // seen when spawning and recycling at the pool limit. Filling across frames keeps
-    // static-type batches dense (~pool_size/256) regardless of the spawn cadence.
     int64_t frame    = Engine::get_singleton()->get_physics_frames();
-    bool    animated = td.anim_frames.size() > 1;
     // Resolve effective spawn delay: fire-block override takes priority.
     int eff_delay = (p_data.spawn_delay_override >= 0) ? p_data.spawn_delay_override : td.spawn_delay;
-    // In default mode, every type opens a fresh batch each physics frame so the coordinator
-    // can sort by spawn_frame for correct temporal draw order. In optimized mode, only
-    // animated types need per-frame batches (to keep each cohort on its own animation phase);
-    // static types fill across frames for dense batches and composite merging.
-    bool needs_per_frame_batch = animated || !_z_order_by_type;
+    // A new batch is opened each physics frame so that the draw coordinator can draw
+    // older batches before newer ones, preserving within-type spawn-time ordering.
     bool need_new_batch = !td.cur_batch
         || td.cur_batch->used >= BATCH_CHUNK
-        || (needs_per_frame_batch && td.cur_frame != frame);
+        || td.cur_frame != frame;
     if (need_new_batch) {
         td.cur_batch              = _get_batch(td);
         td.cur_batch->birth_frame = (int)frame;

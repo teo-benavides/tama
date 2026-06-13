@@ -84,9 +84,9 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
     }
 
     if (!ps->has_setting("tama/server_bullet_composite_threshold")) {
-        ps->set_setting("tama/server_bullet_composite_threshold", 1000);
+        ps->set_setting("tama/server_bullet_composite_threshold", 300);
     }
-    ps->set_initial_value("tama/server_bullet_composite_threshold", 1000);
+    ps->set_initial_value("tama/server_bullet_composite_threshold", 300);
     {
         Dictionary hint;
         hint["name"]        = "tama/server_bullet_composite_threshold";

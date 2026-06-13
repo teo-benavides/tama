@@ -121,7 +121,6 @@ class TamaServerBulletPool : public godot::Node2D {
     std::vector<BulletState *> _to_recycle;
 
     // Pre-allocated buffer for spawn animation draw path (transform + color per instance)
-    bool _z_order_by_type = true;
     godot::PackedFloat32Array _spawn_buf;
 
     // Registrations queued before the node enters the scene tree

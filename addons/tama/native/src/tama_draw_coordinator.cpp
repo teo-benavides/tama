@@ -29,7 +29,7 @@ void _TamaDrawCoordinator::_ready() {
     set_physics_process(true);
     ProjectSettings *ps = ProjectSettings::get_singleton();
     _z_order_by_type     = (bool)ps->get_setting("tama/z_order_by_type", true);
-    _composite_threshold = (int)ps->get_setting("tama/server_bullet_composite_threshold", 1000);
+    _composite_threshold = (int)ps->get_setting("tama/server_bullet_composite_threshold", 300);
 }
 
 // ---------------------------------------------------------------------------

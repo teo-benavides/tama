@@ -61,6 +61,7 @@ rotates = false
 rect = Rect2(-64, -64, 128, 128)
 spawn_texture = SubResource("TamaAnimatedTexture_qgind")
 pool_size = 10000
+z_index = 10
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_okdsw"]
 blend_mode = 1
