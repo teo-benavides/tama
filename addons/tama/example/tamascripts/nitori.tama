@@ -44,7 +44,14 @@ act nitori(amount, spread, intervalf, angle, dirtype, speed_, start_amt, play_sf
         waitf intervalf
 
 act burst
-    act aimed_shots(5, 90, 150, circle)
-    act aimed_shots(5, 90, 200, circle)
-    act aimed_shots(5, 90, 250, circle)
+    var spd_ = 150
+    repeat 3
+        form
+            type fan
+            amt 5
+            spr 90
+            spd abs spd_
+            bul
+                type circle
+        spd_ = spd_ + 50
 

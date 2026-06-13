@@ -267,6 +267,7 @@ fire
 | `NAME(args...)` | TamaContextオブジェクトのメソッドを呼び出す（クイックスタート手順9参照）。戻り値は破棄される。引数には数値式またはクォート文字列（例: `sfx("fire")`）が使える。 |
 | `event NAME(args...)` | `TamaManager.event_fired(name, args)` を発火する。ゲーム側コードへの撃ちっぱなし（fire-and-forget）シグナル。引数には数値式またはクォート文字列が使える（例: `event sfx("shot.wav")`）。引数がない場合は括弧を省略できる。SFX・スコア・画面シェイクなどに使う。コンテキスト呼び出しと違い `TamaContext` は不要。 |
 | `fire NAME` / `fire` *(インライン)* | 弾をスポーンする。 |
+| `form NAME` / `form` *(インライン)* | 複数の弾を空間パターン（リングまたはファン）で一度に発射する。 |
 | `act NAME` / `act` *(インライン)* | アクトを実行する（ブロッキング）。 |
 | `async act …` | アクトをブロッキングなしで実行する。 |
 | `chdir` / `chspd` / `chrotspd` / `chpos` / `accel` | この弾にトランジションコマンドを送る。`over` を省略するか `0` にすると即時適用される。 |
@@ -292,6 +293,46 @@ bullet side_bouncer
 
 bullet finite_y
     bounces 2 y     ← 上下の壁で2回反射し、その後通常通り画面外へ
+```
+
+### `form` ブロックの文
+
+| サブ文 | 説明 |
+|---|---|
+| `type ring` \| `type fan` | レイアウトアルゴリズム。`ring`：弾を360°に均等分布。`fan`：`dir` を中心に弾を配置。必須。 |
+| `amt EXPR` | 発射する弾の数。 |
+| `dir [QUALIFIER] EXPR` | 中心方向。`fire` の `dir` と同じ修飾子（`aim`、`abs`、`rel`、`seq`、`away`）および変数修飾子（式の前に置く非キーワード識別子。スコープから実行時に解決される）を受け付ける。`away` はリングのみ。 |
+| `spd [QUALIFIER] EXPR` | 弾の速度（`fire` の `speed` と同じ修飾子）。 |
+| `spr EXPR` | *（ファンのみ）* 角度スプレッドの合計（度）；隣接する弾の間のステップ = `spr / (amt-1)`。 |
+| `step EXPR` | *（ファンのみ）* 隣接する弾の間の固定角ステップ（度）。両方指定された場合、`spr` より優先される。`amt` が変化しても間隔を一定に保ちたい場合に使う。 |
+| `rad EXPR` | *（リングのみ）* 各弾の進行方向に沿ったオフセット距離。 |
+| `rotspd [QUALIFIER] EXPR` | スポーン時に各弾に適用される初期回転速度（度/秒）。 |
+| `bul IDENT` \| `bul` *（ブロック）* | 弾タイプ — `fire` の `bullet` と同様。 |
+
+```
+# プレイヤーを避けるリング8発
+form
+    type ring
+    amt 8
+    dir away
+    spd 200
+    bul type enemy
+
+# 90°に広がる狙い撃ちファン5発
+form
+    type fan
+    amt 5
+    spr 90
+    dir aim 0
+    spd 150
+
+# 固定ステップのファン — amt が変わっても間隔が一定
+form myfan(n, angle, spd_)
+    type fan
+    amt n
+    step 10           ← amtに関わらず隣接する弾の間が10°
+    dir abs angle
+    spd spd_
 ```
 
 ### 変数と制御フロー

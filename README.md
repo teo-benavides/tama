@@ -268,6 +268,7 @@ fire
 | `NAME(args...)` | Call a method on the TamaContext object (see Quick Start step 9). Return value is discarded. Arguments can be numeric expressions or quoted strings (e.g. `sfx("fire")`). |
 | `event NAME(args...)` | Emit `TamaManager.event_fired(name, args)` — a fire-and-forget signal to game code. Args can be numeric expressions or quoted strings (e.g. `event sfx("shot.wav")`). Parentheses are optional when there are no args. Use this for SFX/score/screen-shake; unlike a context call it needs no `TamaContext`. |
 | `fire NAME` / `fire` *(inline)* | Spawn a bullet. |
+| `form NAME` / `form` *(inline)* | Spawn multiple bullets simultaneously in a spatial pattern (ring or fan). |
 | `act NAME` / `act` *(inline)* | Run an act (blocking). |
 | `async act …` | Run an act without blocking. |
 | `chdir` / `chspd` / `chrotspd` / `chpos` / `accel` | Send a transition command to this bullet. Omit `over` (or set it to `0`) to apply instantly. |
@@ -293,6 +294,46 @@ bullet side_bouncer
 
 bullet finite_y
     bounces 2 y     ← bounce twice off top/bottom walls, then exit normally
+```
+
+### `form` block statements
+
+| Sub-statement | Description |
+|---|---|
+| `type ring` \| `type fan` | Layout algorithm. `ring`: bullets evenly distributed over 360°. `fan`: bullets centered on `dir`. Required. |
+| `amt EXPR` | Number of bullets to fire. |
+| `dir [QUALIFIER] EXPR` | Center direction. Accepts the same qualifiers as `fire`'s `dir` (`aim`, `abs`, `rel`, `seq`, `away`), including a variable qualifier (non-keyword identifier before the expression, resolved from scope). `away` is ring-only. |
+| `spd [QUALIFIER] EXPR` | Bullet speed (same qualifiers as `fire`'s `speed`). |
+| `spr EXPR` | *(Fan only)* Total angular spread in degrees; step between adjacent bullets = `spr / (amt-1)`. |
+| `step EXPR` | *(Fan only)* Fixed angular step between adjacent bullets in degrees. Takes priority over `spr` when both are present. Use when spacing must stay constant as `amt` changes across calls. |
+| `rad EXPR` | *(Ring only)* Offset distance along each bullet's travel direction. |
+| `rotspd [QUALIFIER] EXPR` | Initial rotation speed (degrees/sec) applied to each bullet at spawn. |
+| `bul IDENT` \| `bul` *(block)* | Bullet type — same as `fire`'s `bullet`. |
+
+```
+# Ring of 8 bullets avoiding the player
+form
+    type ring
+    amt 8
+    dir away
+    spd 200
+    bul type enemy
+
+# Fan of 5 aimed bullets spread 90°
+form
+    type fan
+    amt 5
+    spr 90
+    dir aim 0
+    spd 150
+
+# Fan with fixed step — spacing stays the same as amt changes
+form myfan(n, angle, spd_)
+    type fan
+    amt n
+    step 10           ← 10° between adjacent bullets regardless of n
+    dir abs angle
+    spd spd_
 ```
 
 ### Variables and control flow
