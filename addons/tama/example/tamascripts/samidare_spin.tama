@@ -1,15 +1,16 @@
 main
     repeat -1 i
-        act f7(i, fast)
-        act f7(i, orange, 95)
-        act f7(i, blue, 180)
-        act f7(i, green, 275)
+        form samidare(i, fast, 0)
+        form samidare(i, orange, 90+(360.0/32.0)/2)
+        form samidare(i, blue, 180)
+        form samidare(i, green, 270+(360.0/32.0)/2)
         waitf 3
 
-act f7(inc, btype, ofs)
-    repeat 7 i
-        fire
-            dir abs (inc + i) * (360.0/32.0) + ofs
-            spd 500
-            bul
-                type btype
+form samidare(inc, btype, ofs)
+    type fan
+    amt 7
+    step 360.0/32.0
+    dir abs (inc + 3) * (360.0/32.0) + ofs
+    spd 500
+    bul
+        type btype

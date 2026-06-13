@@ -54,7 +54,7 @@ KW = "main" | "fire" | "act" | "bullet" | "bul"
    | "over" | "x" | "y"
    | "include" | "export"
    | "bounces"
-   | "form" | "amt" | "spr" | "rad"
+   | "form" | "amt" | "spr" | "rad" | "step"
    | "true" | "false" ;
              (* "delay" is a soft keyword: only meaningful as a fire/form-block statement.
                 it is NOT reserved and may be used freely as a variable or parameter name.
@@ -322,6 +322,7 @@ form_sub_stmt = "type" ( "ring" | "fan" )
               | ( "speed" | "spd" ) [ VALUE_TYPE ] EXPR
               | form_dir_stmt
               | "spr" EXPR
+              | "step" EXPR
               | "rad" EXPR
               | rotspd_stmt
               | offset_stmt
@@ -330,10 +331,14 @@ form_sub_stmt = "type" ( "ring" | "fan" )
               | ( "bullet" | "bul" ) IDENT [ arg_list ]
               | ( "bullet" | "bul" ) NEWLINE bullet_block ;
 
-form_dir_stmt = "dir" ( "away" | [ DIR_TYPE ] EXPR ) ;
+form_dir_stmt = "dir" ( "away" | [ DIR_TYPE | IDENT ] EXPR | IDENT ) ;
                 (* "away" is valid for ring only; rotates the ring by half a bullet-step
                    so the player falls exactly in the gap between two bullets.
-                   all other DIR_TYPE qualifiers behave the same as in fire blocks.      *)
+                   DIR_TYPE qualifiers (aim/abs/rel/seq) behave the same as in fire blocks.
+                   IDENT (non-keyword word) before EXPR: variable qualifier — its string value
+                     is looked up in scope at runtime ("aim"/"abs"/"rel"/"seq"/"away").
+                   bare IDENT (before NEWLINE, no EXPR): variable qualifier with no angle
+                     expression; angle defaults to 0 (e.g. dir dirtype alone).            *)
 
 (* ring: amt bullets evenly distributed over 360°, step = 360/amt.
          dir away   → dir_type=aim, per-bullet offset = step/2 + i*step

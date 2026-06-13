@@ -32,12 +32,14 @@ act nitori(amount, spread, intervalf, angle, dirtype, speed_, start_amt, play_sf
     repeat amount/2
         if play_sfx
             event sfx("shot")
-        repeat curr_amt i
-            fire
-                dir dirtype (2*i + 1 - curr_amt) * spread / (2 * maxi(amount - 2, 1)) + angle
-                spd speed_
-                bul
-                    type blue
+        form
+            type fan
+            amt curr_amt
+            step 6
+            dir dirtype angle
+            spd speed_
+            bul
+                type blue
         curr_amt = curr_amt + 2
         waitf intervalf
 

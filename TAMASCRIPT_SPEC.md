@@ -91,6 +91,7 @@ emitter emt     async
 if      elif    else    while
 var     true    false
 export  include
+form    amt     spr     rad     step
 ```
 
 `delay` is a **soft keyword**: it is only treated as the fire-block `delay` statement when it appears as the first token of a line inside a fire block. It is **not** reserved and may be used freely as a variable or parameter name anywhere else.
@@ -671,6 +672,78 @@ TamaManager.event_fired.connect(func(name: String, args: Array):
 event sfx("shot.wav")          # emit event_fired("sfx", ["shot.wav"])
 event screen_shake(amount)     # numeric arg evaluated from scope
 event boss_phase_started       # no args → event_fired("boss_phase_started", [])
+```
+
+### 6.25 `form` (inline) and `form <name>` (named call)
+
+Fires multiple bullets simultaneously according to a spatial pattern. An alternative to a `repeat` loop with per-bullet `fire` statements.
+
+**Inline:**
+```
+form NEWLINE INDENT { form_sub_stmt NEWLINE } DEDENT
+```
+
+**Named call:**
+```
+form IDENT [ "(" arg { "," arg } ")" ]
+```
+
+**Named definition** (top-level, same level as `act`/`fire`):
+```
+form IDENT [ param_list ] NEWLINE INDENT { form_sub_stmt NEWLINE } DEDENT
+```
+
+**Sub-statements** (all optional except `type`):
+
+| Sub-statement | Meaning |
+|---|---|
+| `type ring` \| `type fan` | Layout algorithm. Required. |
+| `amt EXPR` | Number of bullets to fire. |
+| `spd [QUALIFIER] EXPR` | Bullet speed (same qualifiers as `fire`'s `speed`). |
+| `dir [QUALIFIER] EXPR` | Center direction. Accepts literal qualifiers (`aim`, `abs`, `rel`, `seq`, `away`) or a **variable qualifier** (non-keyword WORD before the expression, resolved from scope at runtime — same rule as `fire`'s `dir`). `away` is ring-only: rotates the ring so the player falls in the gap between bullets. |
+| `spr EXPR` | *Fan only.* Total angular spread in degrees. Step between adjacent bullets = `spr / (amt-1)`. |
+| `step EXPR` | *Fan only.* Fixed angular step between adjacent bullets in degrees. Mutually exclusive with `spr`; `step` takes priority when both are present. Use `step` when the spacing must stay constant as `amt` changes across calls. |
+| `rad EXPR` | *Ring only.* Offset distance along each bullet's travel direction (equivalent to per-bullet `offset`). Overridden by an explicit `offset` block. |
+| `rotspd [QUALIFIER] EXPR` | Initial rotation speed (degrees/sec) applied to each bullet at spawn. |
+| `offset ...` | Spawn position offset — same forms as fire's `offset`. Overrides `rad`. |
+| `pos ...` | Absolute spawn position — same as fire's `pos`. |
+| `delay EXPR` | Per-fire spawn delay override (server bullets only). |
+| `bul IDENT` \| `bul` block | Bullet type — same as fire's `bullet`. |
+
+**Ring layout:** `amt` bullets evenly distributed over 360°, step = 360/amt.
+- `dir away` → aim-based, each bullet offset by `step/2 + i*step`
+- `dir abs N` → first bullet at N°, each subsequent offset by `step`
+
+**Fan layout:** `amt` bullets centered on the base direction.
+- With `spr`: step = `spr / (amt-1)`; with `step`: step is used directly.
+- Per-bullet offset = `(i - (amt-1)/2) * step`
+- Odd `amt` → center bullet is exactly on the base direction
+- Even `amt` → base direction falls in the center gap
+
+```
+# Ring of 8 bullets avoiding the player
+form
+    type ring
+    amt 8
+    dir away
+    spd 200
+    bul type enemy
+
+# Fan of 5 bullets spread 90° toward player
+form
+    type fan
+    amt 5
+    spr 90
+    dir aim 0
+    spd 150
+
+# Growing fan with fixed step — amt changes each call but spacing stays constant
+form myfan(n, angle, spd_)
+    type fan
+    amt n
+    step 10           # 10° between adjacent bullets, regardless of n
+    dir abs angle
+    spd spd_
 ```
 
 ---
@@ -1355,6 +1428,11 @@ At runtime, `var` and assignment are executed identically: `scope[name] = eval(e
 | `y` | — | Offset/pos/accel/chpos axis |
 | `export` | — | Top-level directive |
 | `include` | — | Top-level directive |
+| `form` | — | Top-level def and action stmt — fires multiple bullets in a spatial pattern |
+| `amt` | — | Form sub-stmt — number of bullets |
+| `spr` | — | Form sub-stmt (fan) — total angular spread in degrees |
+| `step` | — | Form sub-stmt (fan) — fixed angular step between adjacent bullets in degrees |
+| `rad` | — | Form sub-stmt (ring) — per-bullet radius offset along travel direction |
 
 ---
 

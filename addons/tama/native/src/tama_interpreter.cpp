@@ -840,10 +840,16 @@ void _TamaInterpreter::_exec_form(_TamaASTNode *node) {
     bool  has_rad = !node->var_name.empty();
     float rad_val = has_rad ? _eval_float(node->var_name) : 0.0f;
 
-    // Evaluate spread once (fan only); avoid divide-by-zero for amt==1
+    // Evaluate spread once (fan only); avoid divide-by-zero for amt==1.
+    // step (condition field): fixed angular distance between adjacent bullets.
+    // spr (expr field): total spread — step = spr / (amt-1). step wins when both set.
     float fan_step = 0.0f;
-    if (form_type == "fan" && amt > 1 && !node->expr.empty())
-        fan_step = _eval_float(node->expr) / (float)(amt - 1);
+    if (form_type == "fan" && amt > 1) {
+        if (!node->condition.empty())
+            fan_step = _eval_float(node->condition);
+        else if (!node->expr.empty())
+            fan_step = _eval_float(node->expr) / (float)(amt - 1);
+    }
 
     // Evaluate pass-through fields once
     _TamaASTNode *rotspd_node = node->rotspd.get();

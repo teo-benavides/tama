@@ -1046,6 +1046,12 @@ void TamaParserCpp::parse_form_block(const std::shared_ptr<_TamaASTNode> &node) 
                 if (node->expr.empty()) error_at(peek(), "Expected expression after 'spr'");
                 consume(TT::NEWLINE);
                 break;
+            case TT::KW_STEP:
+                consume(TT::KW_STEP);
+                node->condition = collect_to_eol();
+                if (node->condition.empty()) error_at(peek(), "Expected expression after 'step'");
+                consume(TT::NEWLINE);
+                break;
             case TT::KW_RAD:
                 consume(TT::KW_RAD);
                 node->var_name = collect_to_eol();
