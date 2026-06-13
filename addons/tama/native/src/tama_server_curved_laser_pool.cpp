@@ -446,6 +446,10 @@ void TamaServerCurvedLaserPool::collect_draw_jobs(std::vector<DrawJob> &out) {
 // ---------------------------------------------------------------------------
 
 godot::Rect2 TamaServerCurvedLaserPool::_world_bounds() const {
+    if (TamaManager *mgr = TamaManager::get_instance()) {
+        Rect2 wr = mgr->get_world_rect();
+        if (wr.size.x > 0.0f || wr.size.y > 0.0f) return wr;
+    }
     Viewport *vp = get_viewport();
     if (!vp) return Rect2(-10000, -10000, 20000, 20000);
     Transform2D inv = vp->get_canvas_transform().affine_inverse();

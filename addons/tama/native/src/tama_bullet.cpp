@@ -75,10 +75,9 @@ void TamaBullet::_ready() {
     set_global_position(_initial_position);
 
     // Despawn if spawned off screen
-    float sw = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_width");
-    float sh = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_height");
+    Rect2 world = _scene_bullet_world_bounds();
     Vector2 gp = get_global_position();
-    if ((gp.x < 0.0f || gp.x > sw) && (gp.y < 0.0f || gp.y > sh)) {
+    if ((gp.x < world.position.x || gp.x > world.get_end().x) && (gp.y < world.position.y || gp.y > world.get_end().y)) {
         set_physics_process(false);
         call("destroy");
         return;
@@ -139,22 +138,23 @@ void TamaBullet::_physics_process(double delta) {
 
     if (_bounces_left != 0) {
         static const float PI = 3.14159265f;
-        float sw = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_width");
-        float sh = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_height");
+        Rect2 world = _scene_bullet_world_bounds();
+        float wx0 = world.position.x, wx1 = world.get_end().x;
+        float wy0 = world.position.y, wy1 = world.get_end().y;
         Vector2 pos = get_global_position();
         bool hit_x = false, hit_y = false;
         if (_bounces_axis != 2) { // not y-only
-            if (pos.x < 0.0f) {
-                pos.x = -pos.x; hit_x = true;
-            } else if (pos.x > sw) {
-                pos.x = 2.0f * sw - pos.x; hit_x = true;
+            if (pos.x < wx0) {
+                pos.x = 2.0f * wx0 - pos.x; hit_x = true;
+            } else if (pos.x > wx1) {
+                pos.x = 2.0f * wx1 - pos.x; hit_x = true;
             }
         }
         if (_bounces_axis != 1) { // not x-only
-            if (pos.y < 0.0f) {
-                pos.y = -pos.y; hit_y = true;
-            } else if (pos.y > sh) {
-                pos.y = 2.0f * sh - pos.y; hit_y = true;
+            if (pos.y < wy0) {
+                pos.y = 2.0f * wy0 - pos.y; hit_y = true;
+            } else if (pos.y > wy1) {
+                pos.y = 2.0f * wy1 - pos.y; hit_y = true;
             }
         }
         if (hit_x || hit_y) {
@@ -169,6 +169,16 @@ void TamaBullet::_physics_process(double delta) {
 
 void TamaBullet::destroy() {
     queue_free();
+}
+
+godot::Rect2 TamaBullet::_scene_bullet_world_bounds() const {
+    if (TamaManager *mgr = TamaManager::get_instance()) {
+        Rect2 wr = mgr->get_world_rect();
+        if (wr.size.x > 0.0f || wr.size.y > 0.0f) return wr;
+    }
+    float sw = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_width");
+    float sh = (float)(int)ProjectSettings::get_singleton()->get_setting("display/window/size/viewport_height");
+    return Rect2(0.0f, 0.0f, sw, sh);
 }
 
 // ---------------------------------------------------------------------------

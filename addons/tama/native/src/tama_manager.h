@@ -11,6 +11,7 @@
 #include <godot_cpp/classes/object.hpp>
 #include <godot_cpp/classes/node2d.hpp>
 #include <godot_cpp/variant/node_path.hpp>
+#include <godot_cpp/variant/rect2.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
@@ -55,6 +56,9 @@ public:
     float get_player_hitbox_radius() const { return _player_hitbox_radius; }
     void  set_player_hitbox_radius(float v) { _player_hitbox_radius = v; }
 
+    godot::Rect2 get_world_rect() const { return _world_rect; }
+    void         set_world_rect(godot::Rect2 v) { _world_rect = v; }
+
     int get_bullet_count() const;
 
     // Forwarded from TamaServerBulletPool — emitted when a server bullet hits a body.
@@ -83,8 +87,9 @@ private:
     TamaServerCurvedLaserPool *_curved_laser_pool = nullptr;
     _TamaDrawCoordinator      *_draw_coordinator  = nullptr;
     bool                       _nodes_injected     = false;
-    float _global_out_of_bounds_margin = -1.0f;
-    float _player_hitbox_radius        = 3.0f;
+    float        _global_out_of_bounds_margin = -1.0f;
+    float        _player_hitbox_radius        = 3.0f;
+    godot::Rect2 _world_rect;
 
     void _ensure_scene_nodes();
     void _ensure_registry();

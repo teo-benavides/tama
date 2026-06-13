@@ -924,7 +924,7 @@ bounces_stmt = "bounces" [ EXPR ] [ axis ]
 axis         = "x" | "y"
 ```
 
-Declares that the bullet reflects off screen borders instead of despawning when it reaches them. All parts are optional:
+Declares that the bullet reflects off the world bounds instead of despawning when it reaches them. Bounds are `TamaManager.world_rect` when set (non-zero size), otherwise the viewport rect. All parts are optional:
 
 | Form | Meaning |
 |---|---|
@@ -943,6 +943,8 @@ After the last allowed bounce the bullet continues in its reflected direction an
 **Reflection math:** the bullet's angle is stored as a float in radians internally. Hitting a left/right wall negates the x-component of velocity (`angle = π − angle`); hitting a top/bottom wall negates the y-component (`angle = −angle`). Any independent `speed_x`/`speed_y` acceleration is reflected the same way.
 
 `bounces` has no effect on bullets using `mvmt` expressions — position is controlled by the expression and border reflection cannot be applied.
+
+> **`world_rect` and bouncing:** When `TamaManager.world_rect` is set (non-zero size), bullets reflect off the edges of that rect instead of the viewport edges. When `world_rect` is not set, the viewport rect is used.
 
 ```
 bullet wall_bouncer
@@ -1046,6 +1048,8 @@ Sets the bullet's spawn position directly. Default qualifier for each axis is `a
 | `rel` | Adds to the spawner's global position (`spawner.global_position + value`). |
 
 Both axes are optional; unspecified axes inherit the spawner's position for that axis.
+
+> **`world_rect` and `abs` coordinates:** When `TamaManager.world_rect` is set (non-zero size), `abs` spawn coordinates are interpreted relative to `world_rect.position`. For example, `pos x abs 0 y abs 0` spawns at the top-left corner of the world rect, not the viewport origin. `rel` coordinates are always relative to the spawner and are unaffected by `world_rect`. See also §8.5 for how `world_rect` affects `bounces`.
 
 ```
 fire

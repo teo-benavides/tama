@@ -15,6 +15,7 @@ func _ready() -> void:
 	TamaManager.load_scripts("res://addons/tama/example/tamascripts")
 	TamaManager.global_out_of_bounds_margin = 100
 	TamaManager.event_fired.connect(_on_tama_event)
+	TamaManager.world_rect = $CanvasLayer/ReferenceRect.get_rect()
 	_populate_script_list()
 	_on_option_button_item_selected(0)
 

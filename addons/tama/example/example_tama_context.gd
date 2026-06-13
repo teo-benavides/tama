@@ -2,16 +2,16 @@ extends TamaContext
 class_name ExampleTamaContext
 
 func mid_x() -> float:
-	return DisplayServer.window_get_size().x / 2.0
+	return TamaManager.world_rect.size.x / 2.0
 
 func mid_y() -> float:
-	return DisplayServer.window_get_size().y / 2.0
+	return TamaManager.world_rect.size.y / 2.0
 
 func end_x() -> float:
-	return DisplayServer.window_get_size().x
+	return TamaManager.world_rect.size.x
 
 func end_y() -> float:
-	return DisplayServer.window_get_size().y
+	return TamaManager.world_rect.size.y
 
 func spiral_x(sx: float, radius: float, ofs: float, exp_spd: float, rot_spd: float, rot_dir: float, t0: float) -> float:
 	var dt := time() - t0

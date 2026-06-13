@@ -12,6 +12,8 @@ main
         fire
             dir abs shot_angle # rotate to make it an inverted star
             spd abs 1000
+            offset
+                y abs 100
             bul star_spawner((360.0/amt_)*i, shift_angle, shot_angle)
 
 bullet star_spawner(move_direction, shift_angle, shot_angle)

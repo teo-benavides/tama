@@ -53,6 +53,10 @@ void TamaManager::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::INT, "bullet_count",
                               PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
                  "", "get_bullet_count");
+    ClassDB::bind_method(D_METHOD("get_world_rect"),                         &TamaManager::get_world_rect);
+    ClassDB::bind_method(D_METHOD("set_world_rect","v"),                     &TamaManager::set_world_rect);
+    ADD_PROPERTY(PropertyInfo(Variant::RECT2, "world_rect"),
+                 "set_world_rect", "get_world_rect");
     ClassDB::bind_method(D_METHOD("_on_pool_bullet_hit", "bullet"),  &TamaManager::_on_pool_bullet_hit);
     ADD_SIGNAL(MethodInfo("bullet_hit",
         PropertyInfo(Variant::OBJECT, "bullet", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT, "TamaServerBullet")));

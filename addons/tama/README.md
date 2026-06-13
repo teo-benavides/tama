@@ -179,6 +179,7 @@ func _on_curved_laser_hit(laser: TamaServerCurvedLaser) -> void:
 | `spawn_parent` | `NodePath` | Where scene bullets are parented. Defaults to the scene root. |
 | `context` | `TamaContext` | Custom context that exposes GDScript functions to TamaScript. |
 | `global_out_of_bounds_margin` | `float` | When ≥ 0, overrides the per-config `out_of_bounds_margin` for all types. Default `-1` (disabled). |
+| `world_rect` | `Rect2` | World bounds rectangle. When set (non-zero size): `pos abs` spawn coordinates are offset by `world_rect.position` (so `pos x abs 0 y abs 0` spawns at the top-left of the world rect, not the viewport origin); server bullets and curved lasers are recycled when they exit this rect; bullets with `bounces` reflect off the edges of this rect. Defaults to the viewport rect when not set. |
 | `bullet_count` | `int` *(read-only)* | Total active server objects across all types. |
 | `bullet_hit(bullet)` | Signal | Emitted when a server bullet overlaps the player hitbox. |
 | `straight_laser_hit(laser)` | Signal | Emitted when a straight laser beam overlaps the player hitbox (expand/active phases only). |
@@ -283,7 +284,7 @@ fire
 | `emt NAME` / `emt` *(inline)* | Attach a firing emitter that runs in parallel with the bullet's `act`. **Not supported for server bullets.** |
 | `mvmt` *(block)* | Per-frame position expression re-evaluated every physics frame. `abs` = world coordinate; `rel` = offset from spawn position. |
 | `act NAME` / `act` *(inline)* | Behaviour the bullet runs after spawning. |
-| `bounces [N] [x\|y]` | Make the bullet reflect off screen borders instead of despawning. `N` = max number of bounces (omit or `-1` for infinite). `x` = left/right walls only; `y` = top/bottom walls only; omit axis for all borders. After the last bounce the bullet exits normally. |
+| `bounces [N] [x\|y]` | Make the bullet reflect off the world bounds instead of despawning. Bounds are `TamaManager.world_rect` when set, otherwise the viewport. `N` = max number of bounces (omit or `-1` for infinite). `x` = left/right walls only; `y` = top/bottom walls only; omit axis for all borders. After the last bounce the bullet exits normally. |
 
 ```
 bullet wall_bouncer

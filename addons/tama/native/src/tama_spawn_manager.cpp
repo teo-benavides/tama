@@ -372,11 +372,14 @@ float _TamaSpawnManager::_resolve_rot_speed(const TamaBulletFireData &data, Obje
 Vector2 _TamaSpawnManager::_resolve_position(const TamaBulletFireData &data, Object *spawner, float angle) const {
     if (data.has_pos) {
         Vector2 pos = spawner_get_global_position(spawner);
+        Vector2 world_origin;
+        if (TamaManager *mgr = TamaManager::get_instance())
+            world_origin = mgr->get_world_rect().get_position();
         if (data.pos_x_set) {
-            if (data.pos_x_type == 0 || data.pos_x_type == 2) pos.x  = data.pos_x; else pos.x += data.pos_x;
+            if (data.pos_x_type == 0 || data.pos_x_type == 2) pos.x  = world_origin.x + data.pos_x; else pos.x += data.pos_x;
         }
         if (data.pos_y_set) {
-            if (data.pos_y_type == 0 || data.pos_y_type == 2) pos.y  = data.pos_y; else pos.y += data.pos_y;
+            if (data.pos_y_type == 0 || data.pos_y_type == 2) pos.y  = world_origin.y + data.pos_y; else pos.y += data.pos_y;
         }
         return pos;
     }

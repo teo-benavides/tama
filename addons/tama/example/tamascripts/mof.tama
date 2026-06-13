@@ -1,6 +1,6 @@
 main
     repeat 5 k
-        async act circle(160, 120, 2.0 * PI * k / 5.0 - PI / 2.0)
+        async act circle(100, 75, 2.0 * PI * k / 5.0 - PI / 2.0)
 
 act circle(pent_r, circ_r, pent_angle)
     repeat 60 i
@@ -12,7 +12,7 @@ fire f(pent_r, circ_r, pent_angle, ofs, wait_time)
     spd abs 0
     pos
         x abs mid_x() + pent_r * cos(pent_angle) + circ_r * cos(ofs + pent_angle - PI / 2.0)
-        y abs mid_y() + pent_r * sin(pent_angle) + circ_r * sin(ofs + pent_angle - PI / 2.0)
+        y abs mid_y() -70 + pent_r * sin(pent_angle) + circ_r * sin(ofs + pent_angle - PI / 2.0)
     bul b(wait_time)
 
 bul b(wait_time)

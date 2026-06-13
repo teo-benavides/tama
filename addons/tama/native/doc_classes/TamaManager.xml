@@ -202,6 +202,23 @@
 		<member name="global_out_of_bounds_margin" type="float" setter="set_global_out_of_bounds_margin" getter="get_global_out_of_bounds_margin" default="-1.0">
 			When ≥ 0, overrides the [member TamaServerObjectConfig.out_of_bounds_margin] of every registered type. [code]-1[/code] (default) means each type uses its own margin.
 		</member>
+		<member name="world_rect" type="Rect2" setter="set_world_rect" getter="get_world_rect" default="Rect2(0, 0, 0, 0)">
+			World bounds rectangle. When set to a rect with non-zero size, this property governs three things:
+			[br][br]
+			[b]Spawn coordinate origin:[/b] [code]pos abs[/code] coordinates in TamaScript are offset by [code]world_rect.position[/code], so [code]pos x abs 0 y abs 0[/code] spawns at the top-left corner of the world rect rather than the viewport origin.
+			[br][br]
+			[b]Out-of-bounds recycling:[/b] Server bullets and curved lasers are recycled when they exit this rect (plus their per-type [member TamaServerObjectConfig.out_of_bounds_margin]). Scene bullets are also despawned when spawned outside this rect.
+			[br][br]
+			[b]Bouncing:[/b] Bullets (both scene and server) with the [code]bounces[/code] property set reflect off the edges of this rect instead of the viewport edges.
+			[br][br]
+			When [code]world_rect[/code] has zero size (the default), all three behaviours fall back to the viewport rect.
+			[codeblock]
+			# Example: play field starts at (100, 50), size 400×600
+			TamaManager.world_rect = Rect2(100, 50, 400, 600)
+			# "pos x abs 0 y abs 0" now spawns at (100, 50) in world space
+			# Bullets bounce off x=100, x=500, y=50, y=650
+			[/codeblock]
+		</member>
 		<member name="bullet_count" type="int" setter="" getter="get_bullet_count">
 			Total active server objects across all types. Read-only.
 		</member>

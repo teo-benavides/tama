@@ -5,6 +5,7 @@
 #include <godot_cpp/classes/character_body2d.hpp>
 #include <godot_cpp/classes/tween.hpp>
 #include <godot_cpp/templates/list.hpp>
+#include <godot_cpp/variant/rect2.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
 
@@ -86,4 +87,5 @@ private:
     float _dir_to_angle(int dir_type, float value) const;
     float _spd_to_value(int speed_type, float value) const;
     float _accel_axis_end(int axis_type, float value, float current, float over) const;
+    godot::Rect2 _scene_bullet_world_bounds() const;
 };

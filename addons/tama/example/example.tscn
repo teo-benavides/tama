@@ -17,7 +17,7 @@ outline_color = Color(0, 0, 0, 1)
 [node name="TamaExample" type="Node2D" unique_id=1817544635]
 script = ExtResource("1_ig7tw")
 
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1819543008]
+[node name="Background" type="Sprite2D" parent="." unique_id=1819543008]
 modulate = Color(1, 0, 0, 1)
 z_index = -2
 position = Vector2(583, 271)
@@ -25,7 +25,7 @@ scale = Vector2(0.41822222, 0.41822222)
 texture = ExtResource("2_pq7m2")
 
 [node name="EmitterPosition" type="Marker2D" parent="." unique_id=1648329798]
-position = Vector2(523, 295)
+position = Vector2(376, 156)
 
 [node name="ExamplePlayer" parent="." unique_id=985488048 instance=ExtResource("3_h2yge")]
 position = Vector2(372, 446)
@@ -59,6 +59,13 @@ script = ExtResource("3_cx0jo")
 layout_mode = 2
 label_settings = SubResource("LabelSettings_pq7m2")
 script = ExtResource("4_bjbng")
+
+[node name="ReferenceRect" type="ReferenceRect" parent="CanvasLayer" unique_id=2067653704]
+offset_left = 153.0
+offset_top = 35.0
+offset_right = 587.0
+offset_bottom = 551.0
+editor_only = false
 
 [node name="SFXPlayer" type="AudioStreamPlayer" parent="." unique_id=1859151334]
 
