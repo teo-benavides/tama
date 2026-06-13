@@ -177,8 +177,10 @@ Object *TamaServerLaserPool::spawn(
         int na = (int)std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
         for (int i = 0; i < na; ++i)
             act_scope[p_data.bullet_params[i]] = TamaScopeVal(p_data.bullet_args[i]);
-        act_scope["spawn_x"] = TamaScopeVal(position.x);
-        act_scope["spawn_y"] = TamaScopeVal(position.y);
+        act_scope["spawn_x"]     = TamaScopeVal(position.x);
+        act_scope["spawn_y"]     = TamaScopeVal(position.y);
+        act_scope["spawn_angle"] = TamaScopeVal(angle);
+        act_scope["spawn_speed"] = TamaScopeVal(0.0f);
 
         TamaServerLaser *wrapper_laser = Object::cast_to<TamaServerLaser>(l.wrapper);
         runner->set_event_handler(wrapper_laser);
@@ -255,8 +257,9 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
     float delta = (float)p_delta;
     int64_t cur_frame = Engine::get_singleton()->get_physics_frames();
     TamaManager *mgr = TamaManager::get_instance();
-    Vector2 player   = mgr ? mgr->get_player_position()      : Vector2();
-    float   hitbox_r = mgr ? mgr->get_player_hitbox_radius()  : 3.0f;
+    Vector2 player      = mgr ? mgr->get_player_position()      : Vector2();
+    float   hitbox_r    = mgr ? mgr->get_player_hitbox_radius()  : 3.0f;
+    Vector2 world_origin = mgr ? mgr->get_world_rect().position  : Vector2();
 
     _to_recycle.clear();
 
@@ -268,7 +271,13 @@ void TamaServerLaserPool::_physics_process(double p_delta) {
             if (l.spawn_frame == cur_frame) continue;
 
             // Step runner so scripts can reposition the laser before we update physics
-            if (l.runner && l.runner->is_running()) l.runner->step(delta);
+            if (l.runner && l.runner->is_running()) {
+                l.runner->set_scope_float("current_x",     l.position.x - world_origin.x);
+                l.runner->set_scope_float("current_y",     l.position.y - world_origin.y);
+                l.runner->set_scope_float("current_angle", l.angle);
+                l.runner->set_scope_float("current_speed", 0.0f);
+                l.runner->step(delta);
+            }
             if (!l.active) continue; // vanished via runner
 
             // Step angle tween

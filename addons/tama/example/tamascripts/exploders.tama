@@ -1,0 +1,21 @@
+main
+    repeat
+        fire
+            dir aim 0
+            spd abs 200
+            bul exploder
+        waitf 30
+
+bul exploder
+    type fast
+    act
+        repeatf
+            if is_oob(current_x, current_y)
+                form
+                    type ring
+                    amt 10
+                    dir abs -90
+                    spd abs 200
+                    bul
+                        type orange
+                vanish

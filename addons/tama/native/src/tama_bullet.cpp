@@ -88,8 +88,26 @@ void TamaBullet::_ready() {
 
 void TamaBullet::_physics_process(double delta) {
     // Step interpreters so act commands (chdir/chspd/etc.) apply this frame
-    if (_runner)  _runner->step(delta);
-    if (_runner2) _runner2->step(delta);
+    if (_runner || _runner2) {
+        Rect2 world = _scene_bullet_world_bounds();
+        Vector2 gpos = get_global_position();
+        float cx = gpos.x - world.position.x;
+        float cy = gpos.y - world.position.y;
+        if (_runner) {
+            _runner->set_scope_float("current_x",     cx);
+            _runner->set_scope_float("current_y",     cy);
+            _runner->set_scope_float("current_angle", _angle);
+            _runner->set_scope_float("current_speed", _speed);
+            _runner->step(delta);
+        }
+        if (_runner2) {
+            _runner2->set_scope_float("current_x",     cx);
+            _runner2->set_scope_float("current_y",     cy);
+            _runner2->set_scope_float("current_angle", _angle);
+            _runner2->set_scope_float("current_speed", _speed);
+            _runner2->step(delta);
+        }
+    }
 
     // Apply rotation speed (degrees/sec → accumulates into angle each frame)
     if (_rot_speed != 0.0f) {

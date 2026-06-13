@@ -290,6 +290,10 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         mvmt_var_values.push_back((double)bullet->_initial_position.x);
         mvmt_var_names.push_back("spawn_y");
         mvmt_var_values.push_back((double)bullet->_initial_position.y);
+        mvmt_var_names.push_back("spawn_angle");
+        mvmt_var_values.push_back((double)bullet->_angle);
+        mvmt_var_names.push_back("spawn_speed");
+        mvmt_var_values.push_back((double)bullet->_speed);
         bullet->_mvmt_x_set      = data.mvmt_x_set;
         bullet->_mvmt_x_type     = data.mvmt_x_type;
         bullet->_mvmt_x_expr     = data.mvmt_x_expr;
@@ -310,8 +314,10 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         TamaScope act_scope;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
             act_scope[bullet_params[i]] = TamaScopeVal(bullet_args[i]);
-        act_scope["spawn_x"] = TamaScopeVal(bullet->_initial_position.x);
-        act_scope["spawn_y"] = TamaScopeVal(bullet->_initial_position.y);
+        act_scope["spawn_x"]     = TamaScopeVal(bullet->_initial_position.x);
+        act_scope["spawn_y"]     = TamaScopeVal(bullet->_initial_position.y);
+        act_scope["spawn_angle"] = TamaScopeVal(bullet->_angle);
+        act_scope["spawn_speed"] = TamaScopeVal(bullet->_speed);
         connect_interpreter(bullet_runner, bullet);
         bullet_runner->set_event_handler(bullet);
         bullet_runner->start_act(source_program, bullet_act, std::move(act_scope));
@@ -331,8 +337,10 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
         TamaScope emt_scope;
         for (int i = 0; i < (int)std::min(bullet_params.size(), bullet_args.size()); ++i)
             emt_scope[bullet_params[i]] = TamaScopeVal(bullet_args[i]);
-        emt_scope["spawn_x"] = TamaScopeVal(bullet->_initial_position.x);
-        emt_scope["spawn_y"] = TamaScopeVal(bullet->_initial_position.y);
+        emt_scope["spawn_x"]     = TamaScopeVal(bullet->_initial_position.x);
+        emt_scope["spawn_y"]     = TamaScopeVal(bullet->_initial_position.y);
+        emt_scope["spawn_angle"] = TamaScopeVal(bullet->_angle);
+        emt_scope["spawn_speed"] = TamaScopeVal(bullet->_speed);
         spawner_runner->start_act(source_program, bullet_emitter_act, std::move(emt_scope));
     }
 }

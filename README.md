@@ -337,6 +337,30 @@ form myfan(n, angle, spd_)
     spd spd_
 ```
 
+### Built-in scope variables
+
+The following float variables are automatically available in every bullet/laser `act` body — no declaration needed.
+
+**Spawn-time** (set once at spawn, constant for the bullet's lifetime):
+
+| Variable | Description |
+|---|---|
+| `spawn_x` | World X position at the moment the bullet spawned. |
+| `spawn_y` | World Y position at the moment the bullet spawned. |
+| `spawn_angle` | Angle in radians at spawn (the direction the bullet was fired). |
+| `spawn_speed` | Speed in pixels/sec at spawn. `0` for straight lasers. |
+
+**Per-frame** (updated every physics frame before the act runs):
+
+| Variable | Description |
+|---|---|
+| `current_x` | Current X position relative to `world_rect.position`. |
+| `current_y` | Current Y position relative to `world_rect.position`. |
+| `current_angle` | Current angle in radians of the bullet's direction of travel. |
+| `current_speed` | Current speed in pixels/sec. `0` for straight lasers. |
+
+`current_x`/`current_y` use the world-rect coordinate system: `(0, 0)` = top-left of `TamaManager.world_rect`. `spawn_x`/`spawn_y`/`spawn_angle`/`spawn_speed` are also available in `mvmt` expressions.
+
 ### Variables and control flow
 
 `var NAME = EXPR` declares a variable scoped to the current block. `NAME = EXPR` (no keyword) reassigns an existing variable and the change propagates back to parent blocks. `true` and `false` are valid values (equal to `1.0` and `0.0`).

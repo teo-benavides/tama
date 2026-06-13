@@ -172,8 +172,9 @@ class _TamaInterpreter {
     _TamaASTNode           *_program       = nullptr;
     godot::Object         *_context       = nullptr;
     TamaBulletEventHandler *_event_handler = nullptr;
-    bool           _running  = false;
-    bool           _breaking = false;
+    bool           _running        = false;
+    bool           _breaking       = false;
+    bool           _vanish_pending = false;
 
     // Execution stack
     std::vector<ExecFrame> _exec_stack;
@@ -295,6 +296,11 @@ public:
 
     // Event handler (C++ only — no Godot signal overhead)
     void set_event_handler(TamaBulletEventHandler *h) { _event_handler = h; }
+
+    // Inject or update a float variable in the running scope (used to expose dynamic built-ins).
+    void set_scope_float(const std::string &name, float value) {
+        _scope[name] = TamaScopeVal(value);
+    }
 
     // Property
     void           set_context(godot::Object *ctx) { _context = ctx; }

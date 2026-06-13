@@ -171,8 +171,10 @@ Object *TamaServerCurvedLaserPool::spawn(
         int na = (int)std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
         for (int i = 0; i < na; ++i)
             act_scope[p_data.bullet_params[i]] = TamaScopeVal(p_data.bullet_args[i]);
-        act_scope["spawn_x"] = TamaScopeVal(position.x);
-        act_scope["spawn_y"] = TamaScopeVal(position.y);
+        act_scope["spawn_x"]     = TamaScopeVal(position.x);
+        act_scope["spawn_y"]     = TamaScopeVal(position.y);
+        act_scope["spawn_angle"] = TamaScopeVal(angle);
+        act_scope["spawn_speed"] = TamaScopeVal(speed);
 
         TamaServerCurvedLaser *wrapper = Object::cast_to<TamaServerCurvedLaser>(l.wrapper);
         runner->set_event_handler(wrapper);
@@ -295,7 +297,13 @@ void TamaServerCurvedLaserPool::_physics_process(double p_delta) {
             if (l.spawn_frame == cur_frame) continue;
 
             // Step runner (may fire chdir/chspd/chrotspd events)
-            if (l.runner && l.runner->is_running()) l.runner->step(delta);
+            if (l.runner && l.runner->is_running()) {
+                l.runner->set_scope_float("current_x",     l.position.x - world.position.x);
+                l.runner->set_scope_float("current_y",     l.position.y - world.position.y);
+                l.runner->set_scope_float("current_angle", l.angle);
+                l.runner->set_scope_float("current_speed", l.speed);
+                l.runner->step(delta);
+            }
             if (!l.active) continue;
 
             // Step tweens

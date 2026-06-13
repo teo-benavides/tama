@@ -889,7 +889,7 @@ Defines a per-frame position expression that is re-evaluated every physics frame
 | `abs` (default) | World coordinate — sets the bullet's global position directly |
 | `rel` | Offset from the bullet's spawn position |
 
-The expression has access to the bullet's scope (params and exports) plus context functions like `time()` and `spawn_x`/`spawn_y`.
+The expression has access to the bullet's scope (params and exports) plus context functions like `time()` and the built-in variables `spawn_x`, `spawn_y`, `spawn_angle`, and `spawn_speed` (see §10.2).
 
 ```
 bullet orbiter(radius, phase)
@@ -1086,11 +1086,37 @@ Expressions (`EXPR`) are **raw token sequences** collected to end-of-line (or to
 - Godot built-in functions available via `Expression`: `sin`, `cos`, `abs`, `max`, `min`, `sqrt`, `floor`, `ceil`, `round`, `pow`, `PI`, etc.
 - Context methods: `time()` — returns elapsed time in seconds (provided by `TamaContext`)
 
-### 10.2 Scope
+### 10.2 Built-in scope variables
+
+The following float variables are automatically injected into the scope of every bullet/laser `act`. They require no declaration and are available in all expressions.
+
+#### Spawn-time (set once at spawn, constant for the bullet's lifetime)
+
+| Variable | Description |
+|---|---|
+| `spawn_x` | World X position at the moment the bullet spawned. |
+| `spawn_y` | World Y position at the moment the bullet spawned. |
+| `spawn_angle` | Angle (radians) at spawn — the direction the bullet was fired. |
+| `spawn_speed` | Speed (pixels/sec) at spawn. `0` for straight lasers. |
+
+#### Per-frame (updated every physics frame before the act runs)
+
+| Variable | Description |
+|---|---|
+| `current_x` | Current X position relative to `world_rect.position`. |
+| `current_y` | Current Y position relative to `world_rect.position`. |
+| `current_angle` | Current angle (radians) of the bullet's direction of travel. |
+| `current_speed` | Current speed (pixels/sec). `0` for straight lasers. |
+
+`current_x` and `current_y` are expressed in the world-rect coordinate system: `(0, 0)` is the top-left corner of `TamaManager.world_rect` and `(world_rect.size.x, world_rect.size.y)` is the bottom-right corner. This makes it straightforward to write bounds checks or position-based patterns without knowing the absolute world origin.
+
+`spawn_x`/`spawn_y` are available in `mvmt` expressions too (they are set at spawn time). The `current_*` variables are only available inside `act` bodies.
+
+### 10.3 Scope
 
 The expression evaluator receives only **numeric** (float/int/bool) values from the current scope. Non-numeric scope values (strings, TamaRefs, inline nodes) are filtered out before evaluation. To use a string value as a qualifier, reference it by name directly in the qualifier position rather than in an expression.
 
-### 10.3 Examples
+### 10.4 Examples
 
 ```
 dir aim (360 / count) * i

@@ -352,8 +352,8 @@ Object *TamaServerBulletPool::spawn(
 
         std::vector<std::string> var_names;
         b.mvmt_values.clear();
-        var_names.reserve(n_args + 2);
-        b.mvmt_values.reserve(n_args + 2);
+        var_names.reserve(n_args + 4);
+        b.mvmt_values.reserve(n_args + 4);
 
         for (int i = 0; i < n_args; ++i) {
             var_names.push_back(params[i]);
@@ -363,6 +363,10 @@ Object *TamaServerBulletPool::spawn(
         b.mvmt_values.push_back((double)position.x);
         var_names.push_back("spawn_y");
         b.mvmt_values.push_back((double)position.y);
+        var_names.push_back("spawn_angle");
+        b.mvmt_values.push_back((double)angle);
+        var_names.push_back("spawn_speed");
+        b.mvmt_values.push_back((double)speed);
 
         // Build cache key
         auto make_key = [&](const std::string &expr) {
@@ -454,8 +458,10 @@ Object *TamaServerBulletPool::spawn(
         int na = (int)std::min(p_data.bullet_params.size(), p_data.bullet_args.size());
         for (int i = 0; i < na; ++i)
             act_scope[p_data.bullet_params[i]] = TamaScopeVal(p_data.bullet_args[i]);
-        act_scope["spawn_x"] = TamaScopeVal(position.x);
-        act_scope["spawn_y"] = TamaScopeVal(position.y);
+        act_scope["spawn_x"]     = TamaScopeVal(position.x);
+        act_scope["spawn_y"]     = TamaScopeVal(position.y);
+        act_scope["spawn_angle"] = TamaScopeVal(angle);
+        act_scope["spawn_speed"] = TamaScopeVal(speed);
 
         // Register C++ event handler — no signal/allocation overhead
         TamaServerBullet *wrapper_bullet = Object::cast_to<TamaServerBullet>(b.wrapper);
@@ -645,7 +651,13 @@ void TamaServerBulletPool::_physics_process(double p_delta) {
 
         // Step runner before this bullet's position update so script changes
         // take effect in the same frame they are issued.
-        if (b->runner && b->runner->is_running()) b->runner->step(delta);
+        if (b->runner && b->runner->is_running()) {
+            b->runner->set_scope_float("current_x", b->position.x - world.position.x);
+            b->runner->set_scope_float("current_y", b->position.y - world.position.y);
+            b->runner->set_scope_float("current_angle", b->angle);
+            b->runner->set_scope_float("current_speed", b->speed);
+            b->runner->step(delta);
+        }
 
         // The runner may have recycled this bullet (e.g. vanish command). Skip it.
         if (!b->active) continue;

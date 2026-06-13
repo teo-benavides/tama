@@ -23,8 +23,9 @@ void _TamaInterpreter::start(_TamaASTNode *program, TamaScope scope) {
     _exec_stack.clear();
     _scope_saves.clear();
     _async_children.clear();
-    _running  = true;
-    _breaking = false;
+    _running        = true;
+    _breaking       = false;
+    _vanish_pending = false;
 
     if (!_program) { _running = false; return; }
     _build_lookup_tables();
@@ -44,8 +45,9 @@ void _TamaInterpreter::start_act(_TamaASTNode *program, _TamaASTNode *act_n, Tam
     _exec_stack.clear();
     _scope_saves.clear();
     _async_children.clear();
-    _running  = true;
-    _breaking = false;
+    _running        = true;
+    _breaking       = false;
+    _vanish_pending = false;
 
     if (!_program || !act_n) { _running = false; return; }
     _build_lookup_tables();
@@ -129,8 +131,14 @@ void _TamaInterpreter::step(double p_delta) {
 
     bool yielded = false;
 
-    while (!yielded && _running && !_exec_stack.empty()) {
+    while ((_running || _breaking) && !yielded && !_exec_stack.empty()) {
         ExecFrame &f = _exec_stack.back();
+
+        // Propagate break: pop BODY frames until the nearest loop-ctrl frame.
+        if (_breaking && f.kind == ExecFrame::Kind::BODY) {
+            _pop_body_frame();
+            continue;
+        }
 
         if (f.kind == ExecFrame::Kind::BODY) {
             if (f.suspend == ExecFrame::Suspend::WAIT_TIME) {
@@ -146,6 +154,14 @@ void _TamaInterpreter::step(double p_delta) {
         } else {
             _step_loop_ctrl(f, yielded);
         }
+    }
+
+    // Deferred vanish: fire on_vanished() after the exec loop so the interpreter
+    // is never deleted while it is still running inside step().
+    if (_vanish_pending) {
+        _vanish_pending = false;
+        if (_event_handler) _event_handler->on_vanished();
+        return;
     }
 
     if (_exec_stack.empty() && _running) {
@@ -275,7 +291,7 @@ void _TamaInterpreter::_pop_body_frame() {
 
 void _TamaInterpreter::_step_body(ExecFrame &f, bool &yielded) {
     while (f.pc < (int)f.body.size()) {
-        if (!_running) return;
+        if (!_running || _breaking) return;
 
         _TamaASTNode *n = f.body[f.pc];
         f.pc++;
@@ -285,9 +301,10 @@ void _TamaInterpreter::_step_body(ExecFrame &f, bool &yielded) {
 
         if (!_exec_stack.empty() && &_exec_stack.back() != &f) return;
         if (yielded) return;
-        if (!_running) return;
+        if (!_running || _breaking) return;
     }
 
+    if (_breaking) return;
     _pop_body_frame();
 }
 
@@ -343,12 +360,11 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
 
     case NT::BREAK:
         _breaking = true;
-        _running  = false;
         return;
 
     case NT::VANISH:
-        _running = false;
-        if (_event_handler) _event_handler->on_vanished();
+        _running        = false;
+        _vanish_pending = true;
         return;
 
     case NT::VAR_DECL:
@@ -439,6 +455,7 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
                     else ++it;
                 }
                 if (_breaking) { _breaking = false; break; }
+                if (!_running) break;
                 ++i;
                 if (count_n >= 0 && i >= count_n) break;
             }
@@ -460,6 +477,7 @@ void _TamaInterpreter::_exec_node(_TamaASTNode *n, bool sync_only, bool &yielded
                     else ++it;
                 }
                 if (_breaking) { _breaking = false; break; }
+                if (!_running) break;
             }
         } else {
             _push_while_ctrl(n->body, cond);

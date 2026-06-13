@@ -37,3 +37,6 @@ func f2s(frames: int) -> float:
 
 func log(message: String) -> void:
 	print(message)
+
+func is_oob(x: float, y: float) -> bool:
+	return not Rect2(Vector2.ZERO, TamaManager.world_rect.size).has_point(Vector2(x, y))
