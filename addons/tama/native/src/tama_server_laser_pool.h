@@ -34,6 +34,7 @@ class TamaServerLaserPool : public godot::Node2D {
         std::vector<TamaAnimFrame> base_texture_frames; // empty = no base texture; size>1 = animated
 
         int blend_mode      = 0;
+        int z_index         = 0;
         int    delay_frames     = 120;
         int    expand_frames    = 10;
         int    duration_frames  = 120;

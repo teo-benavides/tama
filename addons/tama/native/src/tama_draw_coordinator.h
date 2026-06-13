@@ -50,13 +50,20 @@ class _TamaDrawCoordinator : public godot::Node2D {
     // Deferred curved laser job list for optimized draw mode.
     std::vector<DrawJob> _curved_deferred;
 
-    // Reusable buffer for composite bullet draw (static types, optimized mode).
+    // Reusable buffer for composite bullet draw (static types, z_order_by_type mode).
     godot::PackedFloat32Array _composite_buf;
 
-    // When true: skip spawn_frame sort; static bullet types use composite multimesh; curved
-    // lasers batch by texture across all spawn frames. Fewer draw calls, order not guaranteed.
-    bool _optimize_draw_calls    = false;
-    int  _composite_threshold    = 1000;
+    // Precomputed sorted type list for z_order_by_type mode.
+    // Rebuilt in _physics_process whenever the total registered type count changes.
+    struct TypeEntry { int z_index; int pool; void *td; };
+    std::vector<TypeEntry> _type_entries;
+    int _cached_type_count = -1;
+
+    // When true (default): types drawn in z_index order; static bullets use composite multimesh;
+    // curved lasers batched by texture within each type. Cross-type spawn-time order not preserved.
+    // When false: all objects sorted globally by spawn_frame for strict temporal draw order.
+    bool _z_order_by_type     = true;
+    int  _composite_threshold = 1000;
 
     godot::RID _get_or_create_blend_ci(int blend_mode);
 

@@ -96,14 +96,13 @@ void initialize_tama_module(ModuleInitializationLevel p_level) {
         ps->add_property_info(hint);
     }
 
-    // tama/optimize_draw_calls — disabled by default.
-    if (!ps->has_setting("tama/optimize_draw_calls")) {
-        ps->set_setting("tama/optimize_draw_calls", false);
+    if (!ps->has_setting("tama/z_order_by_type")) {
+        ps->set_setting("tama/z_order_by_type", true);
     }
-    ps->set_initial_value("tama/optimize_draw_calls", false);
+    ps->set_initial_value("tama/z_order_by_type", true);
     {
         Dictionary hint;
-        hint["name"] = "tama/optimize_draw_calls";
+        hint["name"] = "tama/z_order_by_type";
         hint["type"] = Variant::BOOL;
         ps->add_property_info(hint);
     }

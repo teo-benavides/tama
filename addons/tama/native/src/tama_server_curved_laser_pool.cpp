@@ -74,6 +74,7 @@ void TamaServerCurvedLaserPool::register_type(const String &p_key, Object *p_con
     td->length               = std::max(2, (int)p_config->get("length"));
     td->pool_size            = (int)  p_config->get("pool_size");
     td->out_of_bounds_margin = (float)p_config->get("out_of_bounds_margin");
+    td->z_index              = (int)  p_config->get("z_index");
     {
         Variant v = p_config->get("texture");
         if (v.get_type() == Variant::OBJECT) {

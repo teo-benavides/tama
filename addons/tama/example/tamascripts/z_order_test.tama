@@ -1,0 +1,21 @@
+main
+    repeat 10
+        fire
+            dir abs 90
+            spd 100
+            bul
+                type fast
+        waitf 2
+    fire
+        dir abs 90
+        spd 130
+        bul
+            type circle
+    repeat 10
+        fire
+            dir abs 90
+            spd 180
+            bul
+                type fast
+        waitf 2
+    

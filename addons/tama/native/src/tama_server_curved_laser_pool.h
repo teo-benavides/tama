@@ -34,6 +34,7 @@ class TamaServerCurvedLaserPool : public godot::Node2D {
         float  out_of_bounds_margin = 50.0f;
 
         int blend_mode = 0;
+        int z_index    = 0;
 
         std::vector<CurvedLaserState>        lasers;
         std::vector<TamaServerCurvedLaser *> wrappers;

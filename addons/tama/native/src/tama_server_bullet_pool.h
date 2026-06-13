@@ -80,6 +80,7 @@ class TamaServerBulletPool : public godot::Node2D {
         // Blend mode (from animation / spawn_texture TamaAnimatedTexture)
         int blend_mode       = 0;
         int spawn_blend_mode = 0;
+        int z_index          = 0;
 
         // Spawn animation frames (from spawn_texture TamaAnimatedTexture)
         std::vector<TamaAnimFrame> spawn_anim_frames;
@@ -120,7 +121,7 @@ class TamaServerBulletPool : public godot::Node2D {
     std::vector<BulletState *> _to_recycle;
 
     // Pre-allocated buffer for spawn animation draw path (transform + color per instance)
-    bool _optimize_draw_calls = false;
+    bool _z_order_by_type = true;
     godot::PackedFloat32Array _spawn_buf;
 
     // Registrations queued before the node enters the scene tree

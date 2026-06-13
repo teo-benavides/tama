@@ -77,6 +77,7 @@ void TamaServerLaserPool::register_type(const String &p_key, Object *p_config) {
     td->duration_frames = (int)  p_config->get("duration_frames");
     td->fade_frames     = (int)  p_config->get("fade_frames");
     td->pool_size       = (int)  p_config->get("pool_size");
+    td->z_index         = (int)  p_config->get("z_index");
     {
         auto load_anim = [&td](Object *cfg, const char *prop, bool read_blend) -> std::vector<TamaAnimFrame> {
             Variant v = cfg->get(prop);

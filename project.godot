@@ -37,3 +37,4 @@ renderer/rendering_method.mobile="gl_compatibility"
 [tama]
 
 scripts_path="res://addons/tama/example/tamascripts"
+server_bullet_composite_threshold=500

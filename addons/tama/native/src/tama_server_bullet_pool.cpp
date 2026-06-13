@@ -95,8 +95,8 @@ TamaServerBulletPool::~TamaServerBulletPool() {
 
 void TamaServerBulletPool::_ready() {
     set_physics_process(true);
-    _optimize_draw_calls = (bool)ProjectSettings::get_singleton()->get_setting(
-        "tama/optimize_draw_calls", false);
+    _z_order_by_type = (bool)ProjectSettings::get_singleton()->get_setting(
+        "tama/z_order_by_type", true);
     for (auto &pr : _pending_regs)
         register_type(pr.key, pr.config);
     _pending_regs.clear();
@@ -146,6 +146,7 @@ void TamaServerBulletPool::register_type(const String &p_key, Object *p_config) 
     td->rotates              = (bool)p_config->get("rotates");
     td->face_velocity        = (bool)p_config->get("face_velocity");
     td->pool_size            = (int)p_config->get("pool_size");
+    td->z_index              = (int)p_config->get("z_index");
     td->out_of_bounds_margin = (float)p_config->get("out_of_bounds_margin");
     td->spawn_delay            = (int)p_config->get("spawn_delay");
     td->starting_spawn_scale   = (float)p_config->get("starting_spawn_scale");
@@ -303,7 +304,7 @@ Object *TamaServerBulletPool::spawn(
     // can sort by spawn_frame for correct temporal draw order. In optimized mode, only
     // animated types need per-frame batches (to keep each cohort on its own animation phase);
     // static types fill across frames for dense batches and composite merging.
-    bool needs_per_frame_batch = animated || !_optimize_draw_calls;
+    bool needs_per_frame_batch = animated || !_z_order_by_type;
     bool need_new_batch = !td.cur_batch
         || td.cur_batch->used >= BATCH_CHUNK
         || (needs_per_frame_batch && td.cur_frame != frame);
