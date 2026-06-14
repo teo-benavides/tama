@@ -40,10 +40,12 @@ offset_bottom = 649.0
 
 [node name="OptionButton" type="OptionButton" parent="CanvasLayer/Container" unique_id=1406359509]
 layout_mode = 2
+focus_mode = 1
 
 [node name="TextEdit" type="TextEdit" parent="CanvasLayer/Container" unique_id=68398283]
 layout_mode = 2
 size_flags_vertical = 3
+focus_mode = 1
 theme_override_font_sizes/font_size = 12
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer" unique_id=428562478]

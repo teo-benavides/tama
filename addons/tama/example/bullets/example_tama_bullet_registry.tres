@@ -23,6 +23,8 @@
 [ext_resource type="Texture2D" uid="uid://cbhrxfjypl02j" path="res://addons/tama/example/bullets/lightball/lightball_blue4.png" id="19_kf76n"]
 [ext_resource type="Texture2D" uid="uid://65p6f1ql1q4y" path="res://addons/tama/example/bullets/small_bullet_orange.png" id="21_lrp1m"]
 [ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama/example/bullets/small_bullet.png" id="22_an04l"]
+[ext_resource type="Texture2D" uid="uid://dm1qfhjurn28t" path="res://addons/tama/example/bullets/player_bullet.png" id="24_3nmvj"]
+[ext_resource type="Texture2D" uid="uid://cdmhkuo5txtoh" path="res://addons/tama/example/bullets/player_shot2.png" id="25_l0deo"]
 
 [sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_tkymk"]
 frame_count = 1
@@ -237,6 +239,47 @@ expand_frames = 0
 duration_frames = 1
 fade_frames = 0
 
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_l0deo"]
+blend_mode = 1
+frame_count = 1
+frame_0/texture = ExtResource("7_bui8c")
+frame_0/duration = 1
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_c0whb"]
+frame_count = 1
+frame_0/texture = ExtResource("24_3nmvj")
+frame_0/duration = 1
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_ml5aw"]
+texture = SubResource("TamaAnimatedTexture_c0whb")
+spawn_delay = 1
+rect = Rect2(-17, -17, 34, 34)
+face_velocity = false
+spawn_texture = SubResource("TamaAnimatedTexture_l0deo")
+starting_spawn_opacity = 1.0
+pool_size = 100
+out_of_bounds_margin = 20.0
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_yrojl"]
+blend_mode = 1
+frame_count = 1
+frame_0/texture = ExtResource("7_bui8c")
+frame_0/duration = 1
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_x87mm"]
+frame_count = 1
+frame_0/texture = ExtResource("25_l0deo")
+frame_0/duration = 1
+
+[sub_resource type="TamaServerBulletConfig" id="TamaServerBulletConfig_yrojl"]
+texture = SubResource("TamaAnimatedTexture_x87mm")
+spawn_delay = 1
+face_velocity = false
+spawn_texture = SubResource("TamaAnimatedTexture_yrojl")
+starting_spawn_opacity = 1.0
+pool_size = 100
+out_of_bounds_margin = 20.0
+
 [resource]
 default_scene_bullet = ExtResource("1_0v7u8")
 default_server_bullet = ExtResource("2_uxopc")
@@ -254,6 +297,8 @@ objects = {
 "laser": SubResource("TamaServerStraightLaserConfig_okdsw"),
 "lightball_blue": SubResource("TamaServerBulletConfig_x87mm"),
 "orange": SubResource("TamaServerBulletConfig_d4i3m"),
+"player": SubResource("TamaServerBulletConfig_ml5aw"),
+"player2": SubResource("TamaServerBulletConfig_yrojl"),
 "rainbow": SubResource("TamaServerBulletConfig_i2sv8"),
 "trajectory": SubResource("TamaServerStraightLaserConfig_rspsb")
 }

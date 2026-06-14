@@ -16,3 +16,8 @@ texture = ExtResource("2_822uf")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=573671170]
 shape = SubResource("CircleShape2D_6sq6r")
+
+[node name="TamaEmitter" type="TamaEmitter" parent="." unique_id=1629553309]
+script_filename = "player_shot"
+excluded_from_group = true
+position = Vector2(0, -19)
