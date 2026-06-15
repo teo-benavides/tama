@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://drv7vyi8j1njv"]
+
+[ext_resource type="Script" uid="uid://dhaacfo3aa4nm" path="res://addons/tama/example_game/example_game.gd" id="1_n7wc6"]
+[ext_resource type="Texture2D" uid="uid://pc1srkkemdfj" path="res://addons/tama/shared/sky.png" id="2_h4k7m"]
+[ext_resource type="PackedScene" uid="uid://cppplayer001" path="res://addons/tama/shared/example_player.tscn" id="3_h4k7m"]
+
+[node name="ExampleGame" type="Node" unique_id=1341615943]
+script = ExtResource("1_n7wc6")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=293045130]
+position = Vector2(573.99994, 283)
+scale = Vector2(0.43422216, 0.4342222)
+texture = ExtResource("2_h4k7m")
+
+[node name="ReferenceRect" type="ReferenceRect" parent="." unique_id=2080512010]
+offset_left = 358.0
+offset_top = 20.0
+offset_right = 853.0
+offset_bottom = 587.0
+editor_only = false
+
+[node name="ExamplePlayer" parent="." unique_id=985488048 instance=ExtResource("3_h4k7m")]
+position = Vector2(611, 514)
+
+[node name="TamaEmitter" type="TamaEmitter" parent="." unique_id=138292473]
+script_filename = "game"
+excluded_from_group = true
+position = Vector2(358, 20)
+
+[node name="GameStartTimer" type="Timer" parent="." unique_id=844783218]
+process_callback = 0
+wait_time = 0.5
+one_shot = true
+autostart = true
+
+[connection signal="timeout" from="GameStartTimer" to="." method="_on_game_start_timer_timeout"]

@@ -1,0 +1,23 @@
+[gd_resource type="TamaServerBulletConfig" format=3 uid="uid://cdalm65plotyt"]
+
+[ext_resource type="Texture2D" uid="uid://c036cyrqakoiq" path="res://addons/tama/shared/bullets/small_bullet.png" id="2_r4kx4"]
+[ext_resource type="Texture2D" uid="uid://t5epag1gjhj1" path="res://addons/tama/shared/bullets/spawn_pink.png" id="2_th1mw"]
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_th1mw"]
+frame_count = 1
+frame_0/texture = ExtResource("2_th1mw")
+frame_0/duration = 1
+
+[sub_resource type="TamaAnimatedTexture" id="TamaAnimatedTexture_85nwc"]
+frame_count = 1
+frame_0/texture = ExtResource("2_r4kx4")
+frame_0/duration = 1
+
+[resource]
+texture = SubResource("TamaAnimatedTexture_85nwc")
+shape_radius = 1.0
+spawn_delay = 13
+rect = Rect2(-7, -4, 14, 8)
+spawn_texture = SubResource("TamaAnimatedTexture_th1mw")
+starting_spawn_scale = 3.0
+pool_size = 50000

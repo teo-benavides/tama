@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://b68k2opkv6emx"]
+
+[ext_resource type="Texture2D" uid="uid://c1iveydjx8n1t" path="res://addons/tama/example_game/sprites/enemy.png" id="1_7g73w"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vjdsn"]
+size = Vector2(20, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_0glxf"]
+size = Vector2(64, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_7wcau"]
+size = Vector2(96, 40)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_t6887"]
+size = Vector2(32, 16)
+
+[node name="ExampleEnemy" type="TamaBullet" unique_id=1272816122]
+rotates = false
+motion_mode = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=950306849]
+texture_filter = 1
+scale = Vector2(2, 2)
+texture = ExtResource("1_7g73w")
+
+[node name="Area2D" type="Area2D" parent="." unique_id=205988845]
+collision_layer = 4
+collision_mask = 8
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1947716923]
+position = Vector2(0, 48)
+shape = SubResource("RectangleShape2D_vjdsn")
+
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="Area2D" unique_id=298427816]
+position = Vector2(0, -4)
+shape = SubResource("RectangleShape2D_0glxf")
+
+[node name="CollisionShape2D3" type="CollisionShape2D" parent="Area2D" unique_id=994927128]
+position = Vector2(0, -44)
+shape = SubResource("RectangleShape2D_7wcau")
+
+[node name="CollisionShape2D4" type="CollisionShape2D" parent="Area2D" unique_id=1498269683]
+position = Vector2(0, 24)
+shape = SubResource("RectangleShape2D_t6887")

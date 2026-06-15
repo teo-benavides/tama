@@ -37,6 +37,9 @@ void TamaBullet::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_initial_position","v"),&TamaBullet::set_initial_position);
     ClassDB::bind_method(D_METHOD("destroy"), &TamaBullet::destroy);
 
+    GDVIRTUAL_BIND(_bullet_ready);
+    GDVIRTUAL_BIND(_bullet_process, "delta");
+
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "_angle", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
                  "set_angle", "get_angle");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "_speed", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE),
@@ -84,6 +87,7 @@ void TamaBullet::_ready() {
     }
 
     if (rotates) set_rotation(_angle);
+    GDVIRTUAL_CALL(_bullet_ready);
 }
 
 void TamaBullet::_physics_process(double delta) {
@@ -138,6 +142,7 @@ void TamaBullet::_physics_process(double delta) {
                 set_rotation(_angle);
             }
         }
+        GDVIRTUAL_CALL(_bullet_process, delta);
         return;
     }
 
@@ -183,6 +188,8 @@ void TamaBullet::_physics_process(double delta) {
                 --_bounces_left;
         }
     }
+
+    GDVIRTUAL_CALL(_bullet_process, delta);
 }
 
 void TamaBullet::destroy() {

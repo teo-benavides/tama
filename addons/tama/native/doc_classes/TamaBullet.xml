@@ -17,6 +17,13 @@
 	<tutorials>
 	</tutorials>
 	<methods>
+		<method name="_bullet_process" qualifiers="virtual">
+			<return type="void" />
+			<param index="0" name="delta" type="float" />
+			<description>
+				Called every physics frame after TamaBullet has applied its own movement logic (velocity, rotation, bouncing, TamaScript act commands). Override this instead of [code]_physics_process[/code] to add per-frame behaviour without breaking bullet movement.
+			</description>
+		</method>
 		<method name="destroy" qualifiers="virtual">
 			<return type="void" />
 			<description>

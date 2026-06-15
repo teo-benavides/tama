@@ -1,0 +1,12 @@
+[gd_resource type="TamaBulletRegistry" format=3 uid="uid://twrtowkwcfny"]
+
+[ext_resource type="PackedScene" uid="uid://brkxviuaxlfee" path="res://addons/tama/example_game/bullets/player/player_bullet.tscn" id="1_mmhky"]
+[ext_resource type="PackedScene" uid="uid://c245r7igdkoxk" path="res://addons/tama/example_game/bullets/player/player_bullet2.tscn" id="2_wttdc"]
+[ext_resource type="PackedScene" uid="uid://b68k2opkv6emx" path="res://addons/tama/example_game/enemies/example_enemy.tscn" id="3_c5vty"]
+
+[resource]
+scene_bullets = {
+"enemy": ExtResource("3_c5vty"),
+"player": ExtResource("1_mmhky"),
+"player2": ExtResource("2_wttdc")
+}

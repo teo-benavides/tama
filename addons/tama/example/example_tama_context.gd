@@ -35,7 +35,7 @@ func group_target_dir(ofs: float, pent_angle: float, circ_r: float, inner_r: flo
 func f2s(frames: int) -> float:
 	return float(frames) / float(Engine.physics_ticks_per_second)
 
-func log(message: String) -> void:
+func logmsg(message: String) -> void:
 	print(message)
 
 func is_oob(x: float, y: float) -> bool:

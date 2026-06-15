@@ -1,0 +1,13 @@
+main
+    fire
+        dir abs 90
+        spd abs 50
+        pos
+            x abs mid_x()
+            y abs -50
+        bul
+            type enemy
+            act
+                wait 4.0
+                chspd
+                    spd abs 0

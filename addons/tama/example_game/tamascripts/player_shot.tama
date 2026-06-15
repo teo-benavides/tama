@@ -1,0 +1,46 @@
+main
+    var x_amplitude = 30
+    var y_amplitude = 15
+    var angle_amplitude = 10
+    var spd_ = 1000
+    var interval = 3
+    var rotation_speed = 2
+    repeat
+        fire
+            dir abs -90+angle_amplitude*cos(rotation_speed*time())
+            spd abs spd_
+            offset
+                x abs x_amplitude*cos(rotation_speed*time())
+                y abs y_amplitude*sin(rotation_speed*time())
+            bul
+                type player
+        fire
+            dir abs -90-angle_amplitude*sin(rotation_speed*time())
+            spd abs spd_
+            offset
+                x abs -x_amplitude*sin(rotation_speed*time())
+                y abs y_amplitude*cos(rotation_speed*time())
+            bul
+                type player
+        fire
+            dir abs -90-angle_amplitude*cos(rotation_speed*time())
+            spd abs spd_
+            offset
+                x abs -x_amplitude*cos(rotation_speed*time())
+                y abs -y_amplitude*sin(rotation_speed*time())
+            bul
+                type player
+        fire
+            dir abs -90+angle_amplitude*sin(rotation_speed*time())
+            spd abs spd_
+            offset
+                x abs x_amplitude*sin(rotation_speed*time())
+                y abs -y_amplitude*cos(rotation_speed*time())
+            bul
+                type player
+        fire
+            dir abs -90
+            spd abs spd_
+            bul
+                type player2
+        waitf interval

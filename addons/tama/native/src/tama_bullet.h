@@ -8,6 +8,9 @@
 #include <godot_cpp/variant/rect2.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector2.hpp>
+#include <godot_cpp/core/gdvirtual.gen.inc>
+
+using namespace godot;
 
 class TamaBullet : public godot::CharacterBody2D, public TamaBulletEventHandler {
     GDCLASS(TamaBullet, godot::CharacterBody2D)
@@ -44,6 +47,9 @@ public:
 
     void _ready()                       override;
     void _physics_process(double delta) override;
+
+    GDVIRTUAL0(_bullet_ready)
+    GDVIRTUAL1(_bullet_process, double)
 
     bool _get(const godot::StringName &p_name, godot::Variant &r_ret) const;
     bool _set(const godot::StringName &p_name, const godot::Variant &p_value);

@@ -235,7 +235,7 @@ void _TamaSpawnManager::_on_bullet_fired(const TamaBulletFireData &data, Object 
     // Scene bullet path
     Ref<PackedScene> scene;
     if (registry.is_valid()) {
-        if (!bullet_type or bullet_type.is_empty()) {
+        if (!bullet_type || bullet_type.is_empty()) {
             scene = registry->default_scene_bullet;
         } else {
             Variant sv = registry->scene_bullets.get(bullet_type, Variant());
@@ -404,10 +404,10 @@ Vector2 _TamaSpawnManager::_resolve_position(const TamaBulletFireData &data, Obj
 }
 
 Node *_TamaSpawnManager::_get_spawn_parent() const {
-    if (!is_inside_tree()) return nullptr;
-    if (!spawn_parent.is_empty()) {
+    if (!spawn_parent.is_empty() && is_inside_tree()) {
         Node *n = get_node_or_null(spawn_parent);
         if (n) return n;
     }
-    return get_tree() ? get_tree()->get_current_scene() : nullptr;
+    SceneTree *stree = Object::cast_to<SceneTree>(Engine::get_singleton()->get_main_loop());
+    return stree ? stree->get_current_scene() : nullptr;
 }

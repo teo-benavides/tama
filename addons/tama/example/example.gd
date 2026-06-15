@@ -1,9 +1,7 @@
 extends Node
 
-const EXAMPLE_BULLET_SCENE = preload("res://addons/tama/example/bullets/example_bullet.tscn")
-const SFX_DIR = "res://addons/tama/example/sfx/"
 const SFX_MAP = {
-	"shot": preload("res://addons/tama/example/sfx/shot.wav"),
+	"shot": preload("res://addons/tama/shared/sfx/shot.wav"),
 }
 
 var emitter: TamaEmitter
