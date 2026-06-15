@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://ndovdqxiqcc3" path="res://addons/tama/example_game/bullets/player/player_bullet.gd" id="1_m7ubm"]
 [ext_resource type="Texture2D" uid="uid://cdmhkuo5txtoh" path="res://addons/tama/shared/bullets/player_shot2.png" id="2_m7ubm"]
 [ext_resource type="Texture2D" uid="uid://cabx0lo7p5g18" path="res://addons/tama/shared/bullets/spawn_green.png" id="3_uii23"]
+[ext_resource type="Script" uid="uid://re873wj2gnjt" path="res://addons/tama/example_game/bullets/player/one_shot_particles.gd" id="4_q8ts1"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_nxk1y"]
 radius = 19.235384
@@ -19,6 +20,31 @@ initial_velocity_max = 137.36
 gravity = Vector3(0, 0, 0)
 scale_min = 0.099999994
 scale_max = 0.29999998
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_uii23"]
+blend_mode = 1
+
+[sub_resource type="Curve" id="Curve_q8ts1"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_jctoh"]
+curve = SubResource("Curve_q8ts1")
+
+[sub_resource type="Curve" id="Curve_c4mb2"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_plkc3"]
+curve = SubResource("Curve_c4mb2")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_q8qrw"]
+particle_flag_disable_z = true
+gravity = Vector3(0, 0, 0)
+scale_min = 2.0
+scale_max = 2.0
+scale_curve = SubResource("CurveTexture_plkc3")
+alpha_curve = SubResource("CurveTexture_jctoh")
 
 [node name="PlayerBullet2" type="TamaBullet" unique_id=1028747838]
 script = ExtResource("1_m7ubm")
@@ -45,5 +71,18 @@ lifetime = 0.16
 one_shot = true
 explosiveness = 1.0
 process_material = SubResource("ParticleProcessMaterial_jctoh")
+script = ExtResource("4_q8ts1")
+
+[node name="SpawnParticles2" type="GPUParticles2D" parent="." unique_id=1679654803]
+texture_filter = 1
+material = SubResource("CanvasItemMaterial_uii23")
+position = Vector2(-8, 0)
+emitting = false
+amount = 1
+texture = ExtResource("3_uii23")
+lifetime = 0.15000000000000002
+one_shot = true
+process_material = SubResource("ParticleProcessMaterial_q8qrw")
+script = ExtResource("4_q8ts1")
 
 [connection signal="area_entered" from="Area2D" to="." method="_on_area_2d_area_entered"]

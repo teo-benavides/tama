@@ -8,7 +8,7 @@ var emitter: TamaEmitter
 var _loading_script := false
 
 func _ready() -> void:
-	TamaManager.set_registry(load("res://addons/tama/example/bullets/example_tama_bullet_registry.tres"))
+	TamaManager.set_registry(load("res://addons/tama/shared/bullets/example_tama_bullet_registry.tres"))
 	TamaManager.set_context(ExampleTamaContext.new())
 	TamaManager.load_scripts("res://addons/tama/example/tamascripts")
 	TamaManager.global_out_of_bounds_margin = 100

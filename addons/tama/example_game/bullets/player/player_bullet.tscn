@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://ndovdqxiqcc3" path="res://addons/tama/example_game/bullets/player/player_bullet.gd" id="1_oqcu5"]
 [ext_resource type="Texture2D" uid="uid://dm1qfhjurn28t" path="res://addons/tama/shared/bullets/player_bullet.png" id="2_h6d8h"]
 [ext_resource type="Texture2D" uid="uid://cabx0lo7p5g18" path="res://addons/tama/shared/bullets/spawn_green.png" id="3_h6d8h"]
+[ext_resource type="Script" uid="uid://re873wj2gnjt" path="res://addons/tama/example_game/bullets/player/one_shot_particles.gd" id="4_nxk1y"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_nxk1y"]
 radius = 19.235384
@@ -19,6 +20,31 @@ initial_velocity_max = 137.36
 gravity = Vector3(0, 0, 0)
 scale_min = 0.099999994
 scale_max = 0.29999998
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_h6d8h"]
+blend_mode = 1
+
+[sub_resource type="Curve" id="Curve_nxk1y"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_h6d8h"]
+curve = SubResource("Curve_nxk1y")
+
+[sub_resource type="Curve" id="Curve_tat8f"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_nxk1y"]
+curve = SubResource("Curve_tat8f")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_yqlgc"]
+particle_flag_disable_z = true
+gravity = Vector3(0, 0, 0)
+scale_min = 2.0
+scale_max = 2.0
+scale_curve = SubResource("CurveTexture_nxk1y")
+alpha_curve = SubResource("CurveTexture_h6d8h")
 
 [node name="PlayerBullet" type="TamaBullet" unique_id=1028747838]
 script = ExtResource("1_oqcu5")
@@ -38,6 +64,7 @@ shape = SubResource("CircleShape2D_nxk1y")
 [node name="SpawnParticles" type="GPUParticles2D" parent="." unique_id=276091544]
 texture_filter = 1
 material = SubResource("CanvasItemMaterial_nxk1y")
+position = Vector2(-18, 0)
 emitting = false
 amount = 10
 texture = ExtResource("3_h6d8h")
@@ -45,5 +72,18 @@ lifetime = 0.16
 one_shot = true
 explosiveness = 1.0
 process_material = SubResource("ParticleProcessMaterial_jctoh")
+script = ExtResource("4_nxk1y")
+
+[node name="SpawnParticles2" type="GPUParticles2D" parent="." unique_id=782351027]
+texture_filter = 1
+material = SubResource("CanvasItemMaterial_h6d8h")
+position = Vector2(-13, 0)
+emitting = false
+amount = 1
+texture = ExtResource("3_h6d8h")
+lifetime = 0.15000000000000002
+one_shot = true
+process_material = SubResource("ParticleProcessMaterial_yqlgc")
+script = ExtResource("4_nxk1y")
 
 [connection signal="area_entered" from="Area2D" to="." method="_on_area_2d_area_entered"]

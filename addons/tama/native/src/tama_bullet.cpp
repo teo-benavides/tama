@@ -91,6 +91,11 @@ void TamaBullet::_ready() {
 }
 
 void TamaBullet::_physics_process(double delta) {
+    if (_just_spawned)
+    {
+        _just_spawned = false;
+        return;
+    }
     // Step interpreters so act commands (chdir/chspd/etc.) apply this frame
     if (_runner || _runner2) {
         Rect2 world = _scene_bullet_world_bounds();
@@ -158,7 +163,6 @@ void TamaBullet::_physics_process(double delta) {
             set_rotation(_angle);
     }
     move_and_slide();
-
     if (_bounces_left != 0) {
         static const float PI = 3.14159265f;
         Rect2 world = _scene_bullet_world_bounds();

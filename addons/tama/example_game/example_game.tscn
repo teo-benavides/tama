@@ -3,6 +3,16 @@
 [ext_resource type="Script" uid="uid://dhaacfo3aa4nm" path="res://addons/tama/example_game/example_game.gd" id="1_n7wc6"]
 [ext_resource type="Texture2D" uid="uid://pc1srkkemdfj" path="res://addons/tama/shared/sky.png" id="2_h4k7m"]
 [ext_resource type="PackedScene" uid="uid://cppplayer001" path="res://addons/tama/shared/example_player.tscn" id="3_h4k7m"]
+[ext_resource type="Script" uid="uid://clx0bbmru0ksk" path="res://addons/tama/example/bullets_label.gd" id="4_oeqou"]
+[ext_resource type="Script" uid="uid://cvsmm0ofq3fnv" path="res://addons/tama/example/fps_label.gd" id="5_nmxtm"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_f6hwm"]
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_3xruf"]
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
 
 [node name="ExampleGame" type="Node" unique_id=1341615943]
 script = ExtResource("1_n7wc6")
@@ -32,5 +42,21 @@ process_callback = 0
 wait_time = 0.5
 one_shot = true
 autostart = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=2141955568]
+offset_left = 360.0
+offset_top = 21.0
+offset_right = 400.0
+offset_bottom = 71.0
+
+[node name="BulletsLabel" type="Label" parent="VBoxContainer" unique_id=856819900]
+layout_mode = 2
+label_settings = SubResource("LabelSettings_f6hwm")
+script = ExtResource("4_oeqou")
+
+[node name="FPSLabel" type="Label" parent="VBoxContainer" unique_id=59668959]
+layout_mode = 2
+label_settings = SubResource("LabelSettings_3xruf")
+script = ExtResource("5_nmxtm")
 
 [connection signal="timeout" from="GameStartTimer" to="." method="_on_game_start_timer_timeout"]

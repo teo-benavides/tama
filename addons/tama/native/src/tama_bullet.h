@@ -42,8 +42,9 @@ public:
     int            _bounces_left   = 0;     // 0=none, -1=infinite, N>0=remaining
     int            _bounces_axis   = 0;     // 0=both, 1=x (left/right), 2=y (top/bottom)
 
-    bool rotates       = true;
-    bool face_velocity = true;
+    bool rotates        = true;
+    bool face_velocity  = true;
+    bool _just_spawned  = true;
 
     void _ready()                       override;
     void _physics_process(double delta) override;
